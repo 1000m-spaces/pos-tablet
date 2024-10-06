@@ -1,0 +1,22 @@
+<svg width="74" height="77" viewBox="0 0 74 77" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Group 27">
+<g id="Group 26">
+<rect id="Rectangle 60" x="0.75" y="0.75" width="46.5" height="75.5" rx="4.25" stroke="black" stroke-width="1.5" stroke-linejoin="round"/>
+<path id="Vector 18" d="M0.5 8.5C1.3 8.5 32.1667 8.5 47.5 8.5" stroke="black" stroke-width="1.5" stroke-linejoin="round"/>
+<path id="Vector 19" d="M1 64.5H47.5" stroke="black" stroke-width="1.5" stroke-linejoin="round"/>
+<path id="Vector 20" d="M16 4.5H28.5" stroke="black" stroke-width="1.5" stroke-linejoin="round"/>
+<path id="Vector 21" d="M30.5 4.5H34" stroke="black" stroke-width="1.5" stroke-linejoin="round"/>
+<circle id="Ellipse 24" cx="24.5" cy="70.5" r="2.75" stroke="black" stroke-width="1.5" stroke-linejoin="round"/>
+</g>
+<g id="Group 25">
+<rect id="Rectangle 61" x="24" y="16" width="50" height="20" rx="5" fill="#255D54"/>
+<path id="Vector 22" d="M31.5 40V34H38L31.5 40Z" fill="#255D54"/>
+<circle id="Ellipse 25" cx="33" cy="26" r="2" fill="white"/>
+<circle id="Ellipse 26" cx="40" cy="26" r="2" fill="white"/>
+<circle id="Ellipse 27" cx="46" cy="26" r="2" fill="white"/>
+<circle id="Ellipse 28" cx="53" cy="26" r="2" fill="white"/>
+<circle id="Ellipse 29" cx="59" cy="26" r="2" fill="white"/>
+<circle id="Ellipse 30" cx="66" cy="26" r="2" fill="white"/>
+</g>
+</g>
+</svg>

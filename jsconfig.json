@@ -1,0 +1,40 @@
+{
+  "extends": "@react-native/typescript-config/jsconfig.json",
+  "compilerOptions": {
+    "target": "ES6",
+    "baseUrl": ".",
+    "paths": {
+      // "~/*": ["src/*"],
+      "components/*": [
+        "src/components/*"
+      ],
+      "theme/*": [
+        "src/theme/*"
+      ],
+      "utils/*": [
+        "src/utils/*"
+      ],
+      "navigation/*": [
+        "src/navigation/*"
+      ],
+      "common/*": [
+        "src/common/*"
+      ],
+      "assets/*": [
+        "src/assets/*"
+      ],
+      "store/*": [
+        "src/store/*"
+      ],
+      "http/*": [
+        "src/http/*"
+      ],
+      "helpers/*": [
+        "helpers/*"
+      ],
+      "localization/*": [
+        "src/localization/*"
+      ],
+    },
+  }
+}
