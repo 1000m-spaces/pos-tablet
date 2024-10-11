@@ -44,7 +44,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@babel/plugin-transform-class-properties": "^7.25.7",
-    "@babel/plugin-transform-private-property-in-object": "^7.25.7",
+    "@babel/plugin-transform-private-property-in-object": "^7.25.8",
     "@babel/preset-env": "^7.20.0",
     "@babel/runtime": "^7.20.0",
     "@react-native-community/eslint-config": "^3.2.0",
@@ -64,6 +64,5 @@
   },
   "engines": {
     "node": ">=18"
-  },
-  "packageManager": "yarn@3.6.4"
+  }
 }
