@@ -6,6 +6,12 @@ export const sendPhone = phone => ({
     phone,
   },
 });
+
+export const loginInternal = request => ({
+  type: NEOCAFE.LOGIN_REQUEST,
+  payload: request,
+});
+
 export const sendPhoneReset = () => ({
   type: NEOCAFE.SEND_PHONE_RESET,
 });

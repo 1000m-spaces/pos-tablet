@@ -48,6 +48,44 @@ function* sendPhoneSaga({payload}) {
   }
 }
 
+function* loginInternalSaga({payload}) {
+  try {
+    const result = yield call(authController.loginInternalController, payload);
+    console.log('RESULT SAGA loginInternal::: ', result);
+    if (result.success === true && result?.data && result?.data?.status) {
+      const {data} = result.data;
+      console.log('result success loginInternal:', data);
+      yield asyncStorage.setUser(data);
+      yield put({
+        type: NEOCAFE.LOGIN_SUCCESS,
+        payload: {
+          userInfo: data,
+        },
+      });
+      // yield put(sendPhoneReset());
+    } else if (result.success === true && result?.data?.status === false) {
+      console.log('result errorr loginInternal:', result);
+      yield put({
+        type: NEOCAFE.SEND_PHONE_ERROR,
+        payload: {errorMsg: result?.data?.error},
+      });
+    } else {
+      yield put({
+        type: NEOCAFE.SEND_PHONE_ERROR,
+        payload: {errorMsg: 'Xảy ra lỗi trong quá trình đăng nhập'},
+      });
+    }
+  } catch (e) {
+    yield put({
+      type: NEOCAFE.SEND_PHONE_ERROR,
+      payload: {
+        errorMsg:
+          'Xảy ra lỗi trong quá trình nhật OTP, vui lòng liên hệ nhân viên chăm sóc khách hàng',
+      },
+    });
+  }
+}
+
 function* confirmOtp({payload}) {
   const tokenConfirm = yield select(state => isTokenConfirm(state));
   console.log('tokenConfirm', tokenConfirm);
@@ -145,7 +183,8 @@ function* getVersions({payload}) {
 }
 
 export default function* watcherSaga() {
-  yield takeLatest(NEOCAFE.SEND_PHONE_REQUEST, sendPhoneSaga);
+  // yield takeLatest(NEOCAFE.SEND_PHONE_REQUEST, sendPhoneSaga);
+  yield takeLatest(NEOCAFE.LOGIN_REQUEST, loginInternalSaga);
   yield takeLatest(NEOCAFE.CONFIRM_OTP_REQUEST, confirmOtp);
   yield takeLatest(NEOCAFE.LOGIN_PHONE_REQUEST, loginPhone);
   yield takeLatest(NEOCAFE.LOGOUT_REQUEST, logout);

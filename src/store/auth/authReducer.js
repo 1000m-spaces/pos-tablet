@@ -8,6 +8,7 @@ const initializeState = {
   statusConfirmOtp: Status.DEFAULT,
   errorSendOtp: '',
   errorConfirm: '',
+  userInfo: {userid: -1},
   statusLoginPhone: Status.DEFAULT,
   //Get Version
   forceUpdate: false,
@@ -23,6 +24,18 @@ export default (state = initializeState, {type, payload}) => {
       return {
         ...state,
         statusSendPhone: Status.LOADING,
+      };
+    case NEOCAFE.LOGIN_REQUEST:
+      return {
+        ...state,
+        statusSendPhone: Status.LOADING,
+      };
+    case NEOCAFE.LOGIN_SUCCESS:
+      return {
+        ...state,
+        // tokenConfirm: payload.tokenConfirm,
+        userInfo: payload.userInfo,
+        statusSendPhone: Status.SUCCESS,
       };
     case NEOCAFE.SEND_PHONE_SUCCESS:
       return {

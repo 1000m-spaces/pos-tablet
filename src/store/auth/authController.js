@@ -13,6 +13,20 @@ class AuthController {
       return {success: false, error: error.message};
     }
   };
+
+  loginInternalController = async payload => {
+    try {
+      console.log('api login::::', UrlApi.loginInternal);
+      console.log('payload login', payload);
+      const {data} = await HttpClient.post(UrlApi.loginInternal, {
+        username: payload.username,
+        password: payload.password,
+      });
+      return {success: true, data: data};
+    } catch (error) {
+      return {success: false, error: error.message};
+    }
+  };
   confirmOtpController = async query => {
     const result = await HttpClient.put(UrlApi.confirmPhone, query);
     console.log('RESULT CONFIRM OTP CONTROLLER', result, query);
