@@ -33,6 +33,12 @@ export const NEOCAFE = createRequestTypes(
     'CONFIRM_DELETE_OTP',
     'UPDATE_USER_INFO',
     'SET_LANGUAGE',
+
+    //categories
+    'GET_CATEGORIES',
+
+    //order
+    'CREATE_ORDER',
   ],
   suffixTypes,
 );

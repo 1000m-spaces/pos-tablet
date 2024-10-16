@@ -38,6 +38,8 @@ export const UrlApi = {
   getVersion: BASE_PATH_CAFE + 'version',
   sendPhone: BASE_PATH_MENU + 'phone',
   loginInternal: BASE_PATH_MENU + 'loginInternal',
+  internalMenuShop: BASE_PATH_MENU + 'getInternalMenuShop',
+  orderInternal: BASE_PATH_MENU + 'orderInternal',
   confirmPhone: BASE_PATH_MENU + 'phone',
   loginPhone: BASE_PATH_MENU + 'customerloginphone',
   deleteAccount: BASE_PATH_MENU + 'deleteAccount',
