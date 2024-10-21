@@ -1,8 +1,9 @@
 import {Dimensions, Platform} from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import {heightDevices, widthDevices} from '../app';
+export const heightDevice = heightDevices;
+export const widthDevice = widthDevices;
 
-export const heightDevice = Dimensions.get('window').height;
-export const widthDevice = Dimensions.get('window').width;
 export const versionSystem = DeviceInfo.getSystemVersion();
 export const versionNameApp = DeviceInfo.getVersion();
 export const deviceId = DeviceInfo.getUniqueId();
@@ -82,3 +83,6 @@ export const star = require('assets/images/star.png');
 export function formatMoney(x) {
   return x && x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
+
+// POS APPLICATION
+export const background_login = require('./background/background_login.png');

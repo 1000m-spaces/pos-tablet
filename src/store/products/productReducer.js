@@ -6,10 +6,35 @@ const initialState = {
   productMenu: [],
   statusProductMenu: Status.DEFAULT,
   errorProductMenu: '',
+
+  currentProduct: null,
+  statusSetProduct: Status.DEFAULT
 };
 
 export default (state = initialState, {type, payload}) => {
   switch (type) {
+    // SET CURRENT PRODUCT
+     case NEOCAFE.SET_PRODUCT_REQUEST:
+      return {
+        ...state,
+        statusSetProduct: Status.LOADING,
+      };
+    case NEOCAFE.SET_PRODUCT_SUCCESS:
+      return {
+        ...state,
+        currentProduct: payload,
+        statusSetProduct: Status.SUCCESS,
+      };
+    case NEOCAFE.SET_PRODUCT_ERROR:
+      return {
+        ...state,
+        statusSetProduct: Status.ERROR,
+      };
+    case NEOCAFE.SET_PRODUCT_RESET:
+      return {
+        ...state,
+        statusSetProduct: Status.DEFAULT,
+      };
     // PRODUCT ALL SHOP
     case NEOCAFE.GET_MENU_REQUEST:
       return {
@@ -17,18 +42,10 @@ export default (state = initialState, {type, payload}) => {
         statusProductMenu: Status.LOADING,
       };
     case NEOCAFE.GET_MENU_SUCCESS:
-      let listPro = filterDuplicateProduct(payload.products);
-      const filteredListCate =
-        payload?.listCategory &&
-        payload?.listCategory.filter(
-          cate =>
-            cate?.name_vi &&
-            cate?.name_vi.toUpperCase() !== 'NẠP TIỀN' &&
-            cate.name_vi !== 'Gói Vận Chuyển',
-        );
+      const products = setupProduct(payload);
       return {
         ...state,
-        productMenu: mapCategoryProducts(filteredListCate, listPro),
+        productMenu: products || [],
         statusProductMenu: Status.SUCCESS,
       };
     case NEOCAFE.GET_MENU_ERROR:
@@ -45,55 +62,28 @@ export default (state = initialState, {type, payload}) => {
       return state;
   }
 };
-
-const filterDuplicateProduct = product => {
-  let setAllProduct = new Map(
-    product
-      .filter(pro => pro.prodid < 1000000000)
-      .map(item => {
-        return [item.prodid, item];
-      }),
-  );
-  return Array.from(setAllProduct, ([_, val]) => val);
-};
-
-const convertArrayToMap = listProduct => {
-  let mapListPro = new Map();
-  listProduct.forEach(product => {
-    mapListPro.set(`${product.prodid}`, product);
-  });
-  return mapListPro;
-};
-
-const mapCategoryProducts = (
-  listCate,
-  listProduct,
-  topPurchased,
-  recommendation,
-) => {
-  let result = [];
-  const mapCate = new Map(
-    listCate.map(item => {
-      return [
-        item.id,
-        {
-          id: item.id,
-          name: strings.getLanguage() === 'vi' ? item.name_vi : item.name_en,
-          products: [],
-        },
-      ];
-    }),
-  );
-
-  listProduct.map(product => {
-    if (product && product?.categoryid && mapCate.has(product?.categoryid)) {
-      const tempCate = mapCate.get(product?.categoryid);
-      product.categoryname = tempCate.name ? tempCate.name.toUpperCase() : '';
-      product.quantity = 0;
-      tempCate.products.push(product);
-    }
-  });
-  let tempResult = Array.from(mapCate.values());
-  result = tempResult.filter(item => item.products.length > 0);
-  return result;
-};
+function getFirstExtraType1(listExtra, type) {
+  const tempExtraItem = listExtra.find(item => item.group_type === 1);
+  return type === 1 && tempExtraItem ? [tempExtraItem] : [tempExtraItem.id];
+}
+function setupProduct(payload) {
+  if (payload) {
+    payload.map(cate => {
+      cate?.products.map((product, index) => {
+        product.option_item =
+          product.options === false ? {id: -1} : product.options[0][0];
+        product.extra_items =
+          product.extras !== false && product.extras.length > 0
+            ? getFirstExtraType1(product.extras[0], 1)
+            : [];
+        product.quantity = 0;
+        product.extraIds =
+          product.extras !== false && product.extras.length > 0
+            ? getFirstExtraType1(product.extras[0], 2)
+            : [];
+        product.isExpired = false;
+      });
+    });
+  }
+  return payload;
+}

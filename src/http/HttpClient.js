@@ -18,7 +18,7 @@ const HttpClient = axios.create({
 // Custom middleware for requests (this one just logs the error).
 HttpClient.interceptors.request.use(
   config => {
-    config.headers['X-CUPIFY-APP'] = 'NEOCAFE';
+    config.headers['X-CUPIFY-APP'] = 'TRA1000M';
     config.headers['Accept-Language'] = defaultLanguage;
     // console.log('REQUEST API:', config);
     return config;

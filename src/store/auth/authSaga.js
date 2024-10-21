@@ -51,10 +51,9 @@ function* sendPhoneSaga({payload}) {
 function* loginInternalSaga({payload}) {
   try {
     const result = yield call(authController.loginInternalController, payload);
-    console.log('RESULT SAGA loginInternal::: ', result);
     if (result.success === true && result?.data && result?.data?.status) {
       const {data} = result.data;
-      console.log('result success loginInternal:', data);
+      console.log('login data:::', data);
       yield asyncStorage.setUser(data);
       yield put({
         type: NEOCAFE.LOGIN_SUCCESS,

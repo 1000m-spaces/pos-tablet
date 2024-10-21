@@ -12,18 +12,6 @@ const initializeState = {
 
 export default (state = initializeState, {type, payload}) => {
   switch (type) {
-    case NEOCAFE.GET_CATEGORIES_REQUEST:
-      return {
-        ...state,
-        statusGetCategories: Status.LOADING,
-      };
-    case NEOCAFE.GET_CATEGORIES_SUCCESS:
-      return {
-        ...state,
-        // tokenConfirm: payload.tokenConfirm,
-        categories: payload,
-        statusGetCategories: Status.SUCCESS,
-      };
     case NEOCAFE.CREATE_ORDER_REQUEST:
       return {
         ...state,

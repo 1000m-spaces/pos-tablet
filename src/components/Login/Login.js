@@ -2,29 +2,29 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import React, {useEffect, useRef, useState} from 'react';
 import {
   Keyboard,
-  Pressable,
   TextInput,
   TouchableOpacity,
   View,
-  Linking,
-  Platform,
+  ImageBackground,
+  Dimensions,
 } from 'react-native';
 
-// import {View} from 'react-native';
+const heightDevice = Dimensions.get('window').height;
+const widthDevice = Dimensions.get('window').width;
 import {
+  TextHighLightBold,
   TextNormal,
   TextNormalSemiBold,
   TextSemiBold,
 } from 'common/Text/TextFont';
-import SeparatorLine from 'common/SeparatorLine/SeparatorLine';
 import {useDispatch, useSelector} from 'react-redux';
-import {NAVIGATION_HOME} from 'navigation/routes';
+import {NAVIGATION_HOME, NAVIGATION_MAIN} from 'navigation/routes';
 
 import {isErrorSendOtp, isStatusSendPhone} from 'store/selectors';
 
 import Svg from 'common/Svg/Svg';
 import Status from 'common/Status/Status';
-import {heightDevice} from 'assets/constans';
+import {background_login} from 'assets/constans';
 import Colors from 'theme/Colors';
 import {loginInternal} from 'store/actions';
 import strings from 'localization/Localization';
@@ -35,6 +35,7 @@ const Login = props => {
   const dispatch = useDispatch();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [showError, setShowError] = useState(false);
 
   const statusLogin = useSelector(state => isStatusSendPhone(state));
@@ -48,83 +49,77 @@ const Login = props => {
 
   useEffect(() => {
     if (statusLogin === Status.SUCCESS) {
-      props.navigation.navigate(NAVIGATION_HOME, {});
+      props.navigation.navigate(NAVIGATION_MAIN, {});
     } else if (statusLogin === Status.ERROR) {
       setShowError(true);
     }
+    // console.log(widthDevice, heightDevice);
   }, [statusLogin]);
 
   return (
-    <SafeAreaView style={styles.safeView}>
-      <Pressable style={{flex: 1}} onPress={Keyboard.dismiss}>
-        <View style={styles.container}>
-          <View style={{marginTop: 20}}>
-            <TextNormal style={styles.textHello}>
-              {strings.loginScreen.greeting}
-            </TextNormal>
-            {/* <TextSemiBold>aa:{BASE_PATH_CAFE}</TextSemiBold> */}
-            <TextNormal style={[styles.textIntro, {paddingVertical: 20}]}>
-              {'Vui lòng đăng nhập'}
-            </TextNormal>
+    <View style={styles.loginScreen}>
+      <View style={{width: widthDevice * 0.55, height: heightDevice}}>
+        <ImageBackground
+          style={styles.imgBackground}
+          source={background_login}
+          resizeMode={'stretch'}>
+          <View style={styles.logoTea}>
+            <Svg name={'icon_login_logo'} size={108} style />
           </View>
-          <View style={[styles.separatorLine, {marginTop: 40}]}>
-            <SeparatorLine />
-          </View>
-          <View style={{paddingTop: 0.16 * heightDevice}}>
+          <Svg name={'icon_login_content'} size={350} />
+        </ImageBackground>
+      </View>
+
+      <View style={styles.containerLogin}>
+        <TextSemiBold style={styles.titleLogin}>{'Đăng nhập'}</TextSemiBold>
+        <TextInput
+          ref={refInput}
+          placeholder="Tài khoản"
+          placeholderTextColor={Colors.secondary}
+          style={styles.styleTextInput}
+          onChangeText={setUsername}
+        />
+        <TouchableOpacity>
+          <TextInput
+            ref={refInput}
+            placeholder="Mật khẩu"
+            placeholderTextColor={Colors.secondary}
+            style={styles.styleTextInput}
+            secureTextEntry={!showPassword}
+            onChangeText={setPassword}
+          />
+          {password && password.length > 0 && (
             <TouchableOpacity
-              onPress={() => refInput.current.focus()}
-              style={styles.containerButtonInputPhone}>
-              <TextNormal style={styles.codeCountry} />
-              <TextInput
-                ref={refInput}
-                placeholder="Tên tk"
-                placeholderTextColor={Colors.textGrayColor}
-                style={styles.styleTextInput}
-                onChangeText={text => setUsername(text)}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => refInput.current.focus()}
-              style={styles.containerButtonInputPhone2}>
-              <TextNormal style={styles.codeCountry} />
-              <TextInput
-                ref={refInput}
-                placeholder="Mật khẩu"
-                placeholderTextColor={Colors.textGrayColor}
-                style={styles.styleTextInput}
-                secureTextEntry={true}
-                onChangeText={text => setPassword(text)}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => submitLogin()}
-              disabled={statusLogin === Status.LOADING}
-              style={[
-                styles.buttonSubmitPhone,
-                statusLogin === Status.LOADING && {opacity: 0.5},
-              ]}>
-              {/* <Icons
-                type={'MaterialIcons'}
-                name={'navigate-next'}
-                size={40}
-                color={'white'}
-              /> */}
-              <TextSemiBold style={styles.textConfirm}>
-                {'Đăng nhập'}
-              </TextSemiBold>
-            </TouchableOpacity>
-            {showError === true && (
-              <TextNormal style={styles.textError}>
-                {'Đăng nhập thất bại'}
+              onPress={() => setShowPassword(prev => (prev = !prev))}
+              style={styles.hideText}>
+              <TextNormal style={{color: Colors.gray}}>
+                {showPassword ? 'ẨN' : 'HIỂN THỊ'}
               </TextNormal>
-            )}
-          </View>
-        </View>
-      </Pressable>
-    </SafeAreaView>
-    // <View style={{flex: 1}}>
-    //   <View style={{flex: 1, backgroundColor: 'white'}} />
-    // </View>
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={submitLogin}
+          disabled={statusLogin === Status.LOADING || !username || !password}
+          style={[
+            styles.buttonSubmitPhone,
+            username && password && {backgroundColor: Colors.primary},
+          ]}>
+          <TextHighLightBold
+            style={[
+              styles.textConfirm,
+              username && password && {color: Colors.whiteColor},
+            ]}>
+            {'Đăng nhập'}
+          </TextHighLightBold>
+        </TouchableOpacity>
+        {showError === true && (
+          <TextNormal style={styles.textError}>
+            {'Tài khoản hoặc mật khẩu không đúng'}
+          </TextNormal>
+        )}
+      </View>
+    </View>
   );
 };
 

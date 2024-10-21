@@ -8,45 +8,6 @@ import {asyncStorage} from 'store/index';
 // import {resetGetListShop, resetOrder} from 'store/actions';
 // import strings from 'localization/Localization';
 
-function* getInternalMenuShopSaga({payload}) {
-  try {
-    const result = yield call(
-      orderController.getInternalMenuShopController,
-      payload,
-    );
-    console.log('RESULT SAGA getInternalmenuShop::: ', result);
-    if (result.success === true && result?.data && result?.data?.status) {
-      const {data} = result.data;
-      console.log('result success getInternalmenuShop:', data);
-      yield asyncStorage.setUser(data);
-      yield put({
-        type: NEOCAFE.GET_CATEGORIES_SUCCESS,
-        payload: data,
-      });
-      // yield put(sendPhoneReset());
-    } else if (result.success === true && result?.data?.status === false) {
-      console.log('result errorr getInternalmenuShop:', result);
-      // yield put({
-      //   type: NEOCAFE.SEND_PHONE_ERROR,
-      //   payload: {errorMsg: result?.data?.error},
-      // });
-    } else {
-      // yield put({
-      //   type: NEOCAFE.SEND_PHONE_ERROR,
-      //   payload: {errorMsg: 'Xảy ra lỗi trong quá trình đăng nhập'},
-      // });
-    }
-  } catch (e) {
-    // yield put({
-    //   type: NEOCAFE.SEND_PHONE_ERROR,
-    //   payload: {
-    //     errorMsg:
-    //       'Xảy ra lỗi trong quá trình nhật OTP, vui lòng liên hệ nhân viên chăm sóc khách hàng',
-    //   },
-    // });
-  }
-}
-
 function* createOrderSaga({payload}) {
   try {
     const result = yield call(orderController.createOrderController, payload);
@@ -82,7 +43,7 @@ function* createOrderSaga({payload}) {
 
 export default function* watcherSaga() {
   // yield takeLatest(NEOCAFE.SEND_PHONE_REQUEST, sendPhoneSaga);
-  yield takeLatest(NEOCAFE.GET_CATEGORIES_REQUEST, getInternalMenuShopSaga);
+  
   yield takeLatest(NEOCAFE.CREATE_ORDER_REQUEST, createOrderSaga);
   // yield takeLatest(NEOCAFE.LOGIN_PHONE_REQUEST, loginPhone);
   // yield takeLatest(NEOCAFE.LOGOUT_REQUEST, logout);

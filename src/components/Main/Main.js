@@ -1,158 +1,99 @@
 import React, {useEffect} from 'react';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import * as Screens from 'components';
 import {NAVIGATION_HOME, NAVIGATION_MENU} from 'navigation/routes';
-// import Images from 'common/Images/Images';
-// import {
-//   heightDevice,
-//   icon_account,
-//   icon_home,
-//   icon_menu,
-//   icon_shop,
-//   widthDevice,
-// } from 'assets/constans';
-import {Platform, StyleSheet, View} from 'react-native';
-import Colors from 'theme/Colors';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {Platform, StyleSheet, View, Text, TouchableOpacity} from 'react-native';
+import {createDrawerNavigator} from '@react-navigation/drawer';
+import {NavigationContainer} from '@react-navigation/native';
+import * as Screens from 'components';
+const Drawer = createDrawerNavigator();
+import {
+  DrawerContentScrollView,
+  DrawerItemList,
+} from '@react-navigation/drawer';
 import Svg from 'common/Svg/Svg';
-import {TextSmallEleven} from 'common/Text/TextFont';
-import {widthDevice} from 'assets/constans';
-import strings from 'localization/Localization';
-import {useSelector} from 'react-redux';
-import {getCurrentLanguage} from 'store/selectors';
+import {TextNormal} from 'common/Text/TextFont';
+import Colors from 'theme/Colors';
+import { heightDevice } from 'assets/constans';
 
-const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
-
-// const StackAccount = () => {
-//   return (
-//     <Stack.Navigator
-//       screenOptions={{header: () => null}}
-//       initialRouteName={NAVIGATION_ACCOUNT}>
-//       <Stack.Screen name={NAVIGATION_ACCOUNT} component={Screens.Account} />
-//       <Stack.Screen
-//         name={NAVIGATION_ACCOUNT_INFO}
-//         component={Screens.AccountInfo}
-//       />
-//       <Stack.Screen
-//         name={NAVIGATION_ACCOUNT_ORDER_HISTORY}
-//         component={Screens && Screens.HistoryOrder ? Screens.HistoryOrder : ''}
-//       />
-//     </Stack.Navigator>
-//   );
-// };
-
-// icon_giohang1
-const Main = () => {
-  const insets = useSafeAreaInsets();
-  const currentUserLanguage = useSelector(state => getCurrentLanguage(state));
-
-  useEffect(() => {
-    console.log('CHANGE LANGUAGE:::::', currentUserLanguage);
-  }, [currentUserLanguage]);
-
+const CustomDrawerContent = props => {
   return (
-    <Tab.Navigator
-      initialRouteName={NAVIGATION_HOME}
-      screenOptions={({route}) => ({
-        tabBarHideOnKeyboard: true,
-        tabBarIcon: ({color, size, focused}) => {
-          const icons = {
-            [NAVIGATION_HOME]: 'icon_svg_home',
-            // [NAVIGATION_SHOP]: 'icon_svg_shop',
-            // [NAVIGATION_MENU]: 'icon_svg_menu',
-            // [NAVIGATION_REVIEW]: 'icon_rating',
-            // [NAVIGATION_ACCOUNT]: 'icon_svg_account',
-          };
-          const title = router => {
-            switch (router) {
-              case NAVIGATION_HOME:
-                return strings.common.home;
-              // case NAVIGATION_MENU:
-              //   return 'Menu';
-              // case NAVIGATION_SHOP:
-              //   return strings.common.store;
-              // case NAVIGATION_REVIEW:
-              //   return strings.common.reviews;
-              // case NAVIGATION_ACCOUNT:
-              //   return strings.common.user;
-              default:
-            }
-          };
-          return (
-            // <Images
-            //   resizeMode="contain"
-            //   style={styles.icon}
-            //   styleContainer={styles.styleContainerIcon}
-            //   source={icons[route.name]}
-            //   tintColor={
-            //     focused ? Colors.buttonTextColor : Colors.textGrayColor
-            //   }
-            // />
-            <View
-              style={{
-                alignItems: 'center',
-                width: widthDevice / 5,
-              }}>
-              <Svg
-                name={icons[route.name]}
-                size={35}
-                color={focused ? Colors.buttonTextColor : Colors.textGrayColor}
-                style={{
-                  marginTop: 10,
-                }}
-              />
-              <TextSmallEleven
-                // eslint-disable-next-line react-native/no-inline-styles
-                style={{
-                  fontSize: 11,
-                  fontWeight:
-                    Platform.OS === 'ios'
-                      ? focused
-                        ? 'bold'
-                        : 'normal'
-                      : 'normal',
-                  fontFamily: focused
-                    ? 'SVN-Poppins-SemiBold'
-                    : 'SVN-Poppins-Regular',
-                  marginBottom: insets.bottom > 0 ? 0 : 13,
-                  color: focused
-                    ? Colors.buttonTextColor
-                    : Colors.textGrayColor,
-                }}>
-                {title(route.name)}
-              </TextSmallEleven>
-            </View>
-          );
-        },
-        tabBarActiveTintColor: Colors.buttonTextColor,
-        tabBarInactiveTintColor: Colors.textGrayColor,
-        // tabBarLabelStyle: {
-        //   fontSize: 11,
-        //   fontFamily: 'SVN-Poppins-Regular',
-        //   marginBottom: insets.bottom > 0 ? 0 : 13,
-        // },
+    <DrawerContentScrollView {...props}>
+      <View style={styles.header}>
+        {/* Custom header content */}
+        <Svg name={'logo_menu'} size={60} />
+      </View>
+      {/* Custom drawer items */}
+      <DrawerItemList {...props} />
+
+      {/* Additional buttons in the drawer */}
+      {/* <TouchableOpacity
+        style={styles.logoutButton}
+        onPress={() => alert('Logout')}>
+        <Text style={styles.logoutText}>Menu</Text>
+      </TouchableOpacity> */}
+    </DrawerContentScrollView>
+  );
+};
+
+const Main = () => {
+  return (
+    <Drawer.Navigator
+      drawerContent={props => <CustomDrawerContent {...props} />}
+      overlayColor="rgba(0, 0, 0, 0.7)"
+      screenOptions={{
         headerShown: false,
-        tabBarStyle: {height: 75 + insets.bottom / 2},
-      })}>
-      <Tab.Screen
-        name={NAVIGATION_HOME}
-        component={Screens.Home}
-        options={{title: () => null}}
-      />
-    </Tab.Navigator>
+        drawerType: 'permanent',
+        drawerActiveBackgroundColor: Colors.primary,
+        drawerActiveTintColor: Colors.whiteColor,
+        drawerStyle: {
+          backgroundColor: '#021526',
+          width: 108,
+          padding: 0,
+        },
+      }}
+      initialRouteName={NAVIGATION_HOME}>
+      <Drawer.Screen name={'Menu'} component={Screens.Home} />
+      {/* <Drawer.Screen name="Notifications" component={NotificationsScreen} /> */}
+    </Drawer.Navigator>
   );
 };
 
 export default Main;
 
 const styles = StyleSheet.create({
-  icon: {
-    height: 27,
-    width: 27,
+  header: {
+    alignItems: 'center',
+    padding: 20,
+    // backgroundColor: '#f4f4f4',
   },
-  styleContainerIcon: {
-    marginTop: 5,
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 10,
+  },
+  username: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  logoutButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#ff6347',
+    borderRadius: 5,
+    marginHorizontal: 20,
+  },
+  logoutText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  customDrawerSection: {
+    marginTop: 20,
+    paddingHorizontal: 10,
+  },
+  sectionTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 10,
   },
 });

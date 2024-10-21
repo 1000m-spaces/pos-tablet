@@ -15,6 +15,7 @@ const StackNavigator = () => {
     <Stack.Navigator
       screenOptions={{header: () => null}}
       initialRouteName={NAVIGATION_SPLASH}>
+      <Stack.Screen name={NAVIGATION_MAIN} component={Screens.Main} />
       <Stack.Screen name={NAVIGATION_HOME} component={Screens.Home} />
       <Stack.Screen name={NAVIGATION_SPLASH} component={Screens.Splash} />
       <Stack.Screen name={NAVIGATION_LOGIN} component={Screens.Login} />

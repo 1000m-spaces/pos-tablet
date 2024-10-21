@@ -53,7 +53,23 @@ import icon_gift from './iconMain/icon_gift.svg';
 import icon_rating from './iconMain/icon_rating.svg';
 import icon_camera_review from './iconMain/icon_camera_review.svg';
 import icon_star_review from './iconMain/icon_star_review.svg';
+// POS ICON
+import icon_login_logo from './svgs/login_logo.svg';
+import icon_login_content from './svgs/login_content.svg';
+import search from './svgs/search.svg';
+import logo_menu from './svgs/logo_menu.svg';
+import selected_circle from './svgs/selected_circle.svg';
+import circle from './svgs/circle.svg';
 export default {
+  // POS
+  icon_login_logo,
+  icon_login_content,
+  search,
+  logo_menu,
+  circle,
+  selected_circle,
+
+  // APP MOBLIE
   icon_star_review,
   icon_camera_review,
   icon_rating,

@@ -1,16 +1,38 @@
-import {heightDevice, widthDevice} from 'assets/constans';
-import {StyleSheet} from 'react-native';
+// import {heightDevice, widthDevice} from 'assets/constans';
+import {Dimensions, StyleSheet} from 'react-native';
 import Colors from 'theme/Colors';
 
+const heightDevice = Dimensions.get('window').height;
+const widthDevice = Dimensions.get('window').width;
+console.log(widthDevice, heightDevice)
 const styles = StyleSheet.create({
-  textError: {color: Colors.redColor, marginTop: 10, textAlign: 'center'},
+  titleLogin: {marginBottom: 32, fontSize: 40, fontWeight: '600'},
+  logoTea: {position: 'absolute', top: 32, left: 32},
+  hideText: {position: 'absolute', top: 13, right: 16, zIndex: 99},
+  imgBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingEnd: 40,
+  },
+  loginScreen: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: Colors.whiteColor,
+  },
+  containerLogin: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textError: {color: Colors.error, textAlign: 'center'},
   safeView: {
     flex: 1,
   },
   textConfirm: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 20,
+    color: Colors.textDisabled,
+    fontWeight: '600',
+    fontSize: 18,
   },
 
   container: {
@@ -67,17 +89,11 @@ const styles = StyleSheet.create({
     color: Colors.textGrayColor,
   },
   buttonSubmitPhone: {
-    // backgroundColor: Colors.buttonTextColor,
-    // height: 60,
-    // width: 60,
-    // borderRadius: 60,
-    // justifyContent: 'center',
-    // alignItems: 'center',
-    width: widthDevice / 1.15,
-    marginTop: 10,
-    height: 50,
-    borderRadius: 30,
-    backgroundColor: '#004D40',
+    width: 377,
+    height: 48,
+    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: Colors.btnDisabled,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -120,12 +136,17 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   styleTextInput: {
-    fontSize: 20,
-    // alignItems: 'center',
-    // backgroundColor: 'red',
+    fontSize: 16,
     color: 'black',
+    paddingLeft: 16,
+    marginBottom: 24,
     fontFamily: 'SVN-Poppins-Medium',
     fontWeight: '500',
+    width: 377,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    backgroundColor: '#F4F4F4',
   },
   imageVietNam: {},
   iconDown: {

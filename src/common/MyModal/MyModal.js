@@ -4,7 +4,12 @@ import styles from './styles';
 
 const MyModal = ({children, onPressOutSide, visible}) => {
   return (
-    <Modal transparent={true} visible={visible} style={styles.container}>
+    <Modal
+      transparent
+      // statusBarTranslucent={false}
+      visible={visible}
+      animationType="slide"
+      style={styles.container}>
       <TouchableOpacity
         activeOpacity={1}
         onPress={() => onPressOutSide()}

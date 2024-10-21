@@ -39,6 +39,9 @@ export const NEOCAFE = createRequestTypes(
 
     //order
     'CREATE_ORDER',
+    // product
+    'GET_MENU',
+    'SET_PRODUCT',
   ],
   suffixTypes,
 );
