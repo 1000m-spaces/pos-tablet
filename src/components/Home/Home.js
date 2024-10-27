@@ -3,17 +3,20 @@ import {FlatList, SafeAreaView, View} from 'react-native';
 
 import {useDispatch, useSelector} from 'react-redux';
 import {getMenuAction, setProductAction} from 'store/actions';
-import {productMenuSelector} from 'store/selectors';
-import ProductItem from './ProductItem';
+import {currentOrderSelector, productMenuSelector} from 'store/selectors';
+import ProductItemMenu from './ProductItemMenu';
 import Colors from 'theme/Colors';
 import {asyncStorage} from 'store/index';
 import Header from './Header';
 import DetailProduct from './DetailProduct';
+import Cart from './Cart';
+import TableSelector from './TableSelector';
 const Home = ({navigation}) => {
   const dispatch = useDispatch();
   const productMenu = useSelector(state => productMenuSelector(state));
-  const [showDetail, setShowDetail] = useState(false);
+  const [showModal, setShowModal] = useState(-1);
   const [currentCate, setCurrentCate] = useState(0);
+  const currentOrder = useSelector(state => currentOrderSelector(state));
   useEffect(() => {
     // Orientation.lockToLandscape();
     const initData = async () => {
@@ -27,23 +30,23 @@ const Home = ({navigation}) => {
     };
     initData();
   }, []);
-  const renderProductItems = ({item, index}) => {
+  const renderProductItems = ({item, _}) => {
     return (
-      <ProductItem
-        product={item}
-        index={index}
-        onPressDetail={handlePressProduct}
-      />
+      <ProductItemMenu product={item} onPressDetail={handlePressProduct} />
     );
   };
   const handlePressProduct = async item => {
     console.log(item);
     dispatch(setProductAction(item));
-    item && setShowDetail(true);
+    item && setShowModal(1);
   };
   const onClose = () => {
-    setShowDetail(false);
+    setShowModal(-1);
   };
+  const onShowTable = () => setShowModal(2);
+  // useEffect(() => {
+  //   console.log('currentOrder::', JSON.stringify(currentOrder));
+  // }, [currentOrder]);
 
   return (
     <SafeAreaView
@@ -61,7 +64,8 @@ const Home = ({navigation}) => {
 
         <FlatList
           data={productMenu[currentCate]?.products || []}
-          keyExtractor={(cate, idx) => `${cate.name}_${cate.id}_${idx}`}
+          keyExtractor={(cate, _) => `${cate.prodname}`}
+          extraData={currentCate}
           renderItem={renderProductItems}
           numColumns={3}
           contentContainerStyle={{
@@ -70,8 +74,17 @@ const Home = ({navigation}) => {
           showsVerticalScrollIndicator={false}
         />
       </View>
-      <View style={{width: '30%', backgroundColor: 'green'}} />
-      {showDetail && <DetailProduct close={onClose} isVisiable={showDetail} />}
+      <Cart showTable={onShowTable} />
+      {showModal === 1 && (
+        <DetailProduct close={onClose} isVisiable={showModal === 1} />
+      )}
+      {showModal === 2 && (
+        <TableSelector
+          close={onClose}
+          isVisible={showModal === 2}
+          currentOrder={currentOrder}
+        />
+      )}
     </SafeAreaView>
   );
 };

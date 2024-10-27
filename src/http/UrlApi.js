@@ -1,12 +1,13 @@
-import {BASE_PATH_CAFE, BASE_PATH_MENU} from 'assets/config';
+import {BASE_PATH_MENU} from 'assets/config';
 // const BASE_PATH_MENU = 'https://test.mycafe.co/api1.0.php/';
-// const BASE_PATH_CAFE = 'https://api.neocafe.tech/v1/';
+const BASE_PATH_CAFE = 'https://api.neocafe.tech/v1/';
 export const UrlApi = {
   // ------------------ PRODUCT ------------------------
   getFavoriteProducts: BASE_PATH_MENU + 'getMyMenuCustomer',
   // addFavoriteProduct: BASE_PATH_MENU + 'createMyMenuCustomer',
   reomveFavoriteProduct: BASE_PATH_MENU + 'cancelMyMenuCustomer',
   getProductMenu: BASE_PATH_MENU + 'getMenuShop',
+  getVoucher: BASE_PATH_CAFE + 'marketings-v2/voucher/event',
   getProductExpired: BASE_PATH_MENU + 'getProductExpired',
   getTopPurchasedApi: BASE_PATH_CAFE + 'reports/top-purchased-products',
   getRecommendedProductsUrl:

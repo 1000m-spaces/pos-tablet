@@ -1,2 +1,1 @@
-
-export const order = state => state.order.order;
+export const currentOrderSelector = state => state.order.currentOrder;

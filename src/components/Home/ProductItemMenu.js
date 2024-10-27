@@ -7,7 +7,7 @@ import FastImage from 'react-native-fast-image';
 
 import {StyleSheet} from 'react-native';
 import Colors from 'theme/Colors';
-const ProductItem = ({onPressDetail, product, index}) => {
+const ProductItemMenu = ({onPressDetail, product}) => {
   if (!product) {
     console.log('product is undefined');
     return;
@@ -25,10 +25,10 @@ const ProductItem = ({onPressDetail, product, index}) => {
               : `${IMAGE_URL}${product.prodimg}`,
             priority: FastImage.priority.high,
           }}
-          // resizeMode={FastImage.resizeMode.stretch}
+          resizeMode={FastImage.resizeMode.cover}
         />
         <View style={{padding: 16, alignItems: 'center'}}>
-          <TextSmallMedium llMedium numberOfLines={2} style={styles.textName}>
+          <TextSmallMedium numberOfLines={2} style={styles.textName}>
             {product.prodname}
           </TextSmallMedium>
           <TextNormalSemiBold style={styles.priceText}>
@@ -40,18 +40,18 @@ const ProductItem = ({onPressDetail, product, index}) => {
   );
 };
 
-export default memo(ProductItem);
+export default ProductItemMenu;
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    // alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 12,
-    marginRight: 14,
+    marginRight: 16,
     height: 248,
     marginBottom: 24,
     // flex: 1,
-    width: 190,
+    width: '30%',
   },
   content: {
     // justifyContent: 'space-between',
@@ -60,8 +60,6 @@ const styles = StyleSheet.create({
   },
   image: {
     height: 142,
-    width: 190,
-    // borderRadiusTopLeft: 12,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },

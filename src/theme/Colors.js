@@ -19,6 +19,9 @@ const Colors = {
   grayText: '#484848',
   inactiveText: '#808080',
   topping: '#727272',
+  placeholder: '#ABABAB',
+  line: '#E4E4E4',
+  bgInputNote: '#EDEDED',
 };
 
 export default Colors;

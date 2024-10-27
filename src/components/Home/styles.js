@@ -6,7 +6,7 @@ const styles = StyleSheet.create({
   storeText:{fontSize: 28, marginBottom: 4},
   searchHeader: {
     borderRadius: 12,
-    width: 295,
+    width: '50%',
     height: 48,
     alignItems: 'center',
     backgroundColor: Colors.whiteColor,

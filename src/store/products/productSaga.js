@@ -36,7 +36,33 @@ function* setProductSaga({payload}) {
     });
   }
 }
+
+function* getVoucherSaga({payload}) {
+  console.log('payload saga::', payload)
+  try {
+    const result = yield call(ProductController.getVoucher, payload);
+    if (result && result.success) {
+      yield put({
+        type: NEOCAFE.GET_VOUCHER_SUCCESS,
+        payload: result.data,
+      });
+    } else {
+      yield put({
+        type: NEOCAFE.GET_VOUCHER_ERROR,
+        payload,
+      });
+    }
+  } catch (error) {
+    yield put({
+      type: NEOCAFE.GET_VOUCHER_ERROR,
+      payload: {
+        errorMsg: error,
+      },
+    });
+  }
+}
 export default function* watcherSaga() {
   yield takeLatest(NEOCAFE.GET_MENU_REQUEST, getMenuSaga);
-  yield takeLatest(NEOCAFE.SET_PRODUCT_REQUEST, setProductSaga)
+  yield takeLatest(NEOCAFE.SET_PRODUCT_REQUEST, setProductSaga);
+  yield takeLatest(NEOCAFE.GET_VOUCHER_REQUEST, getVoucherSaga);
 }

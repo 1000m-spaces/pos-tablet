@@ -40,12 +40,34 @@ function* createOrderSaga({payload}) {
     });
   }
 }
+function* setOrderSaga({payload}) {
+  try {
+    yield put({
+      type: NEOCAFE.SET_ORDER_SUCCESS,
+      payload,
+    });
+  } catch (error) {
+    yield put({
+      type: NEOCAFE.SET_ORDER_ERROR,
+    });
+  }
+}
+function* addProductCartSaga({payload}) {
+  try {
+    yield put({
+      type: NEOCAFE.ADD_PRODUCT_CART_SUCCESS,
+      payload,
+    });
+  } catch (error) {
+    yield put({
+      type: NEOCAFE.ADD_PRODUCT_CART_ERROR,
+    });
+  }
+}
 
 export default function* watcherSaga() {
-  // yield takeLatest(NEOCAFE.SEND_PHONE_REQUEST, sendPhoneSaga);
-  
   yield takeLatest(NEOCAFE.CREATE_ORDER_REQUEST, createOrderSaga);
-  // yield takeLatest(NEOCAFE.LOGIN_PHONE_REQUEST, loginPhone);
-  // yield takeLatest(NEOCAFE.LOGOUT_REQUEST, logout);
-  // yield takeLatest(NEOCAFE.GET_VERSION_REQUEST, getVersions);
+  yield takeLatest(NEOCAFE.ADD_PRODUCT_CART_REQUEST, addProductCartSaga);
+  yield takeLatest(NEOCAFE.SET_ORDER_REQUEST, setOrderSaga);
+
 }

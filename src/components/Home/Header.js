@@ -20,6 +20,7 @@ const Header = ({productMenu, currentCate, setCurrentCate}) => {
         <TextNormal
           style={{
             fontWeight: currentCate === index ? '500' : '400',
+            textTransform: 'capitalize',
             color:
               currentCate === index ? Colors.whiteColor : Colors.inactiveText,
           }}>
@@ -48,7 +49,7 @@ const Header = ({productMenu, currentCate, setCurrentCate}) => {
       </View>
       <FlatList
         data={productMenu || []}
-        keyExtractor={(cate, idx) => `${cate.name}_${cate.id}_${idx}`}
+        keyExtractor={(_, idx) => idx}
         renderItem={renderTabCate}
         horizontal={true}
         showsHorizontalScrollIndicator={false}

@@ -11,15 +11,17 @@ import Modal from 'react-native-modal';
 import Options from './Options';
 import {useDispatch, useSelector} from 'react-redux';
 import {productSelector} from 'store/selectors';
-import {setProductAction} from 'store/actions';
+import {addProductCart, setProductAction} from 'store/actions';
 import ProductSection from './ProductSection';
 import ExtraSection from './ExtraSection';
-import {heightDevices, widthDevices} from '../../app';
+import QuantityProduct from './QuantityProduct';
+import {heightDevice, widthDevice} from 'assets/constans';
 const DetailProduct = ({isVisiable, close}) => {
   const dispatch = useDispatch();
   const detailProduct = useSelector(state => productSelector(state));
   const [options, setOptions] = useState([]);
   const [topping, setTopping] = useState([]);
+  const [quantity, setQuantity] = useState(1);
   const setupOption = () => {
     if (detailProduct?.options === false) {
       return;
@@ -34,7 +36,7 @@ const DetailProduct = ({isVisiable, close}) => {
     if (detailProduct?.extras === false) {
       return;
     }
-    const mapSubTypes = new Map( // initialize Map object {extraId, {data}}
+    const mapSubTypes = new Map(
       detailProduct.extras[0].map(item => {
         return [
           item?.group_type,
@@ -47,7 +49,7 @@ const DetailProduct = ({isVisiable, close}) => {
     );
     const tempMapExtra = new Map();
     detailProduct?.extras[0].map(item => {
-      tempMapExtra.set(item?.id, {...item, value: false}); // Set the value
+      tempMapExtra.set(item?.id, {...item, value: false});
       if (mapSubTypes.has(item?.group_type)) {
         mapSubTypes.get(item?.group_type)?.data.push({
           ...item,
@@ -80,9 +82,9 @@ const DetailProduct = ({isVisiable, close}) => {
   useEffect(() => {
     updateOptionProduct();
   }, [options]);
-  useEffect(() => {
-    console.log('detail product:::', JSON.stringify(detailProduct));
-  }, [detailProduct]);
+  // useEffect(() => {
+  //   console.log('detail product:::', JSON.stringify(detailProduct));
+  // }, [detailProduct]);
   const onSelectOption = option => {
     const list = JSON.parse(JSON.stringify(options));
     list.map(o => {
@@ -139,6 +141,22 @@ const DetailProduct = ({isVisiable, close}) => {
   useEffect(() => {
     updateExtraProduct();
   }, [topping]);
+  const onAddingCart = () => {
+    let total_price = detailProduct.prodprice || 0;
+    detailProduct.extra_items.map(e => {
+      if (e.def_price && e.def_price > 0) {
+        total_price += e.def_price;
+      }
+    });
+    dispatch(
+      addProductCart({
+        ...detailProduct,
+        quantity,
+        total_price,
+      }),
+    );
+    close();
+  };
   return (
     <Modal
       isVisible={isVisiable}
@@ -148,7 +166,7 @@ const DetailProduct = ({isVisiable, close}) => {
       style={styles.containerModal}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        style={{borderRadius: 16, paddingVertical: 24}}>
+        style={styles.containerView}>
         <ProductSection detailProduct={detailProduct} />
         {/* OPTION PRODUCT */}
         {options && options.length > 0 && (
@@ -159,7 +177,14 @@ const DetailProduct = ({isVisiable, close}) => {
         )}
 
         <ExtraSection topping={topping} onSelectTopping={onSelectTopping} />
+        <View style={{height: 96}} />
       </ScrollView>
+      <QuantityProduct
+        detailProduct={detailProduct}
+        quantity={quantity}
+        onAddingCart={onAddingCart}
+        updateQuantity={val => setQuantity(prev => (prev += val))}
+      />
     </Modal>
   );
 };
@@ -167,15 +192,16 @@ const DetailProduct = ({isVisiable, close}) => {
 export default DetailProduct;
 
 const styles = StyleSheet.create({
+  containerView: {borderRadius: 16, paddingVertical: 24},
   containerModal: {
-    width: 568,
-    height: 628,
+    width: heightDevice > widthDevice ? heightDevice * 0.5 : widthDevice * 0.5,
+    height: heightDevice > widthDevice ? widthDevice * 0.75 : heightDevice * 0.75,
     backgroundColor: 'white',
     borderRadius: 16,
     // position: 'absolute',
     // top: 103,
-    left: (Dimensions.get('window').width - 568) / 2,
-    margin: 0,
+    left: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
+    margin: 10,
   },
   line: {height: 6, backgroundColor: '#F5F5F5'},
 });

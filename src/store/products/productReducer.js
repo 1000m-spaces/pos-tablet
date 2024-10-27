@@ -8,11 +8,36 @@ const initialState = {
   errorProductMenu: '',
 
   currentProduct: null,
-  statusSetProduct: Status.DEFAULT
+  statusSetProduct: Status.DEFAULT,
+
+  vouchers: [],
+  statusGetVoucher: Status.DEFAULT,
 };
 
 export default (state = initialState, {type, payload}) => {
   switch (type) {
+    // GET VOUCHER
+    case NEOCAFE.GET_VOUCHER_REQUEST:
+      return {
+        ...state,
+        statusGetVoucher: Status.LOADING,
+      };
+    case NEOCAFE.GET_VOUCHER_SUCCESS:
+      return {
+        ...state,
+        vouchers: payload,
+        statusGetVoucher: Status.SUCCESS,
+      };
+    case NEOCAFE.GET_VOUCHER_ERROR:
+      return {
+        ...state,
+        statusGetVoucher: Status.ERROR,
+      };
+    case NEOCAFE.GET_VOUCHER_RESET:
+      return {
+        ...state,
+        statusGetVoucher: Status.DEFAULT,
+      };
     // SET CURRENT PRODUCT
      case NEOCAFE.SET_PRODUCT_REQUEST:
       return {
@@ -45,7 +70,7 @@ export default (state = initialState, {type, payload}) => {
       const products = setupProduct(payload);
       return {
         ...state,
-        productMenu: products || [],
+        productMenu: products.filter(a => a.products.length > 0) || [],
         statusProductMenu: Status.SUCCESS,
       };
     case NEOCAFE.GET_MENU_ERROR:

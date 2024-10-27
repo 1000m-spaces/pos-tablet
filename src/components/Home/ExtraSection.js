@@ -52,8 +52,10 @@ const ExtraSection = ({topping, onSelectTopping}) => {
     <View style={styles.wrapperSection}>
       <FlatList
         data={topping}
+        scrollEnabled={false}
         keyExtractor={(op, _) => op?.id}
         renderItem={renderTopping}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );

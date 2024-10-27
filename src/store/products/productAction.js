@@ -16,3 +16,13 @@ export const setProductAction = payload => ({
 export const resetSettingProductAction = () => ({
   type: NEOCAFE.SET_PRODUCT_RESET,
 });
+
+export const applyVoucherAction = payload => ({
+  type: NEOCAFE.APPLY_VOUCHER_REQUEST,
+  payload,
+});
+
+export const getVoucherAction = payload => ({
+  type: NEOCAFE.GET_VOUCHER_REQUEST,
+  payload,
+});

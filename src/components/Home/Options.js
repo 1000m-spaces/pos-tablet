@@ -5,6 +5,7 @@ import {FlatList, StyleSheet, TouchableOpacity, View} from 'react-native';
 import Colors from 'theme/Colors';
 
 const Options = ({options, onSelectOption}) => {
+  console.log('options:', options);
   const optionHeader = () => {
     return (
       <View style={styles.wrapperTitle}>
@@ -36,6 +37,7 @@ const Options = ({options, onSelectOption}) => {
     <View style={styles.wrapperSection}>
       <FlatList
         data={options}
+        scrollEnabled={false}
         ListHeaderComponent={options.length > 0 ? optionHeader : null}
         keyExtractor={(op, _) => op?.id}
         renderItem={renderOption}
@@ -57,7 +59,7 @@ const styles = StyleSheet.create({
     borderStyle: 'solid',
   },
 
-  nameText: {paddingLeft: 10, fontSize: 16},
+  nameText: {paddingLeft: 10, fontSize: 16, color: Colors.topping},
 
   wrapperSection: {backgroundColor: 'white', padding: 24},
   wrapperTitle: {flexDirection: 'row', alignItems: 'center', paddingBottom: 4},
