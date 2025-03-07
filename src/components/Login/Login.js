@@ -26,7 +26,7 @@ import Svg from 'common/Svg/Svg';
 import Status from 'common/Status/Status';
 import {background_login} from 'assets/constans';
 import Colors from 'theme/Colors';
-import {loginInternal} from 'store/actions';
+import {loginInternal, setScreenAction} from 'store/actions';
 import strings from 'localization/Localization';
 import styles from './styles';
 
@@ -49,6 +49,7 @@ const Login = props => {
 
   useEffect(() => {
     if (statusLogin === Status.SUCCESS) {
+      dispatch(setScreenAction(NAVIGATION_HOME));
       props.navigation.navigate(NAVIGATION_MAIN, {});
     } else if (statusLogin === Status.ERROR) {
       setShowError(true);

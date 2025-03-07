@@ -11,3 +11,4 @@ export const userInfo = state => state.auth.userInfo;
 export const isErrorSendOtp = state => state.auth.errorSendOtp;
 export const isUpdateInstalledCodePush = state =>
   state.auth.updateInstalledCodePush;
+export const screenSelector = state => state.auth.currentScreen;
