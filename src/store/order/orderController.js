@@ -1,22 +1,40 @@
 import HttpClient from 'http/HttpClient';
-import {UrlApi} from 'http/UrlApi';
+import { UrlApi } from 'http/UrlApi';
 
 class OrderController {
   createOrderController = async payload => {
     try {
       console.log('payload create order', payload);
-      const {data} = await HttpClient.post(UrlApi.orderInternal, payload);
-      return {success: true, data: data};
+      const { data } = await HttpClient.post(UrlApi.orderInternal, payload);
+      return { success: true, data: data };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   };
   getOnlineOrder = async payload => {
     try {
-      const {data} = await HttpClient.post(UrlApi.getOnlineOrder, payload);
-      return {success: true, data: data.data};
+      const { data } = await HttpClient.post(UrlApi.getOnlineOrder, payload);
+      return { success: true, data: data.data };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
+    }
+  };
+  fetchOrder = async payload => {
+    try {
+      console.log('fetchOrder', UrlApi.fetchOrder, payload);
+      const { data } = await HttpClient.post(UrlApi.fetchOrder, payload);
+      return { success: true, data: data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+  getOrderDetail = async payload => {
+    console.log('getOrderDetail', UrlApi.fetchOrderDetail, payload);
+    try {
+      const { data } = await HttpClient.post(UrlApi.fetchOrderDetail, payload);
+      return { success: true, data: data };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
   };
 }
