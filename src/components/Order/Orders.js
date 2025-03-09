@@ -459,23 +459,6 @@ const Orders = () => {
     })
   }, [])
 
-
-  const renderItem = ({ item }) => (
-    <View style={styles.row}>
-      <TextNormal style={styles.text}>{'GRAB'}</TextNormal>
-      <TextNormal style={styles.text}>{item.displayID}</TextNormal>
-      {/* <TextNormal style={styles.text}>{item.time}</TextNormal> */}
-      <TextNormal style={styles.text}>{item.orderValue}</TextNormal>
-      <TextNormal style={styles.text}>{item.itemInfo.count}</TextNormal>
-      <View style={[styles.badge, styles.badgeRed]}>
-        <TextNormal style={styles.badgeText}>{'Chưa in'}</TextNormal>
-      </View>
-      <View style={[styles.badge, styles.badgeBlue]}>
-        <TextNormal style={styles.badgeText}>{item.state}</TextNormal>
-      </View>
-    </View>
-  );
-
   const renderFilter = ({ item, index }) => {
     return (
       <TouchableOpacity
@@ -538,8 +521,6 @@ const Orders = () => {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Table */}
         <OrderTable orders={data} />
       </View>
     </View>
