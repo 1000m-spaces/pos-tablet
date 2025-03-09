@@ -24,7 +24,7 @@ const App = () => {
   const connectPrinter = (host, port) => {
     NetPrinter.connectPrinter(host, port).then(
       printer => setCurrentPrinter(printer),
-      error => console.log(error),
+      error => console.warn(error),
     );
   };
 
