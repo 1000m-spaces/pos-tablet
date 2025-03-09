@@ -1,85 +1,482 @@
 import Icons from 'common/Icons/Icons';
 import Svg from 'common/Svg/Svg';
-import {TextNormal} from 'common/Text/TextFont';
-import React, {useEffect, useState} from 'react';
+import { TextNormal } from 'common/Text/TextFont';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
 } from 'react-native';
-import {useDispatch, useSelector} from 'react-redux';
-import {getOnlineOrder} from 'store/actions';
-import {asyncStorage} from 'store/index';
-import { onlineOrderSelector } from 'store/selectors';
+import orderController from 'store/order/orderController';
 import Colors from 'theme/Colors';
+import OrderTable from './OrderTable';
 
-const data = [
-  {
-    id: 1,
-    partner: 'Grab',
-    orderId: '#GF-249',
-    time: '15-01-2025 12:33',
-    total: '95.500',
-    items: 3,
-    status: 'Chưa in',
-    type: 'Đơn mới',
+const dumy = {
+  "orders": [{
+    "orderID": "ORD12345",
+    "displayID": "D12345",
+    "itemInfo": {
+      "count": 2,
+      "items": [
+        {
+          "itemID": "ITEM001",
+          "name": "Burger",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM002",
+          "name": "Fries",
+          "quantity": 2
+        }
+      ]
+    },
+    "state": "Confirmed",
+    "deliveryTaskpoolStatus": "Pending",
+    "preparationTaskpoolStatus": "In Progress",
+    "orderValue": "15.99"
   },
   {
-    id: 2,
-    partner: 'Grab',
-    orderId: '#GF-249',
-    time: '15-01-2025 12:05',
-    total: '316.000',
-    items: 5,
-    status: 'Chưa in',
-    type: 'Đơn mới',
+    "orderID": "ORD67890",
+    "displayID": "D67890",
+    "itemInfo": {
+      "count": 3,
+      "items": [
+        {
+          "itemID": "ITEM003",
+          "name": "Pizza",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM004",
+          "name": "Soda",
+          "quantity": 2
+        },
+        {
+          "itemID": "ITEM005",
+          "name": "Ice Cream",
+          "quantity": 1
+        }
+      ]
+    },
+    "state": "Delivered",
+    "deliveryTaskpoolStatus": "Completed",
+    "preparationTaskpoolStatus": "Done",
+    "orderValue": "25.50"
+  }, {
+    "orderID": "ORD12345",
+    "displayID": "D12345",
+    "itemInfo": {
+      "count": 2,
+      "items": [
+        {
+          "itemID": "ITEM001",
+          "name": "Burger",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM002",
+          "name": "Fries",
+          "quantity": 2
+        }
+      ]
+    },
+    "state": "Confirmed",
+    "deliveryTaskpoolStatus": "Pending",
+    "preparationTaskpoolStatus": "In Progress",
+    "orderValue": "15.99"
   },
   {
-    id: 3,
-    partner: 'Shopee',
-    orderId: '#8837',
-    time: '15-01-2025 11:50',
-    total: '187.000',
-    items: 4,
-    status: 'Chưa in',
-    type: 'Đơn mới',
+    "orderID": "ORD67890",
+    "displayID": "D67890",
+    "itemInfo": {
+      "count": 3,
+      "items": [
+        {
+          "itemID": "ITEM003",
+          "name": "Pizza",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM004",
+          "name": "Soda",
+          "quantity": 2
+        },
+        {
+          "itemID": "ITEM005",
+          "name": "Ice Cream",
+          "quantity": 1
+        }
+      ]
+    },
+    "state": "Delivered",
+    "deliveryTaskpoolStatus": "Completed",
+    "preparationTaskpoolStatus": "Done",
+    "orderValue": "25.50"
+  }, {
+    "orderID": "ORD12345",
+    "displayID": "D12345",
+    "itemInfo": {
+      "count": 2,
+      "items": [
+        {
+          "itemID": "ITEM001",
+          "name": "Burger",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM002",
+          "name": "Fries",
+          "quantity": 2
+        }
+      ]
+    },
+    "state": "Confirmed",
+    "deliveryTaskpoolStatus": "Pending",
+    "preparationTaskpoolStatus": "In Progress",
+    "orderValue": "15.99"
   },
-];
+  {
+    "orderID": "ORD67890",
+    "displayID": "D67890",
+    "itemInfo": {
+      "count": 3,
+      "items": [
+        {
+          "itemID": "ITEM003",
+          "name": "Pizza",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM004",
+          "name": "Soda",
+          "quantity": 2
+        },
+        {
+          "itemID": "ITEM005",
+          "name": "Ice Cream",
+          "quantity": 1
+        }
+      ]
+    },
+    "state": "Delivered",
+    "deliveryTaskpoolStatus": "Completed",
+    "preparationTaskpoolStatus": "Done",
+    "orderValue": "25.50"
+  }, {
+    "orderID": "ORD12345",
+    "displayID": "D12345",
+    "itemInfo": {
+      "count": 2,
+      "items": [
+        {
+          "itemID": "ITEM001",
+          "name": "Burger",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM002",
+          "name": "Fries",
+          "quantity": 2
+        }
+      ]
+    },
+    "state": "Confirmed",
+    "deliveryTaskpoolStatus": "Pending",
+    "preparationTaskpoolStatus": "In Progress",
+    "orderValue": "15.99"
+  },
+  {
+    "orderID": "ORD67890",
+    "displayID": "D67890",
+    "itemInfo": {
+      "count": 3,
+      "items": [
+        {
+          "itemID": "ITEM003",
+          "name": "Pizza",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM004",
+          "name": "Soda",
+          "quantity": 2
+        },
+        {
+          "itemID": "ITEM005",
+          "name": "Ice Cream",
+          "quantity": 1
+        }
+      ]
+    },
+    "state": "Delivered",
+    "deliveryTaskpoolStatus": "Completed",
+    "preparationTaskpoolStatus": "Done",
+    "orderValue": "25.50"
+  }, {
+    "orderID": "ORD12345",
+    "displayID": "D12345",
+    "itemInfo": {
+      "count": 2,
+      "items": [
+        {
+          "itemID": "ITEM001",
+          "name": "Burger",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM002",
+          "name": "Fries",
+          "quantity": 2
+        }
+      ]
+    },
+    "state": "Confirmed",
+    "deliveryTaskpoolStatus": "Pending",
+    "preparationTaskpoolStatus": "In Progress",
+    "orderValue": "15.99"
+  },
+  {
+    "orderID": "ORD67890",
+    "displayID": "D67890",
+    "itemInfo": {
+      "count": 3,
+      "items": [
+        {
+          "itemID": "ITEM003",
+          "name": "Pizza",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM004",
+          "name": "Soda",
+          "quantity": 2
+        },
+        {
+          "itemID": "ITEM005",
+          "name": "Ice Cream",
+          "quantity": 1
+        }
+      ]
+    },
+    "state": "Delivered",
+    "deliveryTaskpoolStatus": "Completed",
+    "preparationTaskpoolStatus": "Done",
+    "orderValue": "25.50"
+  }, {
+    "orderID": "ORD12345",
+    "displayID": "D12345",
+    "itemInfo": {
+      "count": 2,
+      "items": [
+        {
+          "itemID": "ITEM001",
+          "name": "Burger",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM002",
+          "name": "Fries",
+          "quantity": 2
+        }
+      ]
+    },
+    "state": "Confirmed",
+    "deliveryTaskpoolStatus": "Pending",
+    "preparationTaskpoolStatus": "In Progress",
+    "orderValue": "15.99"
+  },
+  {
+    "orderID": "ORD67890",
+    "displayID": "D67890",
+    "itemInfo": {
+      "count": 3,
+      "items": [
+        {
+          "itemID": "ITEM003",
+          "name": "Pizza",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM004",
+          "name": "Soda",
+          "quantity": 2
+        },
+        {
+          "itemID": "ITEM005",
+          "name": "Ice Cream",
+          "quantity": 1
+        }
+      ]
+    },
+    "state": "Delivered",
+    "deliveryTaskpoolStatus": "Completed",
+    "preparationTaskpoolStatus": "Done",
+    "orderValue": "25.50"
+  }, {
+    "orderID": "ORD12345",
+    "displayID": "D12345",
+    "itemInfo": {
+      "count": 2,
+      "items": [
+        {
+          "itemID": "ITEM001",
+          "name": "Burger",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM002",
+          "name": "Fries",
+          "quantity": 2
+        }
+      ]
+    },
+    "state": "Confirmed",
+    "deliveryTaskpoolStatus": "Pending",
+    "preparationTaskpoolStatus": "In Progress",
+    "orderValue": "15.99"
+  },
+  {
+    "orderID": "ORD67890",
+    "displayID": "D67890",
+    "itemInfo": {
+      "count": 3,
+      "items": [
+        {
+          "itemID": "ITEM003",
+          "name": "Pizza",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM004",
+          "name": "Soda",
+          "quantity": 2
+        },
+        {
+          "itemID": "ITEM005",
+          "name": "Ice Cream",
+          "quantity": 1
+        }
+      ]
+    },
+    "state": "Delivered",
+    "deliveryTaskpoolStatus": "Completed",
+    "preparationTaskpoolStatus": "Done",
+    "orderValue": "25.50"
+  },
+  {
+    "orderID": "ORD12345",
+    "displayID": "D12345",
+    "itemInfo": {
+      "count": 2,
+      "items": [
+        {
+          "itemID": "ITEM001",
+          "name": "Burger",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM002",
+          "name": "Fries",
+          "quantity": 2
+        }
+      ]
+    },
+    "state": "Confirmed",
+    "deliveryTaskpoolStatus": "Pending",
+    "preparationTaskpoolStatus": "In Progress",
+    "orderValue": "15.99"
+  },
+  {
+    "orderID": "ORD67890",
+    "displayID": "D67890",
+    "itemInfo": {
+      "count": 3,
+      "items": [
+        {
+          "itemID": "ITEM003",
+          "name": "Pizza",
+          "quantity": 1
+        },
+        {
+          "itemID": "ITEM004",
+          "name": "Soda",
+          "quantity": 2
+        },
+        {
+          "itemID": "ITEM005",
+          "name": "Ice Cream",
+          "quantity": 1
+        }
+      ]
+    },
+    "state": "Delivered",
+    "deliveryTaskpoolStatus": "Completed",
+    "preparationTaskpoolStatus": "Done",
+    "orderValue": "25.50"
+  },
+  {
+    "orderID": "ORD54321",
+    "displayID": "D54321",
+    "itemInfo": {
+      "count": 1,
+      "items": [
+        {
+          "itemID": "ITEM006",
+          "name": "Salad",
+          "quantity": 1
+        }
+      ]
+    },
+    "state": "Cancelled",
+    "deliveryTaskpoolStatus": "N/A",
+    "preparationTaskpoolStatus": "Not Started",
+    "orderValue": "10.00"
+  }
+  ]
+}
+
+
 const orderFilters = [
-  {id: 1, name: 'Đơn mới'},
-  {id: 2, name: 'Đơn đặt trước'},
-  {id: 3, name: 'Lịch sử'},
+  { id: 1, name: 'Đơn mới' },
+  { id: 2, name: 'Đơn đặt trước' },
+  { id: 3, name: 'Lịch sử' },
 ];
 const Orders = () => {
-  const dispatch = useDispatch();
-  const onlineOrder = useSelector(state => onlineOrderSelector(state));
+  const [data, setData] = useState([])
   const [orderType, setOrderType] = useState(1);
   useEffect(() => {
-    dispatch(getOnlineOrder({rest_id: '237'}));
-  }, []);
-  useEffect(() => {
-    console.log('onlineOrder::', onlineOrder);
-  }, [onlineOrder]);
+    orderController.fetchOrder({
+      branch_id: 249,
+      brand_id: 110,
+      merchant_id: 133,
+      service: "GRAB"
+    }).then((res) => {
+      console.log('res', res)
+      if (res.success) {
+        setData(dumy.orders)
+      }
+    })
+  }, [])
 
-  const renderItem = ({item}) => (
+
+  const renderItem = ({ item }) => (
     <View style={styles.row}>
-      <TextNormal style={styles.text}>{item.partner}</TextNormal>
-      <TextNormal style={styles.text}>{item.orderId}</TextNormal>
-      <TextNormal style={styles.text}>{item.time}</TextNormal>
-      <TextNormal style={styles.text}>{item.total}</TextNormal>
-      <TextNormal style={styles.text}>{item.items}</TextNormal>
+      <TextNormal style={styles.text}>{'GRAB'}</TextNormal>
+      <TextNormal style={styles.text}>{item.displayID}</TextNormal>
+      {/* <TextNormal style={styles.text}>{item.time}</TextNormal> */}
+      <TextNormal style={styles.text}>{item.orderValue}</TextNormal>
+      <TextNormal style={styles.text}>{item.itemInfo.count}</TextNormal>
       <View style={[styles.badge, styles.badgeRed]}>
-        <TextNormal style={styles.badgeText}>{item.status}</TextNormal>
+        <TextNormal style={styles.badgeText}>{'Chưa in'}</TextNormal>
       </View>
       <View style={[styles.badge, styles.badgeBlue]}>
-        <TextNormal style={styles.badgeText}>{item.type}</TextNormal>
+        <TextNormal style={styles.badgeText}>{item.state}</TextNormal>
       </View>
     </View>
   );
 
-  const renderFilter = ({item, index}) => {
+  const renderFilter = ({ item, index }) => {
     return (
       <TouchableOpacity
         key={item.id}
@@ -120,22 +517,22 @@ const Orders = () => {
             showsHorizontalScrollIndicator={false}
             renderItem={renderFilter}
           />
-          <View style={{flexDirection: 'row'}}>
+          <View style={{ flexDirection: 'row' }}>
             <TouchableOpacity style={styles.searchInput}>
               <Svg name={'search'} size={20} color={'gray'} />
-              <TextNormal style={{marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10}}>
+              <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
                 {new Date().toLocaleDateString('en-GB')}
               </TextNormal>
             </TouchableOpacity>
             <TouchableOpacity style={styles.searchInput}>
               <Svg name={'search'} size={20} color={'gray'} />
-              <TextNormal style={{marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10}}>
+              <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
                 {'All'}
               </TextNormal>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.searchInput, {flex: 1}]}>
+            <TouchableOpacity style={[styles.searchInput, { flex: 1 }]}>
               <Svg name={'search'} size={20} />
-              <TextNormal style={{color: Colors.secondary}}>
+              <TextNormal style={{ color: Colors.secondary }}>
                 {' Tìm kiếm món'}
               </TextNormal>
             </TouchableOpacity>
@@ -143,34 +540,7 @@ const Orders = () => {
         </View>
 
         {/* Table */}
-        <View style={styles.table}>
-          <FlatList
-            data={data}
-            ListHeaderComponent={() => {
-              return (
-                <View style={styles.row}>
-                  <TextNormal style={styles.textHeader}>{'Đối tác'}</TextNormal>
-                  <TextNormal style={styles.textHeader}>
-                    {'Mã đơn hàng'}
-                  </TextNormal>
-                  <TextNormal style={styles.textHeader}>
-                    {'Thời gian nhận đơn'}
-                  </TextNormal>
-                  <TextNormal style={styles.textHeader}>
-                    {'Tổng tiền'}
-                  </TextNormal>
-                  <TextNormal style={styles.textHeader}>{'Số món'}</TextNormal>
-                  <TextNormal style={styles.textHeader}>{'Tem'}</TextNormal>
-                  <TextNormal style={styles.textHeader}>
-                    {'Trạng thái đơn'}
-                  </TextNormal>
-                </View>
-              );
-            }}
-            renderItem={renderItem}
-            keyExtractor={item => item.id.toString()}
-          />
-        </View>
+        <OrderTable orders={data} />
       </View>
     </View>
   );

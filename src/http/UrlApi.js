@@ -1,7 +1,10 @@
-import {BASE_PATH_MENU} from 'assets/config';
+import { BASE_PATH_MENU } from 'assets/config';
 // const BASE_PATH_MENU = 'https://test.mycafe.co/api1.0.php/';
 const BASE_PATH_CAFE = 'https://api.neocafe.tech/v1/';
 const BASE_PATH_CASE_DEV = 'https://dev-api-php.1000m.vn/api1.0.php/';
+
+const BASE_PATH_1000M = 'https://api.1000m.vn/'
+
 export const UrlApi = {
   // ------------------ PRODUCT ------------------------
   getFavoriteProducts: BASE_PATH_MENU + 'getMyMenuCustomer',
@@ -32,6 +35,10 @@ export const UrlApi = {
   getNotPaidOrder: BASE_PATH_CAFE + 'getOrderNotPaidNew',
   getOnlineOrder: BASE_PATH_CASE_DEV + 'getOrderOnlineNew',
   getNotCompleteOrder: BASE_PATH_CAFE + 'getOrderNotCompleteNew',
+
+  fetchOrder: BASE_PATH_1000M + 'synthetic/orders/v1/fetch',
+  fetchOrderDetail: BASE_PATH_1000M + 'synthetic/orders/v1/detail',
+
 
   createOrder: BASE_PATH_MENU + 'order',
   cancelOrder: BASE_PATH_MENU + 'cancelOrderOnline',
