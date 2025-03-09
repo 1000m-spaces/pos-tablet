@@ -55,3 +55,7 @@ export const getUpdateInstalledCodePush = isInstalled => ({
   type: 'UPDATE_INSTALLED_CODE_PUSH',
   payload: isInstalled,
 });
+export const setScreenAction = payload => ({
+  type: 'SET_SCREEN',
+  payload,
+});

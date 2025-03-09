@@ -66,10 +66,18 @@ import note_cart from './svgs/note_cart.svg';
 import voucher_cart from './svgs/voucher_cart.svg';
 import arrow_right from './svgs/arrow_right.svg';
 import icon_close from './svgs/icon_close.svg';
+import account_pos from './svgs/account_pos.svg';
+import history_pos from './svgs/history_pos.svg';
+import order_pos from './svgs/order_pos.svg';
+import menu_pos from './svgs/menu_pos.svg';
 export default {
   // POS
   icon_login_logo,
   icon_login_content,
+  account_pos,
+  history_pos,
+  order_pos,
+  menu_pos,
   search,
   arrow_right,
   logo_menu,

@@ -11,7 +11,8 @@ const initializeState = {
     delivery: null,
   },
   statusAddProductCart: Status.DEFAULT,
-
+  onlineOrders: [],
+  statusGetOnlineOrder: Status.DEFAULT,
   statusSetOrder: Status.DEFAULT,
   //order
   statusCreateOrder: Status.DEFAULT,
@@ -20,6 +21,29 @@ const initializeState = {
 
 export default (state = initializeState, {type, payload}) => {
   switch (type) {
+    // GET ONLINE ORDER
+    case NEOCAFE.GET_ONLINE_ORDER_REQUEST:
+      return {
+        ...state,
+        statusGetOnlineOrder: Status.LOADING,
+      };
+    case NEOCAFE.GET_ONLINE_ORDER_SUCCESS:
+      console.log('payload::', payload)
+      return {
+        ...state,
+        onlineOrders: payload,
+        statusGetOnlineOrder: Status.SUCCESS,
+      };
+    case NEOCAFE.GET_ONLINE_ORDER_ERROR:
+      return {
+        ...state,
+        statusGetOnlineOrder: Status.ERROR,
+      };
+    case NEOCAFE.GET_ONLINE_ORDER_RESET:
+      return {
+        ...state,
+        statusGetOnlineOrder: Status.DEFAULT,
+      };
     // ADD PRODUCT TO CART
     case NEOCAFE.ADD_PRODUCT_CART_REQUEST:
       return {

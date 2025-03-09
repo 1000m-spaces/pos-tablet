@@ -16,10 +16,18 @@ const initializeState = {
   versionNew: '',
   statusGetVersion: Status.DEFAULT,
   updateInstalledCodePush: false,
+
+  currentScreen: 'Home',
 };
 
 export default (state = initializeState, {type, payload}) => {
   switch (type) {
+    case 'SET_SCREEN':
+      return {
+        ...state,
+        currentScreen: payload,
+      };
+    // send phone
     case NEOCAFE.SEND_PHONE_REQUEST:
       return {
         ...state,

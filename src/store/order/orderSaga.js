@@ -64,10 +64,29 @@ function* addProductCartSaga({payload}) {
     });
   }
 }
-
+function* getOnlineOrderSaga({payload}) {
+  try {
+    const result = yield call(orderController.getOnlineOrder, payload);
+    console.log('result:::', result);
+    if (result && result.success) {
+      yield put({
+        type: NEOCAFE.GET_ONLINE_ORDER_SUCCESS,
+        payload: result.data,
+      });
+    } else {
+      yield put({
+        type: NEOCAFE.GET_ONLINE_ORDER_ERROR,
+      });
+    }
+  } catch (error) {
+    yield put({
+      type: NEOCAFE.GET_ONLINE_ORDER_ERROR,
+    });
+  }
+}
 export default function* watcherSaga() {
   yield takeLatest(NEOCAFE.CREATE_ORDER_REQUEST, createOrderSaga);
   yield takeLatest(NEOCAFE.ADD_PRODUCT_CART_REQUEST, addProductCartSaga);
   yield takeLatest(NEOCAFE.SET_ORDER_REQUEST, setOrderSaga);
-
+  yield takeLatest(NEOCAFE.GET_ONLINE_ORDER_REQUEST, getOnlineOrderSaga);
 }

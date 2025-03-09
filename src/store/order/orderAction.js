@@ -12,3 +12,12 @@ export const setOrderAction = payload => ({
   type: NEOCAFE.SET_ORDER_REQUEST,
   payload,
 });
+
+export const getOnlineOrder = payload => ({
+  type: NEOCAFE.GET_ONLINE_ORDER_REQUEST,
+  payload,
+});
+export const resetGetOnlineOrder = payload => ({
+  type: NEOCAFE.GET_ONLINE_ORDER_RESET,
+  payload,
+});

@@ -7,6 +7,7 @@ class ProductController {
   getProductMenu = async body => {
     try {
       const {data} = await HttpClient.post(UrlApi.internalMenuShop, body);
+      console.log('data:::', data)
       return {
         success: data ? true : false,
         categories: data ? data : [],

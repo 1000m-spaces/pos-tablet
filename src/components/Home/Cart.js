@@ -64,7 +64,9 @@ const Cart = ({showTable}) => {
           }}
         />
         <View style={styles.wrapperProductInfo}>
-          <TextNormal numberOfLines={1} style={styles.productName}>{item?.prodname}</TextNormal>
+          <TextNormal numberOfLines={1} style={styles.productName}>
+            {item?.prodname}
+          </TextNormal>
           <TextNormal style={styles.productTopping}>
             {`${item?.option_item.name_vn},`.replace('undefined,', '') +
               Array.from(
@@ -110,8 +112,10 @@ const Cart = ({showTable}) => {
             color:
               orderType === item.id ? Colors.whiteColor : Colors.inactiveText,
           }}>
-          {item.id === 1 && currentOrder.table > 0
-            ? `Thẻ ${currentOrder.table}`
+          {item.id === 1
+            ? currentOrder.table > 0
+              ? `Thẻ ${currentOrder.table}`
+              : 'Chọn số thẻ'
             : item.name}
         </TextNormal>
       </TouchableOpacity>
@@ -173,7 +177,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.whiteColor,
     flex: 0.6,
-    height: heightDevice,
+    // height: heightDevice,
   },
   image: {
     width: 57,

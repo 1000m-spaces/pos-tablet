@@ -8,5 +8,5 @@ import Main from './Main/Main';
 import Home from './Home/Home';
 import Login from './Login/Login';
 import VerifyCode from './VerifyCode/VerifyCode';
-
-export {Splash, Main, Home, Login, VerifyCode};
+import Order from './Order/Orders';
+export {Splash, Main, Home, Login, VerifyCode, Order};

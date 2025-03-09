@@ -29,6 +29,7 @@ const Home = ({navigation}) => {
       dispatch(getMenuAction(body));
     };
     initData();
+    console.log('productMenu', productMenu)
   }, []);
   const renderProductItems = ({item, _}) => {
     return (

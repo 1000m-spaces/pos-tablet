@@ -1,6 +1,7 @@
 import {BASE_PATH_MENU} from 'assets/config';
 // const BASE_PATH_MENU = 'https://test.mycafe.co/api1.0.php/';
 const BASE_PATH_CAFE = 'https://api.neocafe.tech/v1/';
+const BASE_PATH_CASE_DEV = 'https://dev-api-php.1000m.vn/api1.0.php/';
 export const UrlApi = {
   // ------------------ PRODUCT ------------------------
   getFavoriteProducts: BASE_PATH_MENU + 'getMyMenuCustomer',
@@ -27,10 +28,19 @@ export const UrlApi = {
   updateMessage: BASE_PATH_MENU + 'updateMessage',
 
   // ---------------------- ORDER ------------------------------
+  getPaidOrder: BASE_PATH_CAFE + 'getOrderPaidSuccessNew',
+  getNotPaidOrder: BASE_PATH_CAFE + 'getOrderNotPaidNew',
+  getOnlineOrder: BASE_PATH_CASE_DEV + 'getOrderOnlineNew',
+  getNotCompleteOrder: BASE_PATH_CAFE + 'getOrderNotCompleteNew',
+
   createOrder: BASE_PATH_MENU + 'order',
   cancelOrder: BASE_PATH_MENU + 'cancelOrderOnline',
   getListHistoryOrder: BASE_PATH_MENU + 'getOrderDetail',
 
+  orderSuccessPayment: BASE_PATH_MENU + 'getOrderPaidSuccessNew', // don da thanh toan
+  orderNotComplete: BASE_PATH_MENU + 'getOrderNotCompleteNew',
+  orderWaitingPayment: BASE_PATH_MENU + 'getOrderNotPaidNew', // chua thanh toan
+  onlineOrderList: BASE_PATH_MENU + 'getOrderOnlineNew',
   // --------------------- SHOP --------------------------------
   getListShop: BASE_PATH_MENU + 'getListShopByLocation1',
   getHistoryCashin: BASE_PATH_MENU + 'getTransactionsAddPoint',
