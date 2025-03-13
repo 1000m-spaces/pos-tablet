@@ -13,6 +13,7 @@ class ProductController {
         categories: data ? data : [],
       };
     } catch (error) {
+      console.log('error::', error)
       return {success: false, status: 400, products: [], categories: []};
     }
   };

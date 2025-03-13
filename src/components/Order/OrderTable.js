@@ -60,7 +60,7 @@ const OrderTable = ({ orders }) => {
                 </ScrollView>
             </ScrollView>
 
-            <Modal visible={modalVisible} transparent animationType="slide">
+            <Modal supportedOrientations={['portrait', 'landscape']} visible={modalVisible} transparent animationType="slide">
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
                         {selectedOrder && (
