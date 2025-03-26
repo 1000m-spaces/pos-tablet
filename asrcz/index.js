@@ -1,16 +1,16 @@
-import React, {useRef, useEffect, useState} from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 // import { Button, Platform, StyleSheet, Text, View } from 'react-native';
 import RNPrint from 'react-native-print';
 // import html2canvas from 'html2canvas';
-import {Buffer} from 'buffer';
+import { Buffer } from 'buffer';
 // import RNFS from 'react-native-fs';
 import TcpSocket from 'react-native-tcp-socket';
 import ViewShot from 'react-native-view-shot';
 import RNFS from 'react-native-fs';
 import ImageResizer from 'react-native-image-resizer';
-import {printImage, printText} from './printImage';
-import {Printer, PrinterConstants} from 'react-native-esc-pos-printer';
-import {View, Text, Image, Button, TouchableOpacity, Alert} from 'react-native';
+import { printImage, printText } from './printImage';
+import { Printer, PrinterConstants } from 'react-native-esc-pos-printer';
+import { View, Text, Image, Button, TouchableOpacity, Alert } from 'react-native';
 // import {
 //   NetworkPrinter,
 //   USBPrinter,
@@ -49,8 +49,8 @@ const App = () => {
     orderId: 'ORD-12345',
     date: new Date().toLocaleString(),
     items: [
-      {name: 'Cà phê sữa', price: 30000, quantity: 2},
-      {name: 'Bánh mì thịt', price: 25000, quantity: 1},
+      { name: 'Cà phê sữa', price: 30000, quantity: 2 },
+      { name: 'Bánh mì thịt', price: 25000, quantity: 1 },
     ],
     total: 85000,
     customerName: 'Nguyễn Văn A',
@@ -63,7 +63,7 @@ const App = () => {
   useEffect(() => {
     NetPrinter.init().then(() => {
       setPrinters([
-        {device_name: 'Xprinter', host: '192.168.1.100', port: 9100},
+        { device_name: 'Xprinter', host: '192.168.1.100', port: 9100 },
       ]);
     });
   }, []);
@@ -84,7 +84,9 @@ const App = () => {
       const printerInstance = new Printer({
         target: '192.168.1.100', // IP máy in XPrinter XP-Q800
         deviceName: 'XPrinter XP-Q800', // Tên máy in
+        language: PrinterConstants.LANG_VI,
       });
+      await printerInstance.addTextLang(PrinterConstants.LANG_VI);
 
       await printerInstance.addQueueTask(async () => {
         // Kiểm tra kết nối
@@ -97,7 +99,7 @@ const App = () => {
       // In nội dung
       await printerInstance.addText(
         'Xin chào, đây là test in trên XP-Q800!\n\n',
-        {encoding: 'CP1258'},
+        { encoding: 'CP1258' },
       );
       await printerInstance.addFeedLine();
       await printerInstance.addCut();
@@ -240,7 +242,7 @@ const App = () => {
   };
 
   return (
-    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
       {printers.map(printer => (
         <TouchableOpacity
           key={printer.device_id}
@@ -249,7 +251,7 @@ const App = () => {
         </TouchableOpacity>
       ))}
       {/* Thành phần cần in */}
-      <ViewShot ref={viewRef} options={{format: 'jpg', quality: 0.9}}>
+      <ViewShot ref={viewRef} options={{ format: 'jpg', quality: 0.9 }}>
         <View
           style={{
             width: 200,
@@ -262,7 +264,7 @@ const App = () => {
             source={{
               uri: 'https://reactnative.dev/img/tiny_logo.png',
             }}
-            style={{width: 50, height: 50}}
+            style={{ width: 50, height: 50 }}
           />
         </View>
       </ViewShot>
@@ -273,8 +275,8 @@ const App = () => {
       {/* Hiển thị ảnh đã chụp (debug) */}
       {imageUri && (
         <Image
-          source={{uri: imageUri}}
-          style={{width: 200, height: 100, marginTop: 10}}
+          source={{ uri: imageUri }}
+          style={{ width: 200, height: 100, marginTop: 10 }}
         />
       )}
       <TouchableOpacity onPress={print}>
