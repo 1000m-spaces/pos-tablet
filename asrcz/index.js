@@ -1,9 +1,24 @@
-import React, {useEffect, useState} from 'react';
+import React, {useRef, useEffect, useState} from 'react';
 // import { Button, Platform, StyleSheet, Text, View } from 'react-native';
-import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import RNPrint from 'react-native-print';
-import {View, Text, TouchableOpacity} from 'react-native';
+// import html2canvas from 'html2canvas';
+import {Buffer} from 'buffer';
+// import RNFS from 'react-native-fs';
+import TcpSocket from 'react-native-tcp-socket';
+import ViewShot from 'react-native-view-shot';
+import RNFS from 'react-native-fs';
+import ImageResizer from 'react-native-image-resizer';
+import {printImage, printText} from './printImage';
+import {Printer, PrinterConstants} from 'react-native-esc-pos-printer';
+import {View, Text, Image, Button, TouchableOpacity, Alert} from 'react-native';
+// import {
+//   NetworkPrinter,
+//   USBPrinter,
+//   NetPrinter,
+//   BLEPrinter,
+// } from 'react-native-thermal-receipt-printer-image-qr';
 import {
+  NetworkPrinter,
   USBPrinter,
   NetPrinter,
   BLEPrinter,
@@ -12,25 +27,199 @@ import {
 const App = () => {
   const [printers, setPrinters] = useState([]);
   const [currentPrinter, setCurrentPrinter] = useState(null);
+  const viewRef = useRef(null);
+  const [imageUri, setImageUri] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [client, setClient] = useState(null);
+  const [status, setStatus] = useState('Ready');
+
+  // ESC/POS commands for thermal printers
+  const COMMANDS = {
+    LF: Buffer.from([0x0a]),
+    ESC: Buffer.from([0x1b]),
+    GS: Buffer.from([0x1d]),
+    INIT: Buffer.from([0x1b, 0x40]),
+    CUT: Buffer.from([0x1d, 0x56, 0x41]),
+    CENTER: Buffer.from([0x1b, 0x61, 0x01]),
+    LEFT: Buffer.from([0x1b, 0x61, 0x00]),
+    RIGHT: Buffer.from([0x1b, 0x61, 0x02]),
+  };
+
+  const orderData = {
+    orderId: 'ORD-12345',
+    date: new Date().toLocaleString(),
+    items: [
+      {name: 'Cà phê sữa', price: 30000, quantity: 2},
+      {name: 'Bánh mì thịt', price: 25000, quantity: 1},
+    ],
+    total: 85000,
+    customerName: 'Nguyễn Văn A',
+  };
+
+  // Địa chỉ IP của máy in X-Printer (đổi theo IP thực tế)
+  const printerIP = '192.168.1.100';
+  const printerPort = 9100;
 
   useEffect(() => {
     NetPrinter.init().then(() => {
       setPrinters([
-        {device_name: 'Xprinter', host: '192.168.0.10', port: 9100},
+        {device_name: 'Xprinter', host: '192.168.1.100', port: 9100},
       ]);
     });
   }, []);
 
-  const connectPrinter = (host, port) => {
-    NetPrinter.connectPrinter(host, port).then(
-      printer => setCurrentPrinter(printer),
-      error => console.warn(error),
-    );
+  const connectPrinter = () => {
+    console.log('conneccttttt____printerrrr', printerIP, printerPort);
+    // NetPrinter.connectPrinter(printerIP, printerPort).then(
+    //   printer => {
+    //     console.log('printerrrr::::::', printer);
+    //     setCurrentPrinter(printer);
+    //   },
+    //   error => console.log(error),
+    // );
   };
+
+  const print = async () => {
+    try {
+      const printerInstance = new Printer({
+        target: '192.168.1.100', // IP máy in XPrinter XP-Q800
+        deviceName: 'XPrinter XP-Q800', // Tên máy in
+      });
+
+      await printerInstance.addQueueTask(async () => {
+        // Kiểm tra kết nối
+        await Printer.tryToConnectUntil(
+          printerInstance,
+          status => status.online.statusCode === PrinterConstants.TRUE,
+        );
+      });
+
+      // In nội dung
+      await printerInstance.addText(
+        'Xin chào, đây là test in trên XP-Q800!\n\n',
+        {encoding: 'CP1258'},
+      );
+      await printerInstance.addFeedLine();
+      await printerInstance.addCut();
+
+      // Gửi lệnh in
+      const result = await printerInstance.sendData();
+
+      // Ngắt kết nối sau khi in xong
+      await printerInstance.disconnect();
+
+      console.log('In thành công:', result);
+    } catch (error) {
+      console.error('Lỗi khi in:', error);
+    }
+  };
+
+  // Connect to printer
+  // const connectPrinter = () => {
+  //   console.log('connect to printer');
+  //   setStatus('Connecting...');
+  //   try {
+  //     const newClient = TcpSocket.createConnection({
+  //       host: printerIP,
+  //       port: parseInt(printerPort),
+  //       timeout: 3000,
+  //     });
+
+  //     newClient.on('connect', () => {
+  //       setClient(newClient);
+  //       setIsConnected(true);
+  //       setStatus('Connected');
+  //       console.log('connecteddddddd to printer');
+  //       // Initialize printer
+  //       newClient.write(COMMANDS.INIT);
+  //     });
+
+  //     newClient.on('error', error => {
+  //       setStatus(`Error: ${error.message}`);
+  //       console.log('connect to printer errorrrrr');
+  //       setIsConnected(false);
+  //     });
+
+  //     newClient.on('close', () => {
+  //       setStatus('Disconnected');
+  //       setIsConnected(false);
+  //       setClient(null);
+  //     });
+  //   } catch (error) {
+  //     setStatus(`Connection failed: ${error.message}`);
+  //   }
+  // };
+
+  // Print current view as image
+  const printScreen = async () => {
+    setStatus('Capturing screen...');
+    try {
+      // Capture the view as an image
+      console.log('pass to view.....');
+      const uri = await viewRef.current.capture(viewRef, {
+        format: 'png',
+        quality: 0.8,
+      });
+
+      const printer = new Printer({
+        target: '192.168.1.100',
+        deviceName: 'XPrinter XP-Q800',
+      });
+
+      // Khởi tạo đối tượng máy in với địa chỉ IP và cổng mặc định 9100
+      // await printer.addQueueTask(async () => {
+      //   await Printer.tryToConnectUntil(
+      //     printer,
+      //     status => status.online.statusCode === true,
+      //   );
+      // });
+      await printer.init();
+
+      await printer.addFeedLine();
+
+      await Printer.addViewShot(printer, {
+        viewNode: viewRef.current,
+      });
+
+      await printer.addCut();
+
+      const result = await printer.sendData();
+
+      await printer.disconnect();
+
+      setStatus('Processing image...', result);
+      // Prepare image data for printer
+      console.log('Processing text...', uri);
+
+      setStatus('Print complete');
+    } catch (error) {
+      console.log('printing error.....', error);
+      setStatus(`Print failed: ${error.message}`);
+    }
+  };
+
+  // Print text
+  // const printText = text => {
+  //   if (!isConnected) {
+  //     // Alert.alert('Not Connected', 'Please connect to a printer first.');
+  //     console.log('do not connect to printer');
+  //     return;
+  //   }
+
+  //   try {
+  //     client.write(COMMANDS.LEFT);
+  //     client.write(Buffer.from(text));
+  //     client.write(COMMANDS.LF);
+  //     client.write(COMMANDS.LF);
+  //     setStatus('Text printed');
+  //   } catch (error) {
+  //     setStatus(`Print failed: ${error.message}`);
+  //   }
+  // };
 
   const printTextTest = () => {
     if (currentPrinter) {
-      NetPrinter.printText('<C>sample text</C>\n');
+      NetPrinter.printText(`<C>${'Hee Looo'}</C>\n`);
     }
   };
 
@@ -55,11 +244,40 @@ const App = () => {
       {printers.map(printer => (
         <TouchableOpacity
           key={printer.device_id}
-          onPress={() => connectPrinter(printer.host, printer.port)}>
+          onPress={() => connectPrinter()}>
           <Text>{`device_name: ${printer.device_name}, host: ${printer.host}, port: ${printer.port}`}</Text>
         </TouchableOpacity>
       ))}
-      <TouchableOpacity onPress={printTextTest}>
+      {/* Thành phần cần in */}
+      <ViewShot ref={viewRef} options={{format: 'jpg', quality: 0.9}}>
+        <View
+          style={{
+            width: 200,
+            height: 100,
+            backgroundColor: 'blue',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}>
+          <Image
+            source={{
+              uri: 'https://reactnative.dev/img/tiny_logo.png',
+            }}
+            style={{width: 50, height: 50}}
+          />
+        </View>
+      </ViewShot>
+
+      {/* Nút bấm để chụp và in */}
+      <Button title="Chụp & In" onPress={print} />
+
+      {/* Hiển thị ảnh đã chụp (debug) */}
+      {imageUri && (
+        <Image
+          source={{uri: imageUri}}
+          style={{width: 200, height: 100, marginTop: 10}}
+        />
+      )}
+      <TouchableOpacity onPress={print}>
         <Text> Print Text </Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={printBillTest}>
@@ -82,7 +300,7 @@ const data = {
   foodapp_order_id: '',
   online_tran_id: '',
   imgUrl: 'https://helio.assets.ciaolink.net',
-  shopname: 'TrÃ  1000M - 45 Nguyá»…n Thá»‹ Äá»‹nh',
+  shopname: 'Trà 1000M 45 Nguyễn Thị Định',
   address:
     'Ä/C: 45 Nguyá»…n Thá»‹ Äá»‹nh, Trung HÃ²a, Cáº§u Giáº¥y, Ha Noi, Viet Nam',
   phone: 'Tel: 0904343433',
@@ -118,7 +336,7 @@ const data = {
   footer2: '( Reprint bill 1)',
   items: [
     {
-      product_name: 'TrÃ  Shan Tuyáº¿t ThÆ°á»£ng Háº¡ng 1000M',
+      product_name: 'Trà Shan Tuyết thượng hạng 1000M',
       quantity: '1',
       isCheckBill: 0,
       note_prod: '',
