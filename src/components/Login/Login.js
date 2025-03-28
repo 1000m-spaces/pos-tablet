@@ -1,5 +1,5 @@
-import {SafeAreaView} from 'react-native-safe-area-context';
-import React, {useEffect, useRef, useState} from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Keyboard,
   TextInput,
@@ -17,16 +17,16 @@ import {
   TextNormalSemiBold,
   TextSemiBold,
 } from 'common/Text/TextFont';
-import {useDispatch, useSelector} from 'react-redux';
-import {NAVIGATION_HOME, NAVIGATION_MAIN} from 'navigation/routes';
+import { useDispatch, useSelector } from 'react-redux';
+import { NAVIGATION_HOME, NAVIGATION_MAIN } from 'navigation/routes';
 
-import {isErrorSendOtp, isStatusSendPhone} from 'store/selectors';
+import { isErrorSendOtp, isStatusSendPhone } from 'store/selectors';
 
 import Svg from 'common/Svg/Svg';
 import Status from 'common/Status/Status';
-import {background_login} from 'assets/constans';
+import { background_login } from 'assets/constans';
 import Colors from 'theme/Colors';
-import {loginInternal, setScreenAction} from 'store/actions';
+import { loginInternal, setScreenAction } from 'store/actions';
 import strings from 'localization/Localization';
 import styles from './styles';
 
@@ -41,10 +41,11 @@ const Login = props => {
   const statusLogin = useSelector(state => isStatusSendPhone(state));
 
   const submitLogin = () => {
+    props.navigation.navigate(NAVIGATION_MAIN);
     if (username === '' || password === '') {
       return;
     }
-    dispatch(loginInternal({username: username, password: password}));
+    dispatch(loginInternal({ username: username, password: password }));
   };
 
   useEffect(() => {
@@ -59,7 +60,7 @@ const Login = props => {
 
   return (
     <View style={styles.loginScreen}>
-      <View style={{width: widthDevice * 0.55, height: heightDevice}}>
+      <View style={{ width: widthDevice * 0.55, height: heightDevice }}>
         <ImageBackground
           style={styles.imgBackground}
           source={background_login}
@@ -93,7 +94,7 @@ const Login = props => {
             <TouchableOpacity
               onPress={() => setShowPassword(prev => (prev = !prev))}
               style={styles.hideText}>
-              <TextNormal style={{color: Colors.gray}}>
+              <TextNormal style={{ color: Colors.gray }}>
                 {showPassword ? 'ẨN' : 'HIỂN THỊ'}
               </TextNormal>
             </TouchableOpacity>
@@ -101,15 +102,15 @@ const Login = props => {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={submitLogin}
-          disabled={statusLogin === Status.LOADING || !username || !password}
+          // disabled={statusLogin === Status.LOADING || !username || !password}
           style={[
             styles.buttonSubmitPhone,
-            username && password && {backgroundColor: Colors.primary},
+            username && password && { backgroundColor: Colors.primary },
           ]}>
           <TextHighLightBold
             style={[
               styles.textConfirm,
-              username && password && {color: Colors.whiteColor},
+              username && password && { color: Colors.whiteColor },
             ]}>
             {'Đăng nhập'}
           </TextHighLightBold>

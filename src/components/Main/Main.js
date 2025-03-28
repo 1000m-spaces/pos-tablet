@@ -1,22 +1,22 @@
 import React from 'react';
-import {NAVIGATION_HOME, NAVIGATION_ORDER} from 'navigation/routes';
-import {StyleSheet} from 'react-native';
-import {createDrawerNavigator} from '@react-navigation/drawer';
+import { NAVIGATION_HOME, NAVIGATION_ORDER } from 'navigation/routes';
+import { StyleSheet } from 'react-native';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import * as Screens from 'components';
 const Drawer = createDrawerNavigator();
 
 import Colors from 'theme/Colors';
 
 import DrawerContent from './DrawerContent';
-import {useSelector} from 'react-redux';
-import {screenSelector} from 'store/selectors';
+import { useSelector } from 'react-redux';
+import { screenSelector } from 'store/selectors';
 const Main = () => {
   const currentScreen = useSelector(state => screenSelector(state));
   // console.log('currentScreen:::', currentScreen);
   return (
     <Drawer.Navigator
       drawerContent={props => (
-        <DrawerContent {...props}  />
+        <DrawerContent {...props} />
       )}
       overlayColor="rgba(0, 0, 0, 0.7)"
       screenOptions={{

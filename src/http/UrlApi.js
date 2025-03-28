@@ -36,7 +36,7 @@ export const UrlApi = {
   getOnlineOrder: BASE_PATH_CASE_DEV + 'getOrderOnlineNew',
   getNotCompleteOrder: BASE_PATH_CAFE + 'getOrderNotCompleteNew',
 
-  fetchOrder: BASE_PATH_1000M + 'synthetic/orders/v1/fetch',
+  fetchOrder: 'https://api.1000m.vn/' + 'synthetic/orders/v1/fetch',
   fetchOrderDetail: BASE_PATH_1000M + 'synthetic/orders/v1/detail',
 
 

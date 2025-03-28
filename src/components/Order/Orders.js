@@ -30,7 +30,7 @@ const Orders = () => {
     }).then((res) => {
       console.log('res', res)
       if (res.success) {
-        setData(res.data.orders)
+        setData(res.data.orders ? res.data.orders : []);
       }
     })
   }, [])
