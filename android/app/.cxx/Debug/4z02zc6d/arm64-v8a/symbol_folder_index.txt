@@ -1,1 +1,0 @@
-/Users/bien/development/pos-tablet/android/app/build/intermediates/cxx/Debug/4z02zc6d/obj/arm64-v8a
