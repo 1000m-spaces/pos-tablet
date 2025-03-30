@@ -1,9 +1,11 @@
 import RootNavigation from 'navigation/RootNavigation';
-import React, {useEffect} from 'react';
+import React, { useEffect } from 'react';
 import Orientation from 'react-native-orientation-locker';
-import {LogBox, TextInput, StatusBar, Dimensions} from 'react-native';
-import {setCustomText} from 'react-native-global-props';
+import { LogBox, TextInput, StatusBar, Dimensions } from 'react-native';
+import { setCustomText } from 'react-native-global-props';
 import 'react-native-gesture-handler';
+
+
 const customTextProps = {
   allowFontScaling: false,
 };
