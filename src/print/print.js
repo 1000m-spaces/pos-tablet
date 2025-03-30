@@ -11,7 +11,7 @@ const EscPosCommands = {
     ALIGN_CENTER: '\x1Ba1',
     ALIGN_LEFT: '\x1Ba0',
     DOUBLE_SIZE: '\x1B!0x11',
-    CUT_PAPER: '\x1Bd\x03',
+    CUT_PAPER: '\x1D\x56\x41',
     SET_ENCODING_CP1258: '\x1B\x74\x1E', // Windows-1258 encoding
 };
 
