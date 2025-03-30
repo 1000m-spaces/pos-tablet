@@ -12,7 +12,7 @@ const EscPosCommands = {
     ALIGN_LEFT: '\x1Ba0',
     DOUBLE_SIZE: '\x1B!0x11',
     CUT_PAPER: '\x1Bd\x03',
-    SET_ENCODING_GBK: '\x1B\x74\x04',
+    SET_ENCODING_CP1258: '\x1B\x74\x1E', // Windows-1258 encoding
 };
 
 const orderData = {
@@ -27,7 +27,7 @@ const orderData = {
 };
 
 const formatOrderForPrint = (order) => {
-    let bill = EscPosCommands.RESET + EscPosCommands.SET_ENCODING_GBK;
+    let bill = EscPosCommands.RESET + EscPosCommands.SET_ENCODING_CP1258;
 
     // Header
     bill +=
@@ -71,7 +71,7 @@ const formatOrderForPrint = (order) => {
         EscPosCommands.NEW_LINE +
         EscPosCommands.CUT_PAPER;
 
-    return iconv.encode(bill, 'gbk');
+    return iconv.encode(bill, 'win1258'); // Convert text to Windows-1258 encoding
 };
 
 const XPrinterOrderExample = () => {
