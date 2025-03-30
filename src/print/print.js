@@ -12,7 +12,7 @@ const EscPosCommands = {
     ALIGN_LEFT: '\x1Ba0',
     DOUBLE_SIZE: '\x1B!0x11',
     CUT_PAPER: '\x1Bd\x03',
-    SET_ENCODING_CP1258: '\x1B\x74\x1E', // Vietnamese encoding
+    SET_ENCODING_GBK: '\x1B\x74\x04',
 };
 
 const orderData = {
@@ -27,7 +27,7 @@ const orderData = {
 };
 
 const formatOrderForPrint = (order) => {
-    let bill = EscPosCommands.RESET + EscPosCommands.SET_ENCODING_CP1258;
+    let bill = EscPosCommands.RESET + EscPosCommands.SET_ENCODING_GBK;
 
     // Header
     bill +=
@@ -71,11 +71,11 @@ const formatOrderForPrint = (order) => {
         EscPosCommands.NEW_LINE +
         EscPosCommands.CUT_PAPER;
 
-    return iconv.encode(bill, 'windows-1258');
+    return iconv.encode(bill, 'gbk');
 };
 
 const XPrinterOrderExample = () => {
-    const [printerIP, setPrinterIP] = useState('192.168.1.103'); // Change to your printer's IP
+    const [printerIP, setPrinterIP] = useState('192.168.1.103'); // Change to your printer IP
     const [printerPort, setPrinterPort] = useState('9100'); // Default ESC/POS port
 
     const printOrder = () => {
@@ -83,7 +83,6 @@ const XPrinterOrderExample = () => {
         const client = TcpSocket.createConnection(options, () => {
             console.log('Connected to printer');
 
-            // Convert order data to ESC/POS format
             const printData = formatOrderForPrint(orderData);
 
             client.write(printData, () => {

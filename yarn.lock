@@ -1875,14 +1875,9 @@
   resolved "https://registry.npmjs.org/@react-native/eslint-plugin/-/eslint-plugin-0.78.1.tgz"
   integrity sha512-J8tiNhMQi7CQfMLB8bJQEONPc99qmhHyPN/qbukpWrSMHBhBOgYDdOA+BX16bIwZWtShGm38jFS2jPa5U96qtg==
 
-"@react-native/gradle-plugin@0.78.1":
+"@react-native/gradle-plugin@0.78.1", "@react-native/gradle-plugin@^0.78.1":
   version "0.78.1"
   resolved "https://registry.npmjs.org/@react-native/gradle-plugin/-/gradle-plugin-0.78.1.tgz"
-  integrity sha512-v8GJU+8DzQDWO3iuTFI1nbuQ/kzuqbXv07VVtSIMLbdofHzuuQT14DGBacBkrIDKBDTVaBGAc/baDNsyxCghng==
-
-"@react-native/gradle-plugin@^0.78.1":
-  version "0.78.1"
-  resolved "https://registry.yarnpkg.com/@react-native/gradle-plugin/-/gradle-plugin-0.78.1.tgz#b57cda1bf40e90385a170d24198c8140cc945cfe"
   integrity sha512-v8GJU+8DzQDWO3iuTFI1nbuQ/kzuqbXv07VVtSIMLbdofHzuuQT14DGBacBkrIDKBDTVaBGAc/baDNsyxCghng==
 
 "@react-native/js-polyfills@0.78.1":
@@ -6421,11 +6416,6 @@ react-native-orientation-locker@^1.7.0:
   version "1.7.0"
   resolved "https://registry.npmjs.org/react-native-orientation-locker/-/react-native-orientation-locker-1.7.0.tgz"
   integrity sha512-2PhG4UyRJktb3KCTISStuu8/q+Q3q3oPesGg9DhdY0b6Cu/ZzxkCvkbJte2TPWRYkS0JpClimvqVaonulGvDrA==
-
-react-native-print@^0.11.0:
-  version "0.11.0"
-  resolved "https://registry.npmjs.org/react-native-print/-/react-native-print-0.11.0.tgz"
-  integrity sha512-hFDzb9dVJVT8c3VHNNWgkPfLF3Jfyw0WVJ3o7wUmSMmi5hJx6b++veNJ3J95d3lW3Y0sZUpGbn9+yzXrLANnJQ==
 
 react-native-reanimated@^3.17.1:
   version "3.17.1"
