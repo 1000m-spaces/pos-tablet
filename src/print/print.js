@@ -1,19 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, Button, Alert } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text } from 'react-native';
+import ViewShot from 'react-native-view-shot';
 import TcpSocket from 'react-native-tcp-socket';
-import iconv from 'iconv-lite';
+import RNFS from 'react-native-fs';
+import { decode } from 'image-size';
+import Colors from 'theme/Colors';
+import Buffer from 'buffer'
 
-// ESC/POS Commands Enum
-const EscPosCommands = {
-    ESC: '\x1B',
-    NEW_LINE: '\n',
-    RESET: '\x1B@',
-    ALIGN_CENTER: '\x1Ba1',
-    ALIGN_LEFT: '\x1Ba0',
-    DOUBLE_SIZE: '\x1B!0x11',
-    CUT_PAPER: '\x1D\x56\x41',
-    SET_ENCODING_CP1258: '\x1B\x74\x1E', // Windows-1258 encoding
-};
+const XPRINTER_IP = '192.168.1.100'; // Replace with your printer's IP
+const XPRINTER_PORT = 9100; // Default ESC/POS port
 
 const orderData = {
     orderId: 'ORD-12345',
@@ -26,84 +21,88 @@ const orderData = {
     customerName: 'Nguyễn Văn A',
 };
 
-const formatOrderForPrint = (order) => {
-    let bill = EscPosCommands.RESET + EscPosCommands.SET_ENCODING_CP1258;
-
-    // Header
-    bill +=
-        EscPosCommands.ALIGN_CENTER +
-        EscPosCommands.DOUBLE_SIZE +
-        '*** HÓA ĐƠN ***' +
-        EscPosCommands.NEW_LINE +
-        EscPosCommands.NEW_LINE;
-
-    bill +=
-        EscPosCommands.ALIGN_LEFT +
-        `Mã đơn: ${order.orderId}` +
-        EscPosCommands.NEW_LINE +
-        `Ngày: ${order.date}` +
-        EscPosCommands.NEW_LINE +
-        `Khách hàng: ${order.customerName}` +
-        EscPosCommands.NEW_LINE +
-        '--------------------------------' +
-        EscPosCommands.NEW_LINE;
-
-    // Items
-    order.items.forEach((item) => {
-        const totalItemPrice = item.price * item.quantity;
-        bill += `${item.name} x${item.quantity}  ${totalItemPrice.toLocaleString()}đ` + EscPosCommands.NEW_LINE;
-    });
-
-    bill += '--------------------------------' + EscPosCommands.NEW_LINE;
-
-    // Total
-    bill +=
-        EscPosCommands.ALIGN_LEFT +
-        `Tổng cộng: ${order.total.toLocaleString()}đ` +
-        EscPosCommands.NEW_LINE +
-        EscPosCommands.NEW_LINE;
-
-    // Footer
-    bill +=
-        EscPosCommands.ALIGN_CENTER +
-        'Cảm ơn quý khách!' +
-        EscPosCommands.NEW_LINE +
-        EscPosCommands.NEW_LINE +
-        EscPosCommands.CUT_PAPER;
-
-    return iconv.encode(bill, 'win1258'); // Convert text to Windows-1258 encoding
-};
-
 const XPrinterOrderExample = () => {
-    const [printerIP, setPrinterIP] = useState('192.168.1.103'); // Change to your printer IP
-    const [printerPort, setPrinterPort] = useState('9100'); // Default ESC/POS port
+    const viewShotRef = useRef();
 
-    const printOrder = () => {
-        const options = { host: printerIP, port: parseInt(printerPort, 10) };
-        const client = TcpSocket.createConnection(options, () => {
+    const captureAndPrint = async () => {
+        try {
+            const uri = await viewShotRef.current.capture();
+            console.log('Image saved at:', uri);
+
+            // Read image as binary
+            const imageData = await RNFS.readFile(uri, 'base64');
+
+            // Convert base64 to buffer
+            const imageBuffer = Buffer.from(imageData, 'base64');
+
+            // Get image size
+            const { width, height } = decode(imageBuffer);
+
+            // Convert image to ESC/POS raster format
+            const escPosImage = generateEscPosImage(imageBuffer, width, height);
+
+            // Send to printer
+            sendToPrinter(escPosImage);
+        } catch (error) {
+            console.error('Error capturing/printing:', error);
+        }
+    };
+
+    const generateEscPosImage = (imageBuffer, width, height) => {
+        let escPosCommands = [];
+
+        // ESC * (Raster Mode Image)
+        escPosCommands.push(Buffer.from([0x1D, 0x76, 0x30, 0x00, width / 8, 0x00, height, 0x00]));
+        escPosCommands.push(imageBuffer);
+
+        // Add Feed & Cut
+        escPosCommands.push(Buffer.from([0x1B, 0x64, 0x03])); // Feed 3 lines
+        escPosCommands.push(Buffer.from([0x1D, 0x56, 0x00])); // Full Cut
+
+        return Buffer.concat(escPosCommands);
+    };
+
+    const sendToPrinter = (data) => {
+        const client = TcpSocket.createConnection({ host: XPRINTER_IP, port: XPRINTER_PORT }, () => {
             console.log('Connected to printer');
-
-            const printData = formatOrderForPrint(orderData);
-
-            client.write(printData, () => {
-                console.log('Printed successfully');
-                Alert.alert('Success', 'Printed successfully');
-                client.destroy();
-            });
+            client.write(data);
+            client.destroy();
         });
 
         client.on('error', (error) => {
             console.error('Printer error:', error);
-            Alert.alert('Error', 'Failed to print');
             client.destroy();
         });
     };
 
     return (
-        <View style={{ padding: 20 }}>
-            <Text style={{ fontSize: 18 }}>Print Order Bill</Text>
-            <Button title="Print Order" onPress={printOrder} />
-        </View>
+        <SafeAreaView
+            style={{
+                flex: 1,
+                backgroundColor: Colors.bgInput,
+                flexDirection: 'row',
+            }}>
+            <View>
+                <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9 }}>
+                    <View style={{ backgroundColor: 'white', padding: 20 }}>
+                        <Text style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center' }}>*** HÓA ĐƠN ***</Text>
+                        <Text>Mã đơn: {orderData.orderId}</Text>
+                        <Text>Ngày: {orderData.date}</Text>
+                        <Text>Khách hàng: {orderData.customerName}</Text>
+                        <Text>--------------------------------</Text>
+                        {orderData.items.map((item, index) => (
+                            <Text key={index}>{item.name} x{item.quantity}  {item.price * item.quantity}đ</Text>
+                        ))}
+                        <Text>--------------------------------</Text>
+                        <Text style={{ fontWeight: 'bold' }}>Tổng cộng: {orderData.total}đ</Text>
+                        <Text style={{ textAlign: 'center' }}>Cảm ơn quý khách!</Text>
+                    </View>
+                </ViewShot>
+                <Text onPress={captureAndPrint} style={{ backgroundColor: 'blue', color: 'white', padding: 10, textAlign: 'center' }}>
+                    Print Bill
+                </Text>
+            </View>
+        </SafeAreaView>
     );
 };
 
