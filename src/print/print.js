@@ -77,26 +77,24 @@ const XPrinterOrderExample = () => {
                 backgroundColor: Colors.bgInput,
                 flexDirection: 'row',
             }}>
-            <View>
-                <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9, result: 'base64' }}>
-                    <View style={{ backgroundColor: 'white', padding: 20 }}>
-                        <Text style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center' }}>*** HÓA ĐƠN ***</Text>
-                        <Text>Mã đơn: {orderData.orderId}</Text>
-                        <Text>Ngày: {orderData.date}</Text>
-                        <Text>Khách hàng: {orderData.customerName}</Text>
-                        <Text>--------------------------------</Text>
-                        {orderData.items.map((item, index) => (
-                            <Text key={index}>{item.name} x{item.quantity}  {item.price * item.quantity}đ</Text>
-                        ))}
-                        <Text>--------------------------------</Text>
-                        <Text style={{ fontWeight: 'bold' }}>Tổng cộng: {orderData.total}đ</Text>
-                        <Text style={{ textAlign: 'center' }}>Cảm ơn quý khách!</Text>
-                    </View>
-                </ViewShot>
-                <Text onPress={captureAndPrint} style={{ backgroundColor: 'blue', color: 'white', padding: 10, textAlign: 'center' }}>
-                    Print Bill
-                </Text>
-            </View>
+            <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9, result: 'base64' }}>
+                <View style={{ backgroundColor: 'white', padding: 20 }}>
+                    <Text style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center' }}>*** HÓA ĐƠN ***</Text>
+                    <Text>Mã đơn: {orderData.orderId}</Text>
+                    <Text>Ngày: {orderData.date}</Text>
+                    <Text>Khách hàng: {orderData.customerName}</Text>
+                    <Text>--------------------------------</Text>
+                    {orderData.items.map((item, index) => (
+                        <Text key={index}>{item.name} x{item.quantity}  {item.price * item.quantity}đ</Text>
+                    ))}
+                    <Text>--------------------------------</Text>
+                    <Text style={{ fontWeight: 'bold' }}>Tổng cộng: {orderData.total}đ</Text>
+                    <Text style={{ textAlign: 'center' }}>Cảm ơn quý khách!</Text>
+                </View>
+            </ViewShot>
+            <Text onPress={captureAndPrint} style={{ backgroundColor: 'blue', color: 'white', padding: 10, textAlign: 'center' }}>
+                Print Bill
+            </Text>
         </SafeAreaView>
     );
 };
