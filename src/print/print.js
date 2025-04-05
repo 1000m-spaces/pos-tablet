@@ -1,12 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text } from 'react-native';
 import ViewShot from 'react-native-view-shot';
-import TcpSocket from 'react-native-tcp-socket';
-import { imageSize } from 'image-size';
 import Colors from 'theme/Colors';
-import { Buffer } from 'buffer'
 import { SafeAreaView } from 'react-native';
-import FileViewer from 'react-native-file-viewer';
+import { netConnect, printText, printBitmap } from 'rn-xprinter';
+
 
 const XPRINTER_IP = '192.168.1.103'; // Replace with your printer's IP
 const XPRINTER_PORT = 9100; // Default ESC/POS port
@@ -28,46 +26,17 @@ const XPrinterOrderExample = () => {
     const captureAndPrint = async () => {
         try {
             const imageData = await viewShotRef.current.capture();
-            // Convert base64 to buffer
-            const imageBuffer = Buffer.from(imageData, 'base64');
-            // Get image size
-            const { width, height } = imageSize(imageBuffer);
-
-            // Convert image to ESC/POS raster format
-            const escPosImage = generateEscPosImage(imageBuffer, width, height);
-
             // Send to printer
-            sendToPrinter(escPosImage);
+            sendToPrinter(imageData);
         } catch (error) {
             console.error('Error capturing/printing:', error);
         }
     };
 
-    const generateEscPosImage = (imageBuffer, width, height) => {
-        let escPosCommands = [];
-
-        // ESC * (Raster Mode Image)
-        escPosCommands.push(Buffer.from([0x1D, 0x76, 0x30, 0x00, width / 8, 0x00, height, 0x00]));
-        escPosCommands.push(imageBuffer);
-
-        // Add Feed & Cut
-        escPosCommands.push(Buffer.from([0x1B, 0x64, 0x03])); // Feed 3 lines
-        escPosCommands.push(Buffer.from([0x1D, 0x56, 0x01])); // Full Cut
-
-        return Buffer.concat(escPosCommands);
-    };
-
-    const sendToPrinter = (data) => {
-        const client = TcpSocket.createConnection({ host: XPRINTER_IP, port: XPRINTER_PORT }, () => {
-            console.log('Connected to printer');
-            client.write(data);
-            client.destroy();
-        });
-
-        client.on('error', (error) => {
-            console.error('Printer error:', error);
-            client.destroy();
-        });
+    const sendToPrinter = (imageData) => {
+        netConnect(XPRINTER_IP).then(() => {
+            printBitmap(imageData, 1, 200, 0)
+        })
     };
 
     return (
