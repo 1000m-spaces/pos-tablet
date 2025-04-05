@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Modal, Pressable } from "react-native";
 import { Table, Row } from "react-native-table-component";
+import ViewShot from "react-native-view-shot";
+import PrintTemplate from "./TemTemplate";
+import { Image } from "react-native";
+import { useRef } from "react";
+import FileViewer from 'react-native-file-viewer';
 
 const { width, height } = Dimensions.get("window");
 const tableWidth = width - 108; // Adjust width to leave space for left nav
@@ -14,6 +19,8 @@ const Badge = ({ text, color }) => (
 const OrderTable = ({ orders }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const viewShotRef = useRef();
+    const [image, setImage] = useState("")
 
     const tableHead = ["Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
@@ -33,6 +40,21 @@ const OrderTable = ({ orders }) => {
         setSelectedOrder(order);
         setModalVisible(true);
     };
+
+    const printTem = () => {
+        // on mount
+        viewShotRef.current.capture().then(uri => {
+            console.log("do something with ", uri);
+            setImage(uri)
+            FileViewer.open(uri)
+                .then(() => {
+                    console.log("Opened image successfully");
+                })
+                .catch(error => {
+                    console.error("Failed to open image:", error);
+                });
+        });
+    }
 
     const tableData = orders.map(order => [
         "GRAB",
@@ -59,10 +81,10 @@ const OrderTable = ({ orders }) => {
                     </View>
                 </ScrollView>
             </ScrollView>
-
             <Modal supportedOrientations={['portrait', 'landscape']} visible={modalVisible} transparent animationType="slide">
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
+                        {image != "" && (<Image style={{ width: 380, height: 'auto', resizeMode: 'contain' }} source={{ uri: image }}></Image>)}
                         {selectedOrder && (
                             <>
                                 <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
@@ -77,7 +99,7 @@ const OrderTable = ({ orders }) => {
                                         <Text style={styles.itemQuantity}>x{item.quantity}</Text>
                                     </View>
                                 ))}
-                                <Pressable style={styles.printButton} onPress={() => console.log("Printing Tem...")}>
+                                <Pressable style={styles.printButton} onPress={() => printTem(selectedOrder)}>
                                     <Text style={styles.printButtonText}>Print Tem</Text>
                                 </Pressable>
                                 <Pressable style={styles.closeButton} onPress={() => setModalVisible(false)}>
@@ -88,6 +110,16 @@ const OrderTable = ({ orders }) => {
                     </View>
                 </View>
             </Modal>
+            <ViewShot
+                ref={viewShotRef}
+                options={{ format: "png", quality: 1.0 }}
+                style={{
+                    position: 'absolute',
+                    left: -400,
+                    bottom: 0,
+                    width: 400,
+                    backgroundColor: 'white',
+                }}>{selectedOrder && (<PrintTemplate orderPrint={selectedOrder} />)}</ViewShot>
         </>
     );
 };
