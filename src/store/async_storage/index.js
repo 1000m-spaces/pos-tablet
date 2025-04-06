@@ -38,6 +38,26 @@ const getLastOrder = async () => {
   }
 };
 
+const setPrinterInfo = async printerInfo => {
+  try {
+    await AsyncStorage.setItem('printerInfo', JSON.stringify(printerInfo));
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+const getPrinterInfo = async () => {
+  try {
+    const value = await AsyncStorage.getItem('printerInfo');
+    if (value !== null) {
+      return JSON.parse(value);
+    }
+  } catch (error) {
+    console.log(error);
+  }
+  return null;
+};
+
 const setUser = async user => {
   try {
     await AsyncStorage.setItem('user', JSON.stringify(user));
@@ -161,4 +181,6 @@ export default {
   setTheFirstLogin,
   getTheFirstLogin,
   clearStorage,
+  setPrinterInfo,
+  getPrinterInfo,
 };

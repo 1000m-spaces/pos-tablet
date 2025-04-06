@@ -1,16 +1,20 @@
-import Icons from 'common/Icons/Icons';
 import Svg from 'common/Svg/Svg';
 import { TextNormal } from 'common/Text/TextFont';
 import React, { useEffect, useState } from 'react';
+import { heightDevice, widthDevice } from 'assets/constans';
+
 import {
   View,
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  SafeAreaView, TextInput, Pressable, Text
 } from 'react-native';
 import orderController from 'store/order/orderController';
 import Colors from 'theme/Colors';
 import OrderTable from './OrderTable';
+import Modal from 'react-native-modal';
+import AsyncStorage from 'store/async_storage/index'
 
 const orderFilters = [
   { id: 1, name: 'Đơn mới' },
@@ -20,8 +24,15 @@ const orderFilters = [
 const Orders = () => {
   const [data, setData] = useState([])
   const [orderType, setOrderType] = useState(1);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [ip, setIP] = useState("")
 
   useEffect(() => {
+    AsyncStorage.getPrinterInfo().then((printerInfo) => {
+      if (printerInfo) {
+        setIP(printerInfo.IP)
+      }
+    })
     orderController.fetchOrder({
       branch_id: 249,
       brand_id: 110,
@@ -60,46 +71,117 @@ const Orders = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Content */}
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <FlatList
-            data={orderFilters}
-            keyExtractor={i => i.id}
-            horizontal
-            contentContainerStyle={{
-              paddingVertical: 12,
-              alignSelf: 'flex-start',
-            }}
-            showsHorizontalScrollIndicator={false}
-            renderItem={renderFilter}
-          />
-          <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity style={styles.searchInput}>
-              <Svg name={'search'} size={20} color={'gray'} />
-              <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
-                {new Date().toLocaleDateString('en-GB')}
-              </TextNormal>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.searchInput}>
-              <Svg name={'search'} size={20} color={'gray'} />
-              <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
-                {'All'}
-              </TextNormal>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.searchInput, { flex: 1 }]}>
-              <Svg name={'search'} size={20} />
-              <TextNormal style={{ color: Colors.secondary }}>
-                {' Tìm kiếm món'}
-              </TextNormal>
-            </TouchableOpacity>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: Colors.bgInput,
+        flexDirection: 'row',
+      }}>
+      <View style={styles.container}>
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
+              <FlatList
+                data={orderFilters}
+                keyExtractor={i => i.id}
+                horizontal
+                contentContainerStyle={{
+                  paddingVertical: 12,
+                  alignSelf: 'flex-start',
+                }}
+                showsHorizontalScrollIndicator={false}
+                renderItem={renderFilter}
+              />
+              <TouchableOpacity style={{
+                paddingVertical: 12,
+                marginRight: 20
+              }} onPress={() => {
+                setModalVisible(true)
+              }}>
+                <Svg name={'printer'} size={40} color={'transparent'} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ flexDirection: 'row' }}>
+              <TouchableOpacity style={styles.searchInput}>
+                <Svg name={'search'} size={20} color={'gray'} />
+                <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                  {new Date().toLocaleDateString('en-GB')}
+                </TextNormal>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.searchInput}>
+                <Svg name={'search'} size={20} color={'gray'} />
+                <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                  {'All'}
+                </TextNormal>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.searchInput, { flex: 1 }]}>
+                <Svg name={'search'} size={20} />
+                <TextNormal style={{ color: Colors.secondary }}>
+                  {' Tìm kiếm món'}
+                </TextNormal>
+              </TouchableOpacity>
+            </View>
           </View>
+          <OrderTable orders={data} />
+          <Modal
+            onBackdropPress={() => setModalVisible(false)}
+            isVisible={modalVisible}
+            onBackButtonPress={() => setModalVisible(false)}
+            propagateSwipe
+            style={[
+              {
+                width: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
+                height:
+                  heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
+                backgroundColor: Colors.bgInput,
+                position: 'absolute',
+                borderRadius: 16,
+                left: heightDevice > widthDevice ? heightDevice * 0.375 : widthDevice * 0.375,
+                top: heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
+                margin: 0,
+              },
+              modalVisible && { marginBottom: 3, marginLeft: 50 },
+            ]}
+          >
+            <View style={styles.modalContainer}>
+              <TextNormal style={styles.modalTitle}>{"Thiết lập máy in"}</TextNormal>
+              <View>
+                <TextNormal style={styles.lable}>{"Địa chỉ ip của máy"}</TextNormal>
+                <View style={styles.dialogInput}>
+                  <TextInput
+                    placeholder="Printer IP"
+                    value={ip}
+                    onChangeText={(text) => setIP(text)}
+                    style={{
+                      width: 200,
+                      height: 50,
+                      color: 'black',
+                      backgroundColor: Colors.whiteColor,
+                    }}
+                    autoFocus
+                    placeholderTextColor={"gray"}
+                  />
+                </View>
+              </View>
+              <Pressable style={{
+                marginTop: 15,
+                backgroundColor: "#FF9800",
+                padding: 10,
+                borderRadius: 5,
+              }} onPress={() => {
+                AsyncStorage.setPrinterInfo({ IP: ip }).then(() => {
+                  setModalVisible(false)
+                })
+              }}>
+                <Text style={styles.printButtonText}>Save</Text>
+              </Pressable>
+            </View>
+          </Modal>
         </View>
-        <OrderTable orders={data} />
       </View>
-    </View>
+    </SafeAreaView >
   );
 };
 
@@ -108,6 +190,16 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     backgroundColor: '#f4f4f4',
+  },
+  containerModal: {
+    width: heightDevice > widthDevice ? heightDevice * 0.5 : widthDevice * 0.5,
+    height:
+      heightDevice > widthDevice ? widthDevice * 0.45 : heightDevice * 0.45,
+    backgroundColor: 'white',
+    position: 'absolute',
+    borderRadius: 16,
+    left: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
+    margin: 0,
   },
   wrapperOrderType: {
     paddingHorizontal: 12,
@@ -160,6 +252,17 @@ const styles = StyleSheet.create({
     marginRight: 10,
     width: 200,
   },
+  dialogInput: {
+    borderRadius: 12,
+    backgroundColor: 'white',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 1,
+    height: 50,
+    alignItems: 'center',
+    marginRight: 10,
+    width: 202,
+  },
   table: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -190,6 +293,23 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     color: '#000',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: Colors.backgroundColor,
+  },
+
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+
+  lable: {
+    fontSize: 14,
+    marginBottom: 10,
   },
 });
 

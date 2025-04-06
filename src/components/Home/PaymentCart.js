@@ -1,19 +1,18 @@
-import {formatMoney, heightDevice, widthDevice} from 'assets/constans';
+import { formatMoney, heightDevice, widthDevice } from 'assets/constans';
 import Svg from 'common/Svg/Svg';
-import {TextNormal} from 'common/Text/TextFont';
-import React, {useEffect, useState} from 'react';
+import { TextNormal } from 'common/Text/TextFont';
+import React, { useEffect, useState } from 'react';
 import {
   Keyboard,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import {useDispatch, useSelector} from 'react-redux';
-import {currentOrderSelector} from 'store/selectors';
+import { useDispatch, useSelector } from 'react-redux';
+import { currentOrderSelector } from 'store/selectors';
 import Colors from 'theme/Colors';
 import Modal from 'react-native-modal';
-import {getVoucherAction, setOrderAction} from 'store/actions';
+import { getVoucherAction, setOrderAction } from 'store/actions';
 import NoteModal from './NoteModal';
 const PaymentCart = () => {
   const dispatch = useDispatch();
@@ -98,7 +97,7 @@ const PaymentCart = () => {
         <TextNormal style={styles.totalText}>
           {`Thành tiền (${payment?.length} món)`}
         </TextNormal>
-        <TextNormal style={{fontSize: 16}}>
+        <TextNormal style={{ fontSize: 16 }}>
           {payment !== null && `${formatMoney(payment?.initTotal)}đ`}
         </TextNormal>
       </View>
@@ -118,7 +117,7 @@ const PaymentCart = () => {
         propagateSwipe
         style={[
           styles.containerModal,
-          modal === 1 && {marginBottom: 3, marginLeft: 50},
+          modal === 1 && { marginBottom: 3, marginLeft: 50 },
         ]}>
         {modal === 1 && (
           <NoteModal currentOrder={currentOrder} onCloseModal={onCloseModal} />
@@ -167,7 +166,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#757575',
   },
-  textPayment: {fontSize: 20, color: Colors.primary, fontWeight: 'bold'},
+  textPayment: { fontSize: 20, color: Colors.primary, fontWeight: 'bold' },
   wrapperContent: {
     // position: 'absolute',
     // bottom: 0,

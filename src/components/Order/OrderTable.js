@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Modal, Pressable } from "react-native";
+import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Modal, Pressable, Platform, ToastAndroid } from "react-native";
 import { Table, Row } from "react-native-table-component";
 import ViewShot from "react-native-view-shot";
 import PrintTemplate from "./TemTemplate";
-import { Image } from "react-native";
 import { useRef } from "react";
-import FileViewer from 'react-native-file-viewer';
+import AsyncStorage from 'store/async_storage/index'
+import BillTemplate from "./BillTemplate";
 
 const { width, height } = Dimensions.get("window");
 const tableWidth = width - 108; // Adjust width to leave space for left nav
@@ -16,11 +16,11 @@ const Badge = ({ text, color }) => (
     </View>
 );
 
-const OrderTable = ({ orders }) => {
+const OrderTable = ({ orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
-    const viewShotRef = useRef();
-    const [image, setImage] = useState("")
+    const viewTemShotRef = useRef();
+    const viewBillShotRef = useRef();
 
     const tableHead = ["Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
@@ -42,17 +42,48 @@ const OrderTable = ({ orders }) => {
     };
 
     const printTem = () => {
-        // on mount
-        viewShotRef.current.capture().then(uri => {
-            console.log("do something with ", uri);
-            setImage(uri)
-            FileViewer.open(uri)
-                .then(() => {
-                    console.log("Opened image successfully");
+        if (Platform.OS != "android") {
+            return
+        }
+        viewTemShotRef.current.capture().then(uri => {
+            AsyncStorage.getPrinterInfo((printerInfo) => {
+                if (printerInfo == null || printerInfo.IP === "") {
+                    ToastAndroid.show('Vui lòng thiết lập máy in', ToastAndroid.LONG)
+                    showSettingPrinter()
+                    return
+                }
+                netConnect(printerInfo.IP).then(() => {
+                    printBitmap(imageData, 1, 200, 0)
+                    ToastAndroid.show('In hoá đơn thành công', ToastAndroid.LONG)
+                }).catch((err) => {
+                    ToastAndroid.show('Lỗi ' + err, ToastAndroid.LONG)
                 })
-                .catch(error => {
-                    console.error("Failed to open image:", error);
-                });
+            })
+        }).catch((err) => {
+            ToastAndroid.show('Lỗi ' + err, ToastAndroid.LONG)
+        });
+    }
+
+    const printBill = () => {
+        if (Platform.OS != "android") {
+            return
+        }
+        viewBillShotRef.current.capture().then(uri => {
+            AsyncStorage.getPrinterInfo((printerInfo) => {
+                if (printerInfo == null || printerInfo.IP === "") {
+                    ToastAndroid.show('Vui lòng thiết lập máy in', ToastAndroid.LONG)
+                    showSettingPrinter()
+                    return
+                }
+                netConnect(printerInfo.IP).then(() => {
+                    printBitmap(imageData, 1, 200, 0)
+                    ToastAndroid.show('In hoá đơn thành công', ToastAndroid.LONG)
+                }).catch((err) => {
+                    ToastAndroid.show('Lỗi ' + err, ToastAndroid.LONG)
+                })
+            })
+        }).catch((err) => {
+            ToastAndroid.show('Lỗi ' + err, ToastAndroid.LONG)
         });
     }
 
@@ -84,7 +115,6 @@ const OrderTable = ({ orders }) => {
             <Modal supportedOrientations={['portrait', 'landscape']} visible={modalVisible} transparent animationType="slide">
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
-                        {image != "" && (<Image style={{ width: 380, height: 'auto', resizeMode: 'contain' }} source={{ uri: image }}></Image>)}
                         {selectedOrder && (
                             <>
                                 <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
@@ -99,9 +129,19 @@ const OrderTable = ({ orders }) => {
                                         <Text style={styles.itemQuantity}>x{item.quantity}</Text>
                                     </View>
                                 ))}
-                                <Pressable style={styles.printButton} onPress={() => printTem(selectedOrder)}>
-                                    <Text style={styles.printButtonText}>Print Tem</Text>
-                                </Pressable>
+                                <View style={{
+                                    display: 'flex',
+                                    width: 200,
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between'
+                                }}>
+                                    <Pressable style={styles.printButton} onPress={() => printTem(selectedOrder)}>
+                                        <Text style={styles.printButtonText}>Print Tem</Text>
+                                    </Pressable>
+                                    <Pressable style={styles.printButton} onPress={() => printBill(selectedOrder)}>
+                                        <Text style={styles.printButtonText}>Print Bill</Text>
+                                    </Pressable>
+                                </View>
                                 <Pressable style={styles.closeButton} onPress={() => setModalVisible(false)}>
                                     <Text style={styles.closeButtonText}>Đóng</Text>
                                 </Pressable>
@@ -111,7 +151,7 @@ const OrderTable = ({ orders }) => {
                 </View>
             </Modal>
             <ViewShot
-                ref={viewShotRef}
+                ref={viewTemShotRef}
                 options={{ format: "png", quality: 1.0 }}
                 style={{
                     position: 'absolute',
@@ -120,6 +160,23 @@ const OrderTable = ({ orders }) => {
                     width: 400,
                     backgroundColor: 'white',
                 }}>{selectedOrder && (<PrintTemplate orderPrint={selectedOrder} />)}</ViewShot>
+            <ViewShot
+                ref={viewBillShotRef}
+                options={{ format: 'jpg', quality: 0.9, result: 'base64' }}
+                style={{
+                    position: 'absolute',
+                    left: -400,
+                    bottom: 0,
+                    width: 400,
+                    backgroundColor: 'white',
+                }}
+            >
+                {
+                    selectedOrder && (
+                        <BillTemplate selectedOrder={selectedOrder} />
+                    )
+                }
+            </ViewShot>
         </>
     );
 };
