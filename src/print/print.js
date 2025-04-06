@@ -54,10 +54,11 @@ const XPrinterOrderExample = () => {
             style={{
                 flex: 1,
                 backgroundColor: Colors.bgInput,
-                flexDirection: 'row',
+                flexDirection: 'column',
+                alignContent: 'center',
             }}>
             <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 0.9, result: 'base64' }}>
-                <View style={{ backgroundColor: 'white', padding: 20 }}>
+                <View style={{ backgroundColor: 'white', padding: 20, width: 250 }}>
                     <Text style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center' }}>*** HÓA ĐƠN ***</Text>
                     <Text>Mã đơn: {orderData.orderId}</Text>
                     <Text>Ngày: {orderData.date}</Text>
@@ -71,7 +72,7 @@ const XPrinterOrderExample = () => {
                     <Text style={{ textAlign: 'center' }}>Cảm ơn quý khách!</Text>
                 </View>
             </ViewShot>
-            <Text onPress={captureAndPrint} style={{ backgroundColor: 'blue', color: 'white', padding: 10, textAlign: 'center' }}>
+            <Text onPress={captureAndPrint} style={{ backgroundColor: 'blue', color: 'white', padding: 10, width: 250, textAlign: 'center' }}>
                 Print Bill
             </Text>
             <Toast />
