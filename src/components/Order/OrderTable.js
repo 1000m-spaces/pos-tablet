@@ -6,6 +6,9 @@ import PrintTemplate from "./TemTemplate";
 import { useRef } from "react";
 import AsyncStorage from 'store/async_storage/index'
 import BillTemplate from "./BillTemplate";
+import Toast from 'react-native-toast-message'
+import Spinner from 'react-native-loading-spinner-overlay';
+import { netConnect, printBitmap } from 'rn-xprinter';
 
 const { width, height } = Dimensions.get("window");
 const tableWidth = width - 108; // Adjust width to leave space for left nav
@@ -18,6 +21,7 @@ const Badge = ({ text, color }) => (
 
 const OrderTable = ({ orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
+    const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
@@ -43,47 +47,103 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
 
     const printTem = () => {
         if (Platform.OS != "android") {
+            Toast.show({
+                type: 'error',
+                text1: 'Chức năng chỉ hỗ trợ trên hệ điều hành android'
+            })
             return
         }
-        viewTemShotRef.current.capture().then(uri => {
-            AsyncStorage.getPrinterInfo((printerInfo) => {
+        setLoadingVisible(true)
+        viewTemShotRef.current.capture().then(imageData => {
+            AsyncStorage.getPrinterInfo().then((printerInfo) => {
                 if (printerInfo == null || printerInfo.IP === "") {
-                    ToastAndroid.show('Vui lòng thiết lập máy in', ToastAndroid.LONG)
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Vui lòng thiết lập máy in'
+                    })
                     showSettingPrinter()
                     return
                 }
                 netConnect(printerInfo.IP).then(() => {
                     printBitmap(imageData, 1, 200, 0)
-                    ToastAndroid.show('In hoá đơn thành công', ToastAndroid.LONG)
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'success',
+                        text1: 'In tem thành công'
+                    })
                 }).catch((err) => {
-                    ToastAndroid.show('Lỗi ' + err, ToastAndroid.LONG)
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Lỗi ' + err
+                    })
                 })
+            }).catch(() => {
+                setLoadingVisible(false)
+                Toast.show({
+                    type: 'error',
+                    text1: 'Vui lòng thiết lập máy in'
+                })
+                showSettingPrinter()
             })
         }).catch((err) => {
-            ToastAndroid.show('Lỗi ' + err, ToastAndroid.LONG)
+            setLoadingVisible(false)
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi ' + err
+            })
         });
     }
 
     const printBill = () => {
         if (Platform.OS != "android") {
+            Toast.show({
+                type: 'error',
+                text1: 'Chức năng chỉ hỗ trợ trên hệ điều hành android'
+            })
             return
         }
-        viewBillShotRef.current.capture().then(uri => {
-            AsyncStorage.getPrinterInfo((printerInfo) => {
+        setLoadingVisible(true)
+        viewBillShotRef.current.capture().then(imageData => {
+            AsyncStorage.getPrinterInfo().then((printerInfo) => {
                 if (printerInfo == null || printerInfo.IP === "") {
-                    ToastAndroid.show('Vui lòng thiết lập máy in', ToastAndroid.LONG)
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Vui lòng thiết lập máy in'
+                    })
                     showSettingPrinter()
                     return
                 }
                 netConnect(printerInfo.IP).then(() => {
                     printBitmap(imageData, 1, 200, 0)
-                    ToastAndroid.show('In hoá đơn thành công', ToastAndroid.LONG)
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'success',
+                        text1: 'In hoá đơn thành công'
+                    })
                 }).catch((err) => {
-                    ToastAndroid.show('Lỗi ' + err, ToastAndroid.LONG)
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Lỗi ' + err
+                    })
                 })
+            }).catch(() => {
+                setLoadingVisible(false)
+                Toast.show({
+                    type: 'error',
+                    text1: 'Vui lòng thiết lập máy in'
+                })
+                showSettingPrinter()
             })
         }).catch((err) => {
-            ToastAndroid.show('Lỗi ' + err, ToastAndroid.LONG)
+            setLoadingVisible(false)
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi ' + err
+            })
         });
     }
 
@@ -113,6 +173,10 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                 </ScrollView>
             </ScrollView>
             <Modal supportedOrientations={['portrait', 'landscape']} visible={modalVisible} transparent animationType="slide">
+                <Toast />
+                <Spinner
+                    visible={loadingVisible}
+                    textContent={''} />
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
                         {selectedOrder && (
@@ -152,7 +216,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             </Modal>
             <ViewShot
                 ref={viewTemShotRef}
-                options={{ format: "png", quality: 1.0 }}
+                options={{ format: "jpg", quality: 1.0, result: 'base64' }}
                 style={{
                     position: 'absolute',
                     left: -400,
@@ -162,7 +226,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                 }}>{selectedOrder && (<PrintTemplate orderPrint={selectedOrder} />)}</ViewShot>
             <ViewShot
                 ref={viewBillShotRef}
-                options={{ format: 'jpg', quality: 0.9, result: 'base64' }}
+                options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
                 style={{
                     position: 'absolute',
                     left: -400,
@@ -177,6 +241,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                     )
                 }
             </ViewShot>
+            <Toast />
         </>
     );
 };

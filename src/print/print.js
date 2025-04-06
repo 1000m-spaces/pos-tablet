@@ -3,7 +3,8 @@ import { View, Text } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 import Colors from 'theme/Colors';
 import { SafeAreaView } from 'react-native';
-import { netConnect, printText, printBitmap } from 'rn-xprinter';
+import { netConnect, printBitmap } from 'rn-xprinter';
+import Toast from 'react-native-toast-message'
 
 
 const XPRINTER_IP = '192.168.1.103'; // Replace with your printer's IP
@@ -36,6 +37,15 @@ const XPrinterOrderExample = () => {
     const sendToPrinter = (imageData) => {
         netConnect(XPRINTER_IP).then(() => {
             printBitmap(imageData, 1, 200, 0)
+            Toast.show({
+                type: 'success',
+                text1: 'Print success'
+            });
+        }).catch(err => {
+            Toast.show({
+                type: 'error',
+                text1: 'Print error'
+            });
         })
     };
 
@@ -64,6 +74,7 @@ const XPrinterOrderExample = () => {
             <Text onPress={captureAndPrint} style={{ backgroundColor: 'blue', color: 'white', padding: 10, textAlign: 'center' }}>
                 Print Bill
             </Text>
+            <Toast />
         </SafeAreaView>
     );
 };

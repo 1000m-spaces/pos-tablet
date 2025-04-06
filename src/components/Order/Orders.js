@@ -2,6 +2,7 @@ import Svg from 'common/Svg/Svg';
 import { TextNormal } from 'common/Text/TextFont';
 import React, { useEffect, useState } from 'react';
 import { heightDevice, widthDevice } from 'assets/constans';
+import Toast from 'react-native-toast-message'
 
 import {
   View,
@@ -71,117 +72,121 @@ const Orders = () => {
   };
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: Colors.bgInput,
-        flexDirection: 'row',
-      }}>
-      <View style={styles.container}>
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-              <FlatList
-                data={orderFilters}
-                keyExtractor={i => i.id}
-                horizontal
-                contentContainerStyle={{
+    <>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: Colors.bgInput,
+          flexDirection: 'row',
+        }}>
+        <View style={styles.container}>
+          {/* Content */}
+          <View style={styles.content}>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
+                <FlatList
+                  data={orderFilters}
+                  keyExtractor={i => i.id}
+                  horizontal
+                  contentContainerStyle={{
+                    paddingVertical: 12,
+                    alignSelf: 'flex-start',
+                  }}
+                  showsHorizontalScrollIndicator={false}
+                  renderItem={renderFilter}
+                />
+                <TouchableOpacity style={{
                   paddingVertical: 12,
-                  alignSelf: 'flex-start',
-                }}
-                showsHorizontalScrollIndicator={false}
-                renderItem={renderFilter}
-              />
-              <TouchableOpacity style={{
-                paddingVertical: 12,
-                marginRight: 20
-              }} onPress={() => {
-                setModalVisible(true)
-              }}>
-                <Svg name={'printer'} size={40} color={'transparent'} />
-              </TouchableOpacity>
-            </View>
-            <View style={{ flexDirection: 'row' }}>
-              <TouchableOpacity style={styles.searchInput}>
-                <Svg name={'search'} size={20} color={'gray'} />
-                <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
-                  {new Date().toLocaleDateString('en-GB')}
-                </TextNormal>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.searchInput}>
-                <Svg name={'search'} size={20} color={'gray'} />
-                <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
-                  {'All'}
-                </TextNormal>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.searchInput, { flex: 1 }]}>
-                <Svg name={'search'} size={20} />
-                <TextNormal style={{ color: Colors.secondary }}>
-                  {' Tìm kiếm món'}
-                </TextNormal>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <OrderTable orders={data} />
-          <Modal
-            onBackdropPress={() => setModalVisible(false)}
-            isVisible={modalVisible}
-            onBackButtonPress={() => setModalVisible(false)}
-            propagateSwipe
-            style={[
-              {
-                width: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
-                height:
-                  heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
-                backgroundColor: Colors.bgInput,
-                position: 'absolute',
-                borderRadius: 16,
-                left: heightDevice > widthDevice ? heightDevice * 0.375 : widthDevice * 0.375,
-                top: heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
-                margin: 0,
-              },
-              modalVisible && { marginBottom: 3, marginLeft: 50 },
-            ]}
-          >
-            <View style={styles.modalContainer}>
-              <TextNormal style={styles.modalTitle}>{"Thiết lập máy in"}</TextNormal>
-              <View>
-                <TextNormal style={styles.lable}>{"Địa chỉ ip của máy"}</TextNormal>
-                <View style={styles.dialogInput}>
-                  <TextInput
-                    placeholder="Printer IP"
-                    value={ip}
-                    onChangeText={(text) => setIP(text)}
-                    style={{
-                      width: 200,
-                      height: 50,
-                      color: 'black',
-                      backgroundColor: Colors.whiteColor,
-                    }}
-                    autoFocus
-                    placeholderTextColor={"gray"}
-                  />
-                </View>
+                  marginRight: 20
+                }} onPress={() => {
+                  setModalVisible(true)
+                }}>
+                  <Svg name={'printer'} size={40} color={'transparent'} />
+                </TouchableOpacity>
               </View>
-              <Pressable style={{
-                marginTop: 15,
-                backgroundColor: "#FF9800",
-                padding: 10,
-                borderRadius: 5,
-              }} onPress={() => {
-                AsyncStorage.setPrinterInfo({ IP: ip }).then(() => {
-                  setModalVisible(false)
-                })
-              }}>
-                <Text style={styles.printButtonText}>Save</Text>
-              </Pressable>
+              <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity style={styles.searchInput}>
+                  <Svg name={'search'} size={20} color={'gray'} />
+                  <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                    {new Date().toLocaleDateString('en-GB')}
+                  </TextNormal>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.searchInput}>
+                  <Svg name={'search'} size={20} color={'gray'} />
+                  <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                    {'All'}
+                  </TextNormal>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.searchInput, { flex: 1 }]}>
+                  <Svg name={'search'} size={20} />
+                  <TextNormal style={{ color: Colors.secondary }}>
+                    {' Tìm kiếm món'}
+                  </TextNormal>
+                </TouchableOpacity>
+              </View>
             </View>
-          </Modal>
+            <OrderTable orders={data} showSettingPrinter={() => setModalVisible(true)} />
+            <Modal
+              onBackdropPress={() => setModalVisible(false)}
+              isVisible={modalVisible}
+              onBackButtonPress={() => setModalVisible(false)}
+              propagateSwipe
+              style={[
+                {
+                  width: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
+                  height:
+                    heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
+                  backgroundColor: Colors.bgInput,
+                  position: 'absolute',
+                  borderRadius: 16,
+                  left: heightDevice > widthDevice ? heightDevice * 0.375 : widthDevice * 0.375,
+                  top: heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
+                  margin: 0,
+                },
+                modalVisible && { marginBottom: 3, marginLeft: 50 },
+              ]}
+            >
+              <View style={styles.modalContainer}>
+                <TextNormal style={styles.modalTitle}>{"Thiết lập máy in"}</TextNormal>
+                <View>
+                  <TextNormal style={styles.lable}>{"Địa chỉ ip của máy"}</TextNormal>
+                  <View style={styles.dialogInput}>
+                    <TextInput
+                      placeholder="Printer IP"
+                      value={ip}
+                      onChangeText={(text) => setIP(text)}
+                      style={{
+                        width: 200,
+                        height: 50,
+                        color: 'black',
+                        backgroundColor: Colors.whiteColor,
+                      }}
+                      autoFocus
+                      placeholderTextColor={"gray"}
+                    />
+                  </View>
+                </View>
+                <Pressable style={{
+                  marginTop: 15,
+                  backgroundColor: "#FF9800",
+                  padding: 10,
+                  borderRadius: 5,
+                }} onPress={() => {
+                  AsyncStorage.setPrinterInfo({ IP: ip }).then(() => {
+                    setModalVisible(false)
+                  })
+                }}>
+                  <Text style={styles.printButtonText}>Save</Text>
+                </Pressable>
+              </View>
+              <Toast />
+            </Modal>
+          </View>
         </View>
-      </View>
-    </SafeAreaView >
+      </SafeAreaView >
+      <Toast />
+    </>
   );
 };
 
