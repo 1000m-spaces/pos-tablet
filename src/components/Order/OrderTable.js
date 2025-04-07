@@ -1,6 +1,14 @@
 import React, { useState } from "react";
-import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Modal, Pressable } from "react-native";
+import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Modal, Pressable, Platform, ToastAndroid } from "react-native";
 import { Table, Row } from "react-native-table-component";
+import ViewShot from "react-native-view-shot";
+import PrintTemplate from "./TemTemplate";
+import { useRef } from "react";
+import AsyncStorage from 'store/async_storage/index'
+import BillTemplate from "./BillTemplate";
+import Toast from 'react-native-toast-message'
+import Spinner from 'react-native-loading-spinner-overlay';
+import { netConnect, printBitmap } from 'rn-xprinter';
 
 const { width, height } = Dimensions.get("window");
 const tableWidth = width - 108; // Adjust width to leave space for left nav
@@ -11,9 +19,12 @@ const Badge = ({ text, color }) => (
     </View>
 );
 
-const OrderTable = ({ orders }) => {
+const OrderTable = ({ orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
+    const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const viewTemShotRef = useRef();
+    const viewBillShotRef = useRef();
 
     const tableHead = ["Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
@@ -33,6 +44,108 @@ const OrderTable = ({ orders }) => {
         setSelectedOrder(order);
         setModalVisible(true);
     };
+
+    const printTem = () => {
+        if (Platform.OS != "android") {
+            Toast.show({
+                type: 'error',
+                text1: 'Chức năng chỉ hỗ trợ trên hệ điều hành android'
+            })
+            return
+        }
+        setLoadingVisible(true)
+        viewTemShotRef.current.capture().then(imageData => {
+            AsyncStorage.getPrinterInfo().then((printerInfo) => {
+                if (printerInfo == null || printerInfo.IP === "") {
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Vui lòng thiết lập máy in'
+                    })
+                    showSettingPrinter()
+                    return
+                }
+                netConnect(printerInfo.IP).then(() => {
+                    printBitmap(imageData, 1, 700, 0)
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'success',
+                        text1: 'In tem thành công'
+                    })
+                }).catch((err) => {
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Lỗi ' + err
+                    })
+                })
+            }).catch(() => {
+                setLoadingVisible(false)
+                Toast.show({
+                    type: 'error',
+                    text1: 'Vui lòng thiết lập máy in'
+                })
+                showSettingPrinter()
+            })
+        }).catch((err) => {
+            setLoadingVisible(false)
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi ' + err
+            })
+        });
+    }
+
+    const printBill = () => {
+        if (Platform.OS != "android") {
+            Toast.show({
+                type: 'error',
+                text1: 'Chức năng chỉ hỗ trợ trên hệ điều hành android'
+            })
+            return
+        }
+        setLoadingVisible(true)
+        viewBillShotRef.current.capture().then(imageData => {
+            AsyncStorage.getPrinterInfo().then((printerInfo) => {
+                if (printerInfo == null || printerInfo.IP === "") {
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Vui lòng thiết lập máy in'
+                    })
+                    showSettingPrinter()
+                    return
+                }
+                netConnect(printerInfo.IP).then(() => {
+                    printBitmap(imageData, 1, 700, 0)
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'success',
+                        text1: 'In hoá đơn thành công'
+                    })
+                }).catch((err) => {
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Lỗi ' + err
+                    })
+                })
+            }).catch(() => {
+                setLoadingVisible(false)
+                Toast.show({
+                    type: 'error',
+                    text1: 'Vui lòng thiết lập máy in'
+                })
+                showSettingPrinter()
+            })
+        }).catch((err) => {
+            setLoadingVisible(false)
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi ' + err
+            })
+        });
+    }
 
     const tableData = orders.map(order => [
         "GRAB",
@@ -59,8 +172,11 @@ const OrderTable = ({ orders }) => {
                     </View>
                 </ScrollView>
             </ScrollView>
-
             <Modal supportedOrientations={['portrait', 'landscape']} visible={modalVisible} transparent animationType="slide">
+                <Toast />
+                <Spinner
+                    visible={loadingVisible}
+                    textContent={''} />
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
                         {selectedOrder && (
@@ -77,9 +193,19 @@ const OrderTable = ({ orders }) => {
                                         <Text style={styles.itemQuantity}>x{item.quantity}</Text>
                                     </View>
                                 ))}
-                                <Pressable style={styles.printButton} onPress={() => console.log("Printing Tem...")}>
-                                    <Text style={styles.printButtonText}>Print Tem</Text>
-                                </Pressable>
+                                <View style={{
+                                    display: 'flex',
+                                    width: 200,
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between'
+                                }}>
+                                    <Pressable style={styles.printButton} onPress={() => printTem(selectedOrder)}>
+                                        <Text style={styles.printButtonText}>Print Tem</Text>
+                                    </Pressable>
+                                    <Pressable style={styles.printButton} onPress={() => printBill(selectedOrder)}>
+                                        <Text style={styles.printButtonText}>Print Bill</Text>
+                                    </Pressable>
+                                </View>
                                 <Pressable style={styles.closeButton} onPress={() => setModalVisible(false)}>
                                     <Text style={styles.closeButtonText}>Đóng</Text>
                                 </Pressable>
@@ -88,6 +214,34 @@ const OrderTable = ({ orders }) => {
                     </View>
                 </View>
             </Modal>
+            <ViewShot
+                ref={viewTemShotRef}
+                options={{ format: "jpg", quality: 1.0, result: 'base64' }}
+                style={{
+                    position: 'absolute',
+                    left: -400,
+                    bottom: 0,
+                    width: 400,
+                    backgroundColor: 'white',
+                }}>{selectedOrder && (<PrintTemplate orderPrint={selectedOrder} />)}</ViewShot>
+            <ViewShot
+                ref={viewBillShotRef}
+                options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
+                style={{
+                    position: 'absolute',
+                    left: -400,
+                    bottom: 0,
+                    width: 400,
+                    backgroundColor: 'white',
+                }}
+            >
+                {
+                    selectedOrder && (
+                        <BillTemplate selectedOrder={selectedOrder} />
+                    )
+                }
+            </ViewShot>
+            <Toast />
         </>
     );
 };

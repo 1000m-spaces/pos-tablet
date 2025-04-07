@@ -75,3 +75,4 @@ package-lock.json
 /nbproject/private/
 # react-native-config codegen
 ios/tmp.xcconfig
+.cxx

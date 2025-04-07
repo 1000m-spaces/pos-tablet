@@ -1,9 +1,12 @@
 import RootNavigation from 'navigation/RootNavigation';
-import React, {useEffect} from 'react';
+import React, { useEffect } from 'react';
 import Orientation from 'react-native-orientation-locker';
-import {LogBox, TextInput, StatusBar, Dimensions} from 'react-native';
-import {setCustomText} from 'react-native-global-props';
+import { LogBox, TextInput, StatusBar, Dimensions } from 'react-native';
+import { setCustomText } from 'react-native-global-props';
 import 'react-native-gesture-handler';
+import Toast from 'react-native-toast-message'
+
+
 const customTextProps = {
   allowFontScaling: false,
 };
@@ -25,7 +28,10 @@ const App = () => {
     };
   }, []);
 
-  return <RootNavigation />;
+  return <>
+    <RootNavigation />
+    <Toast />
+  </>;
 };
 
 export default App;

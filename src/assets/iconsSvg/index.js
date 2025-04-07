@@ -70,6 +70,8 @@ import account_pos from './svgs/account_pos.svg';
 import history_pos from './svgs/history_pos.svg';
 import order_pos from './svgs/order_pos.svg';
 import menu_pos from './svgs/menu_pos.svg';
+import settings from './svgs/settings.svg';
+import printer from './svgs/printer.svg';
 export default {
   // POS
   icon_login_logo,
@@ -88,6 +90,8 @@ export default {
   circle,
   selected_circle,
   icon_close,
+  settings,
+  printer,
 
   // APP MOBLIE
   // icon_star_review,
