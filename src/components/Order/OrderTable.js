@@ -66,7 +66,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                     return
                 }
                 netConnect(printerInfo.IP).then(() => {
-                    printBitmap(imageData, 1, 200, 0)
+                    printBitmap(imageData, 1, 700, 0)
                     setLoadingVisible(false)
                     Toast.show({
                         type: 'success',
@@ -117,7 +117,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                     return
                 }
                 netConnect(printerInfo.IP).then(() => {
-                    printBitmap(imageData, 1, 200, 0)
+                    printBitmap(imageData, 1, 700, 0)
                     setLoadingVisible(false)
                     Toast.show({
                         type: 'success',
