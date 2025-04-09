@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Modal, Pressable, Platform, ToastAndroid } from "react-native";
+import React, { useState, useEffect } from "react";
+import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Modal, Pressable, Platform } from "react-native";
 import { Table, Row } from "react-native-table-component";
 import ViewShot from "react-native-view-shot";
 import PrintTemplate from "./TemTemplate";
@@ -9,6 +9,7 @@ import BillTemplate from "./BillTemplate";
 import Toast from 'react-native-toast-message'
 import Spinner from 'react-native-loading-spinner-overlay';
 import { netConnect, printBitmap } from 'rn-xprinter';
+import orderController from 'store/order/orderController';
 
 const { width, height } = Dimensions.get("window");
 const tableWidth = width - 108; // Adjust width to leave space for left nav
@@ -23,6 +24,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [selectedOrderDetail, setSelectedOrderDetail] = useState(null);
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
 
@@ -30,6 +32,24 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const numColumns = tableHead.length;
     const columnWidth = tableWidth / numColumns;
     const widthArr = Array(numColumns).fill(columnWidth);
+
+    useEffect(() => {
+        if (!selectedOrder) {
+            return
+        }
+        orderController.getOrderDetail({
+            "branch_id": 249,
+            "brand_id": 110,
+            "merchant_id": 133,
+            "order_id": selectedOrderDetail.orderID,
+            "service": "GRAB"
+        }).then((res) => {
+            console.log('getOrderDetail', res)
+            if (res.success) {
+                setSelectedOrderDetail(res.data.order ? res.data.order : {});
+            }
+        })
+    }, [selectedOrder])
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -44,6 +64,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         setSelectedOrder(order);
         setModalVisible(true);
     };
+
 
     const printTem = () => {
         if (Platform.OS != "android") {
@@ -66,7 +87,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                     return
                 }
                 netConnect(printerInfo.IP).then(() => {
-                    printBitmap(imageData, 1, 700, 0)
+                    printBitmap(imageData, 1, 554, 0)
                     setLoadingVisible(false)
                     Toast.show({
                         type: 'success',
@@ -117,7 +138,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                     return
                 }
                 netConnect(printerInfo.IP).then(() => {
-                    printBitmap(imageData, 1, 700, 0)
+                    printBitmap(imageData, 1, 554, 0)
                     setLoadingVisible(false)
                     Toast.show({
                         type: 'success',
@@ -151,7 +172,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         "GRAB",
         order.displayID,
         order.orderValue,
-        order.itemInfo.count,
+        order.itemInfoDetail?.count,
         <Badge text="chưa in" color="#FF9800" key={order.displayID + "_tem"} />,
         <Badge text={order.state} color={getStatusColor(order.state)} key={order.displayID + "_status"} />
     ]);
@@ -184,10 +205,10 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                                 <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
                                 <View style={styles.detailRow}><Text style={styles.label}>Mã đơn hàng:</Text><Text>{selectedOrder.displayID}</Text></View>
                                 <View style={styles.detailRow}><Text style={styles.label}>Tổng tiền:</Text><Text>{selectedOrder.orderValue}</Text></View>
-                                <View style={styles.detailRow}><Text style={styles.label}>Số món:</Text><Text>{selectedOrder.itemInfo.count}</Text></View>
+                                <View style={styles.detailRow}><Text style={styles.label}>Số món:</Text><Text>{selectedOrder?.itemInfoDetail?.count || 0}</Text></View>
                                 <View style={styles.detailRow}><Text style={styles.label}>Trạng thái:</Text><Badge text={selectedOrder.state} color={getStatusColor(selectedOrder.state)} /></View>
                                 <Text style={styles.modalTitle}>Danh sách món</Text>
-                                {selectedOrder.itemInfo.items.map((item, idx) => (
+                                {selectedOrder?.itemInfoDetail?.items?.map((item, idx) => (
                                     <View key={idx} style={styles.itemRow}>
                                         <Text style={styles.itemName}>{item.name}</Text>
                                         <Text style={styles.itemQuantity}>x{item.quantity}</Text>
@@ -223,7 +244,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                     bottom: 0,
                     width: 400,
                     backgroundColor: 'white',
-                }}>{selectedOrder && (<PrintTemplate orderPrint={selectedOrder} />)}</ViewShot>
+                }}>{selectedOrderDetail && (<PrintTemplate orderPrint={selectedOrderDetail} />)}</ViewShot>
             <ViewShot
                 ref={viewBillShotRef}
                 options={{ format: 'jpg', quality: 1.0, result: 'base64' }}

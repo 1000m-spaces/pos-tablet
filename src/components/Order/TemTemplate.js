@@ -6,27 +6,26 @@ const PrintTemplate = ({ orderPrint }) => {
         <>
             {orderPrint.itemInfo.items.map((item, index) => (
                 <View key={index} style={styles.card}>
-                    <View style={styles.headerRow}>
-                        <Text style={styles.billId}>#{orderPrint.bill_id || '1'}</Text>
-                        <Text style={styles.table}>({orderPrint.table || '1'})</Text>
-                        {/* <Text style={styles.date}>{formatShortTime(orderPrint.date || "")}</Text> */}
+                    <Text style={styles.foodApp}>
+                        <Text style={{ fontWeight: '700' }}>{"GRAB"} #</Text>
+                        <Text style={{ fontSize: 28, fontWeight: '700' }}>{orderPrint.displayID}</Text>
                         <Text style={styles.page}>({index + 1}/{orderPrint.itemInfo.items.length})</Text>
-                    </View>
+                    </Text>
                     <View style={styles.itemRow}>
                         <Text style={styles.itemName}>{item.name}</Text>
                     </View>
-                    {/* <Text style={styles.optionText}> - {item.stringName + ' / ' + item.option + item.extrastring}</Text>
-                    {orderPrint.note?.trim() !== '' && (
-                        <Text style={styles.orderNote}>** {orderPrint.note}</Text>
-                    )} */}
-                    {orderPrint.displayID && orderPrint.displayID != "" ? (
-                        <Text style={styles.foodApp}>
-                            <Text style={{ fontWeight: '700' }}>{"GRAB"} #</Text>
-                            <Text style={{ fontSize: 28, fontWeight: '700' }}>{orderPrint.displayID}</Text>
-                        </Text>
-                    ) : null}
+                    {
+                        item.modifierGroups.map((v, idx) => {
+                            return (
+                                <Text key={idx} style={styles.optionText}> - {v.modifiers[0].modifierName}</Text>
+                            )
+                        })
+                    }
+                    {item.comment?.trim() !== '' && (
+                        <Text style={styles.orderNote}>** {item.comment}</Text>
+                    )}
                     <View style={styles.amountRow}>
-                        <Text style={styles.amount}>{item.amount}</Text>
+                        <Text style={styles.amount}>{item.fare.priceDisplay}{item.fare.currencySymbol}</Text>
                     </View>
                 </View>
             ))}
@@ -43,7 +42,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
     },
     card: {
-        padding: 10,
+        padding: 20,
     },
     headerRow: {
         flexDirection: 'row',
