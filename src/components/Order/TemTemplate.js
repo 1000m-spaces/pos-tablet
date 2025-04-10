@@ -2,22 +2,28 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 
 const PrintTemplate = ({ orderPrint }) => {
+    var modifiers = []
+    orderPrint.itemInfoDetail?.items?.forEach((item) => {
+        item.modifierGroups.forEach(modifierGroup => {
+            modifiers.push(...modifierGroup.modifiers)
+        })
+    })
     return (
         <>
             {orderPrint.itemInfoDetail?.items?.map((item, index) => (
                 <View key={index} style={styles.card}>
                     <Text style={styles.foodApp}>
                         <Text style={{ fontWeight: '700' }}>{"GRAB"} #</Text>
-                        <Text style={{ fontSize: 28, fontWeight: '700' }}>{orderPrint.displayID}</Text>
+                        <Text style={{ fontSize: 25, fontWeight: '700' }}>{orderPrint.displayID}</Text>
                         <Text style={styles.page}>({index + 1}/{orderPrint.itemInfoDetail?.items?.length})</Text>
                     </Text>
                     <View style={styles.itemRow}>
                         <Text style={styles.itemName}>{item.name}</Text>
                     </View>
                     {
-                        item.modifierGroups.map((v, idx) => {
+                        modifiers.map((v, idx) => {
                             return (
-                                <Text key={idx} style={styles.optionText}> - {v.modifiers[0].modifierName}</Text>
+                                <Text key={idx} style={styles.optionText}> - {v.modifierName}</Text>
                             )
                         })
                     }
@@ -43,6 +49,7 @@ const styles = StyleSheet.create({
     },
     card: {
         padding: 20,
+        height: 250,
     },
     headerRow: {
         flexDirection: 'row',

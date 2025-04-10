@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Modal, Pressable, Platform } from "react-native";
+import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Modal, Pressable, Platform, Image } from "react-native";
 import { Table, Row } from "react-native-table-component";
 import ViewShot from "react-native-view-shot";
 import PrintTemplate from "./TemTemplate";
@@ -9,7 +9,8 @@ import BillTemplate from "./BillTemplate";
 import Toast from 'react-native-toast-message'
 import Spinner from 'react-native-loading-spinner-overlay';
 import { netConnect, printBitmap } from 'rn-xprinter';
-import orderController from 'store/order/orderController';
+import ImageEditor from '@react-native-community/image-editor';
+import RNFS from 'react-native-fs';
 
 const { width, height } = Dimensions.get("window");
 const tableWidth = width - 108; // Adjust width to leave space for left nav
@@ -19,6 +20,31 @@ const Badge = ({ text, color }) => (
         <Text style={styles.badgeText}>{text}</Text>
     </View>
 );
+
+
+const splitImageByHeight = async (uri, imageHeight, chunkHeight, imageWidth) => {
+    const chunks = [];
+
+    for (let y = 0; y < imageHeight; y += chunkHeight) {
+        const cropData = {
+            offset: { x: 0, y },
+            size: {
+                width: imageWidth,
+                height: Math.min(chunkHeight, imageHeight - y),
+            },
+            displaySize: {
+                width: imageWidth,
+                height: Math.min(chunkHeight, imageHeight - y),
+            },
+            resizeMode: 'contain',
+        };
+
+        const croppedUri = await ImageEditor.cropImage(uri, cropData);
+        chunks.push(croppedUri);
+    }
+
+    return chunks;
+};
 
 const OrderTable = ({ orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
@@ -56,39 +82,44 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             return
         }
         setLoadingVisible(true)
-        viewTemShotRef.current.capture().then(imageData => {
-            AsyncStorage.getPrinterInfo().then((printerInfo) => {
-                if (printerInfo == null || printerInfo.IP === "") {
+        viewTemShotRef.current.capture().then(async (uri) => {
+            try {
+                const imageInfo = await Image.getSize(uri);
+                const chunks = await splitImageByHeight(uri, imageInfo.height, 500, imageInfo.width);
+                console.log("chunks", chunks);
+                AsyncStorage.getPrinterInfo().then(async (printerInfo) => {
+                    if (printerInfo == null || printerInfo.IP === "") {
+                        setLoadingVisible(false)
+                        Toast.show({
+                            type: 'error',
+                            text1: 'Vui lòng thiết lập máy in'
+                        })
+                        showSettingPrinter()
+                        return
+                    }
+                    await netConnect(printerInfo.IP)
+                    for (chunk in chunks) {
+                        const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
+                        printBitmap(base64, 1, 554, 0)
+                    }
+                    setLoadingVisible(false)
+                    Toast.show({
+                        type: 'success',
+                        text1: 'In tem thành công'
+                    })
+                }).catch(() => {
                     setLoadingVisible(false)
                     Toast.show({
                         type: 'error',
                         text1: 'Vui lòng thiết lập máy in'
                     })
                     showSettingPrinter()
-                    return
-                }
-                netConnect(printerInfo.IP).then(() => {
-                    printBitmap(imageData, 1, 554, 0)
-                    setLoadingVisible(false)
-                    Toast.show({
-                        type: 'success',
-                        text1: 'In tem thành công'
-                    })
-                }).catch((err) => {
-                    setLoadingVisible(false)
-                    Toast.show({
-                        type: 'error',
-                        text1: 'Lỗi ' + err
-                    })
                 })
-            }).catch(() => {
-                setLoadingVisible(false)
-                Toast.show({
-                    type: 'error',
-                    text1: 'Vui lòng thiết lập máy in'
-                })
-                showSettingPrinter()
-            })
+            } catch (e) {
+                console.error(e)
+            }
+
+
         }).catch((err) => {
             setLoadingVisible(false)
             Toast.show({
@@ -218,7 +249,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             </Modal>
             <ViewShot
                 ref={viewTemShotRef}
-                options={{ format: "jpg", quality: 1.0, result: 'base64' }}
+                options={{ format: "jpg", quality: 1.0 }}
                 style={{
                     position: 'absolute',
                     left: -400,
