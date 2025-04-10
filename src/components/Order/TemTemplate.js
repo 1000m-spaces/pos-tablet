@@ -4,12 +4,12 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 const PrintTemplate = ({ orderPrint }) => {
     return (
         <>
-            {orderPrint.itemInfo.items.map((item, index) => (
+            {orderPrint.itemInfoDetail?.items?.map((item, index) => (
                 <View key={index} style={styles.card}>
                     <Text style={styles.foodApp}>
                         <Text style={{ fontWeight: '700' }}>{"GRAB"} #</Text>
                         <Text style={{ fontSize: 28, fontWeight: '700' }}>{orderPrint.displayID}</Text>
-                        <Text style={styles.page}>({index + 1}/{orderPrint.itemInfo.items.length})</Text>
+                        <Text style={styles.page}>({index + 1}/{orderPrint.itemInfoDetail?.items?.length})</Text>
                     </Text>
                     <View style={styles.itemRow}>
                         <Text style={styles.itemName}>{item.name}</Text>

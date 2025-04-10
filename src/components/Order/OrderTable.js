@@ -24,7 +24,6 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
-    const [selectedOrderDetail, setSelectedOrderDetail] = useState(null);
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
 
@@ -32,24 +31,6 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const numColumns = tableHead.length;
     const columnWidth = tableWidth / numColumns;
     const widthArr = Array(numColumns).fill(columnWidth);
-
-    useEffect(() => {
-        if (!selectedOrder) {
-            return
-        }
-        orderController.getOrderDetail({
-            "branch_id": 249,
-            "brand_id": 110,
-            "merchant_id": 133,
-            "order_id": selectedOrderDetail.orderID,
-            "service": "GRAB"
-        }).then((res) => {
-            console.log('getOrderDetail', res)
-            if (res.success) {
-                setSelectedOrderDetail(res.data.order ? res.data.order : {});
-            }
-        })
-    }, [selectedOrder])
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -244,7 +225,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                     bottom: 0,
                     width: 400,
                     backgroundColor: 'white',
-                }}>{selectedOrderDetail && (<PrintTemplate orderPrint={selectedOrderDetail} />)}</ViewShot>
+                }}>{selectedOrder && (<PrintTemplate orderPrint={selectedOrder} />)}</ViewShot>
             <ViewShot
                 ref={viewBillShotRef}
                 options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
