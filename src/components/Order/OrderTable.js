@@ -13,11 +13,11 @@ import ImageEditor from '@react-native-community/image-editor';
 import RNFS from 'react-native-fs';
 
 const { width, height } = Dimensions.get("window");
-const tableWidth = width - 108; // Adjust width to leave space for left nav
+// const tableWidth = width; // Adjust width to leave space for left nav
 
-const Badge = ({ text, color }) => (
-    <View style={[styles.badge, { backgroundColor: color }]}>
-        <Text style={styles.badgeText}>{text}</Text>
+const Badge = ({ text, colorText, colorBg, width }) => (
+    <View style={[styles.badge, { backgroundColor: colorBg, width: width }]}>
+        <Text style={[styles.badgeText, { color: colorText }]}>{text}</Text>
     </View>
 );
 
@@ -56,13 +56,49 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const tableHead = ["Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
     const columnWidth = tableWidth / numColumns;
-    const widthArr = Array(numColumns).fill(columnWidth);
+    // const widthArr = Array(numColumns).fill(columnWidth);
+    const flexArr =  Array(numColumns).fill(columnWidth);
+
+    const [tableWidth, setTableWidth] = useState([])
+    const [widthArr, setWidthArr] = useState([]);
+
+
+    useEffect(() => {
+        const { width, height } = Dimensions.get("window");
+        const calculatedTableWidth = width * 0.96;
+        setTableWidth(calculatedTableWidth);
+        const columnWidth = calculatedTableWidth / numColumns;
+        setWidthArr(Array(numColumns).fill(columnWidth));
+    }, [])
+
+    //#069C2E
+    //#CDEED8
 
     const getStatusColor = (status) => {
         switch (status) {
-            case "Confirmed": return "#4CAF50";
-            case "Delivered": return "#2196F3";
-            case "Cancelled": return "#F44336";
+            case "Confirmed": return "#069C2E";
+            case "Delivered": return "#069C2E";
+            case "Cancelled": return "#EF0000";
+            default: return "#9E9E9E";
+        }
+    };
+
+
+    const getStatusColorBg = (status) => {
+        switch (status) {
+            case "Confirmed": return "#CDEED8";
+            case "Delivered": return "#CDEED8";
+            case "Cancelled": return "#FED9DA";
+            default: return "#9E9E9E";
+        }
+    };
+
+
+    const getStatusText= (status) => {
+        switch (status) {
+            case "Confirmed": return "Đã có tài xế";
+            case "Delivered": return "Đã vận chuyển hàng";
+            case "Cancelled": return "Đã hủy";
             default: return "#9E9E9E";
         }
     };
@@ -185,15 +221,16 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         order.displayID,
         order.orderValue,
         order.itemInfoDetail?.count,
-        <Badge text="chưa in" color="#FF9800" key={order.displayID + "_tem"} />,
-        <Badge text={order.state} color={getStatusColor(order.state)} key={order.displayID + "_status"} />
+        // 2,
+        <Badge text="chưa in" colorText="#EF0000" colorBg="#FED9DA" width="60%" key={order.displayID + "_tem"} />,
+        <Badge text={getStatusText(order.state)} colorText={getStatusColor(order.state)} colorBg={getStatusColorBg(order.state)}  width="80%" key={order.displayID + "_status"} />
     ]);
 
     return (
         <>
             <ScrollView horizontal>
                 <ScrollView style={{ maxHeight: height * 0.6 }}>
-                    <View style={{ width: tableWidth }}>
+                    <View style={{ flex: 1, width: tableWidth }}>
                         <Table borderStyle={styles.border}>
                             <Row data={tableHead} widthArr={widthArr} style={styles.head} textStyle={styles.textHead} />
                             {orders.map((order, index) => (
@@ -297,7 +334,7 @@ const styles = StyleSheet.create({
     },
     text: {
         textAlign: "center",
-        padding: 10,
+        // padding: 10,
     },
     badge: {
         paddingVertical: 5,

@@ -19,11 +19,82 @@ import AsyncStorage from 'store/async_storage/index'
 
 const orderFilters = [
   { id: 1, name: 'Đơn mới' },
-  { id: 2, name: 'Đơn đặt trước' },
+  // { id: 2, name: 'Đơn đặt trước' },
   { id: 3, name: 'Lịch sử' },
 ];
 const Orders = () => {
-  const [data, setData] = useState([])
+  // const [data, setData] = useState(
+  //   [
+  //     {
+  //       doiTac: "Grab",
+  //       displayID: "#GF-249",
+  //       thoiGianNhanDon: "15-01-2025 12:33",
+  //       orderValue: "95.500",
+  //       soMon: 3,
+  //       tem: "Chưa in",
+  //       state: "Delivered"
+  //     },
+  //     {
+  //       doiTac: "Grab",
+  //       displayID: "#GF-249",
+  //       thoiGianNhanDon: "15-01-2025 12:05",
+  //       orderValue: "316.000",
+  //       soMon: 5,
+  //       tem: "Chưa in",
+  //       state: "Confirmed"
+  //     },
+  //     {
+  //       doiTac: "Shopee",
+  //       displayID: "#8837",
+  //       thoiGianNhanDon: "15-01-2025 11:50",
+  //       orderValue: "187.000",
+  //       soMon: 4,
+  //       tem: "Chưa in",
+  //       state: "Confirmed"
+  //     },
+  //     {
+  //       doiTac: "Shopee",
+  //       displayID: "#3456",
+  //       thoiGianNhanDon: "15-01-2025 11:45",
+  //       orderValue: "95.500",
+  //       itemInfoDetail: [{id: 1}, {id: 2}],
+  //       soMon: 3,
+  //       tem: "Đã in",
+  //       state: "Cancelled"
+  //     },
+  //     {
+  //       doiTac: "Grab",
+  //       displayID: "#GF-546",
+  //       thoiGianNhanDon: "15-01-2025 11:40",
+  //       orderValue: "134.500",
+  //       soMon: 6,
+  //       tem: "Đã in",
+  //       itemInfoDetail: [{id: 1}, {id: 2}],
+  //       state: "Cancelled"
+  //     },
+  //     {
+  //       doiTac: "Shopee",
+  //       displayID: "#7678",
+  //       thoiGianNhanDon: "15-01-2025 11:38",
+  //       orderValue: "47.000",
+  //       soMon: 1,
+  //       tem: "Đã in",
+  //       itemInfoDetail: [{id: 1}, {id: 2}],
+  //       state: "Confirmed"
+  //     },
+  //     {
+  //       doiTac: "Shopee",
+  //       displayID: "#7678",
+  //       thoiGianNhanDon: "15-01-2025 11:38",
+  //       orderValue: "47.000",
+  //       soMon: 1,
+  //       tem: "Đã in",
+  //       itemInfoDetail: [{id: 1}, {id: 2}],
+  //       state: "Delivered"
+  //     }
+  //   ]
+  // )
+  const [data, setData] = useState([]);
   const [orderType, setOrderType] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
   const [ip, setIP] = useState("")
@@ -107,7 +178,7 @@ const Orders = () => {
               </View>
               <View style={{ flexDirection: 'row' }}>
                 <TouchableOpacity style={styles.searchInput}>
-                  <Svg name={'search'} size={20} color={'gray'} />
+                  <Svg name={'clock'} size={20} color={'gray'} />
                   <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
                     {new Date().toLocaleDateString('en-GB')}
                   </TextNormal>
@@ -120,8 +191,8 @@ const Orders = () => {
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.searchInput, { flex: 1 }]}>
                   <Svg name={'search'} size={20} />
-                  <TextNormal style={{ color: Colors.secondary }}>
-                    {' Tìm kiếm món'}
+                  <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                    {' Tìm kiếm theo mã đơn hàng'}
                   </TextNormal>
                 </TouchableOpacity>
               </View>
