@@ -8,7 +8,7 @@ import AsyncStorage from 'store/async_storage/index'
 import BillTemplate from "./BillTemplate";
 import Toast from 'react-native-toast-message'
 import Spinner from 'react-native-loading-spinner-overlay';
-import { netConnect, printBitmap } from 'rn-xprinter';
+import { netConnect, printBitmap, printPageModelData, zplPrintTest, cpclPrintTest, tsplPrintTest, tsplPrintBitmap } from 'rn-xprinter';
 import ImageEditor from '@react-native-community/image-editor';
 import RNFS from 'react-native-fs';
 
@@ -57,7 +57,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const numColumns = tableHead.length;
     const columnWidth = tableWidth / numColumns;
     // const widthArr = Array(numColumns).fill(columnWidth);
-    const flexArr =  Array(numColumns).fill(columnWidth);
+    const flexArr = Array(numColumns).fill(columnWidth);
 
     const [tableWidth, setTableWidth] = useState([])
     const [widthArr, setWidthArr] = useState([]);
@@ -94,7 +94,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     };
 
 
-    const getStatusText= (status) => {
+    const getStatusText = (status) => {
         switch (status) {
             case "Confirmed": return "Đã có tài xế";
             case "Delivered": return "Đã vận chuyển hàng";
@@ -124,7 +124,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                 const chunks = await splitImageByHeight(uri, imageInfo.height, 500, imageInfo.width);
                 console.log("chunks", chunks);
                 AsyncStorage.getPrinterInfo().then(async (printerInfo) => {
-                    if (printerInfo == null || printerInfo.IP === "") {
+                    if (printerInfo == null || printerInfo.IP === "" || printerInfo.sWidth === "" || printerInfo.sHeight === "") {
                         setLoadingVisible(false)
                         Toast.show({
                             type: 'error',
@@ -136,14 +136,15 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                     await netConnect(printerInfo.IP)
                     for (chunk in chunks) {
                         const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                        printBitmap(base64, 1, 554, 0)
+                        tsplPrintBitmap(Number(printerInfo.sWidth), Number(printerInfo.sHeight), base64, imageInfo.width)
                     }
                     setLoadingVisible(false)
                     Toast.show({
                         type: 'success',
                         text1: 'In tem thành công'
                     })
-                }).catch(() => {
+                }).catch((err) => {
+                    console.error(err)
                     setLoadingVisible(false)
                     Toast.show({
                         type: 'error',
@@ -216,6 +217,62 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         });
     }
 
+    const printTest = (type) => {
+        if (Platform.OS != "android") {
+            Toast.show({
+                type: 'error',
+                text1: 'Chức năng chỉ hỗ trợ trên hệ điều hành android'
+            })
+            return
+        }
+        setLoadingVisible(true)
+        AsyncStorage.getPrinterInfo().then((printerInfo) => {
+            if (printerInfo == null || printerInfo.IP === "") {
+                setLoadingVisible(false)
+                Toast.show({
+                    type: 'error',
+                    text1: 'Vui lòng thiết lập máy in'
+                })
+                showSettingPrinter()
+                return
+            }
+            netConnect(printerInfo.IP).then(() => {
+                switch (type) {
+                    case "PageModelData":
+                        printPageModelData()
+                        break
+                    case "ZPL":
+                        zplPrintTest()
+                        break
+                    case "CPCL":
+                        cpclPrintTest()
+                        break
+                    case "TSPL":
+                        tsplPrintTest()
+                        break
+                }
+                setLoadingVisible(false)
+                Toast.show({
+                    type: 'success',
+                    text1: 'In test thành công'
+                })
+            }).catch((err) => {
+                setLoadingVisible(false)
+                Toast.show({
+                    type: 'error',
+                    text1: 'Lỗi ' + err
+                })
+            })
+        }).catch(() => {
+            setLoadingVisible(false)
+            Toast.show({
+                type: 'error',
+                text1: 'Vui lòng thiết lập máy in'
+            })
+            showSettingPrinter()
+        })
+    }
+
     const tableData = orders.map(order => [
         "GRAB",
         order.displayID,
@@ -223,7 +280,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         order.itemInfoDetail?.count,
         // 2,
         <Badge text="chưa in" colorText="#EF0000" colorBg="#FED9DA" width="60%" key={order.displayID + "_tem"} />,
-        <Badge text={getStatusText(order.state)} colorText={getStatusColor(order.state)} colorBg={getStatusColorBg(order.state)}  width="80%" key={order.displayID + "_status"} />
+        <Badge text={getStatusText(order.state)} colorText={getStatusColor(order.state)} colorBg={getStatusColorBg(order.state)} width="80%" key={order.displayID + "_status"} />
     ]);
 
     return (
@@ -389,6 +446,7 @@ const styles = StyleSheet.create({
     },
     printButton: {
         marginTop: 15,
+        marginHorizontal: 5,
         backgroundColor: "#FF9800",
         padding: 10,
         borderRadius: 5,

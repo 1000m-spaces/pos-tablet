@@ -76,3 +76,4 @@ package-lock.json
 # react-native-config codegen
 ios/tmp.xcconfig
 .cxx
+release/

@@ -98,11 +98,15 @@ const Orders = () => {
   const [orderType, setOrderType] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
   const [ip, setIP] = useState("")
+  const [sWidth, setSWidth] = useState(50)
+  const [sHeight, setSHeight] = useState(30)
 
   useEffect(() => {
     AsyncStorage.getPrinterInfo().then((printerInfo) => {
       if (printerInfo) {
         setIP(printerInfo.IP)
+        setSWidth(printerInfo.sWidth)
+        setSHeight(printerInfo.sHeight)
       }
     })
     orderController.fetchOrder({
@@ -207,7 +211,7 @@ const Orders = () => {
                 {
                   width: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
                   height:
-                    heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
+                    heightDevice > widthDevice ? widthDevice * 0.5 : heightDevice * 0.5,
                   backgroundColor: Colors.bgInput,
                   position: 'absolute',
                   borderRadius: 16,
@@ -237,6 +241,38 @@ const Orders = () => {
                       placeholderTextColor={"gray"}
                     />
                   </View>
+                  <TextNormal style={styles.lable}>{"Chiều dài khổ giấy"}</TextNormal>
+                  <View style={styles.dialogInput}>
+                    <TextInput
+                      placeholder="Chiều dài (50mm)"
+                      value={sWidth}
+                      onChangeText={(text) => setSWidth(text)}
+                      style={{
+                        width: 200,
+                        height: 50,
+                        color: 'black',
+                        backgroundColor: Colors.whiteColor,
+                      }}
+                      autoFocus
+                      placeholderTextColor={"gray"}
+                    />
+                  </View>
+                  <TextNormal style={styles.lable}>{"Chiều cao khổ giấy"}</TextNormal>
+                  <View style={styles.dialogInput}>
+                    <TextInput
+                      placeholder="Chiều cao (30mm)"
+                      value={sHeight}
+                      onChangeText={(text) => setSHeight(text)}
+                      style={{
+                        width: 200,
+                        height: 50,
+                        color: 'black',
+                        backgroundColor: Colors.whiteColor,
+                      }}
+                      autoFocus
+                      placeholderTextColor={"gray"}
+                    />
+                  </View>
                 </View>
                 <Pressable style={{
                   marginTop: 15,
@@ -244,7 +280,7 @@ const Orders = () => {
                   padding: 10,
                   borderRadius: 5,
                 }} onPress={() => {
-                  AsyncStorage.setPrinterInfo({ IP: ip }).then(() => {
+                  AsyncStorage.setPrinterInfo({ IP: ip, sWidth: sWidth, sHeight: sHeight }).then(() => {
                     setModalVisible(false)
                   })
                 }}>
