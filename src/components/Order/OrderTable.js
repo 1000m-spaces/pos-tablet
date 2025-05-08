@@ -8,40 +8,16 @@ import AsyncStorage from 'store/async_storage/index'
 import BillTemplate from "./BillTemplate";
 import Toast from 'react-native-toast-message'
 import Spinner from 'react-native-loading-spinner-overlay';
-import { netConnect, printBitmap, printPageModelData, zplPrintTest, cpclPrintTest, tsplPrintTest, tsplPrintBitmap } from 'rn-xprinter';
-import ImageEditor from '@react-native-community/image-editor';
+import { netConnect, printBitmap, closeConnection, tsplPrintBitmap } from 'rn-xprinter';
 import RNFS from 'react-native-fs';
 
 const { width, height } = Dimensions.get("window");
-// const tableWidth = width; // Adjust width to leave space for left nav
 
 const Badge = ({ text, colorText, colorBg, width }) => (
     <View style={[styles.badge, { backgroundColor: colorBg, width: width }]}>
         <Text style={[styles.badgeText, { color: colorText }]}>{text}</Text>
     </View>
 );
-
-const splitImageByHeight = async (uri, imageHeight, chunkHeight, imageWidth) => {
-    const chunks = [];
-    for (let y = 0; y < imageHeight; y += chunkHeight) {
-        const cropData = {
-            offset: { x: 0, y },
-            size: {
-                width: imageWidth,
-                height: Math.min(chunkHeight, imageHeight - y),
-            },
-            displaySize: {
-                width: imageWidth,
-                height: Math.min(chunkHeight, imageHeight - y),
-            },
-            resizeMode: 'contain',
-        };
-        const croppedUri = await ImageEditor.cropImage(uri, cropData);
-        chunks.push(croppedUri);
-    }
-
-    return chunks;
-};
 
 const OrderTable = ({ orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
@@ -53,9 +29,6 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
 
     const tableHead = ["Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
-    const columnWidth = tableWidth / numColumns;
-    // const widthArr = Array(numColumns).fill(columnWidth);
-    const flexArr = Array(numColumns).fill(columnWidth);
 
     const [tableWidth, setTableWidth] = useState([])
     const [widthArr, setWidthArr] = useState([]);
@@ -72,6 +45,9 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     // Connect to printer on component mount
     useEffect(() => {
         connectToPrinter();
+        return () => {
+            closeConnection();
+        }
     }, []);
 
     const connectToPrinter = async () => {
@@ -145,9 +121,13 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                 throw new Error('Printer settings not configured');
             }
 
-            const isConnected = await ensurePrinterConnection();
-            if (!isConnected) {
-                throw new Error('Printer connection failed');
+            // Attempt to connect to printer before printing
+            try {
+                await netConnect(printerInfo.IP);
+                setIsPrinterConnected(true);
+            } catch (connectError) {
+                console.error('Printer connection error:', connectError);
+                throw new Error('Printer settings not configured');
             }
 
             const uri = await viewTemShotRef.current.capture();
@@ -196,9 +176,13 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                 throw new Error('Printer settings not configured');
             }
 
-            const isConnected = await ensurePrinterConnection();
-            if (!isConnected) {
-                throw new Error('Printer connection failed');
+            // Attempt to connect to printer before printing
+            try {
+                await netConnect(printerInfo.IP);
+                setIsPrinterConnected(true);
+            } catch (connectError) {
+                console.error('Printer connection error:', connectError);
+                throw new Error('Printer settings not configured');
             }
 
             const imageData = await viewBillShotRef.current.capture();
