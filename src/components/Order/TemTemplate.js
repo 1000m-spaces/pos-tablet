@@ -1,106 +1,178 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const PrintTemplate = ({ orderPrint }) => {
-    var modifiers = []
-    orderPrint.itemInfoDetail?.items?.forEach((item) => {
-        item.modifierGroups.forEach(modifierGroup => {
-            modifiers.push(...modifierGroup.modifiers)
-        })
-    })
+// Convert mm to pixels (96 DPI)
+const mmToPixels = (mm) => {
+    return Math.round((mm * 96) / 25.4); // 25.4mm = 1 inch
+};
+
+// Default printer settings (50mm x 30mm at 96 DPI)
+const DEFAULT_SETTINGS = {
+    width: mmToPixels(50), // 50mm
+    height: mmToPixels(30), // 30mm
+    fontSize: {
+        storeName: 12,
+        orderNumber: 12,
+        itemName: 11,
+        modifier: 10,
+        note: 10
+    },
+    padding: 4,
+    margin: 2
+};
+
+const PrintTemplate = ({ orderPrint, settings = {} }) => {
+    const [printerSettings, setPrinterSettings] = useState(null);
+    useEffect(() => {
+        const loadPrinterSettings = async () => {
+            try {
+                const printerInfo = await AsyncStorage.getPrinterInfo();
+                if (printerInfo && printerInfo.sWidth && printerInfo.sHeight) {
+                    setPrinterSettings({
+                        width: mmToPixels(Number(printerInfo.sWidth)),
+                        height: mmToPixels(Number(printerInfo.sHeight))
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading printer settings:', error);
+            }
+        };
+
+        loadPrinterSettings();
+    }, []);
+
+    // Merge default settings with provided settings and printer settings
+    const config = {
+        ...DEFAULT_SETTINGS,
+        ...settings,
+        ...(printerSettings || {}),
+        fontSize: {
+            ...DEFAULT_SETTINGS.fontSize,
+            ...(settings.fontSize || {})
+        }
+    };
+
+
+
+    const styles = StyleSheet.create({
+        container: {
+            backgroundColor: 'white',
+            width: config.width,
+        },
+        card: {
+            padding: config.padding,
+            height: config.height,
+            marginBottom: mmToPixels(4),
+        },
+        header: {
+            marginBottom: config.margin * 2,
+            borderBottomWidth: 1,
+            borderBottomColor: '#000',
+            paddingBottom: config.padding,
+        },
+        storeName: {
+            fontSize: config.fontSize.storeName,
+            fontWeight: 'bold',
+            textAlign: 'center',
+            marginBottom: config.margin,
+        },
+        orderInfo: {
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        orderLabel: {
+            fontSize: config.fontSize.modifier,
+            fontWeight: '600',
+        },
+        orderNumber: {
+            fontSize: config.fontSize.orderNumber,
+            fontWeight: 'bold',
+            marginLeft: config.margin,
+        },
+        pageNumber: {
+            fontSize: config.fontSize.modifier,
+            marginLeft: config.margin * 2,
+            color: '#000',
+        },
+        itemContainer: {
+            marginTop: config.padding,
+        },
+        itemRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: config.margin,
+        },
+        itemName: {
+            fontSize: config.fontSize.itemName,
+            fontWeight: '600',
+            flex: 1,
+            marginRight: config.padding,
+        },
+        itemPrice: {
+            fontSize: config.fontSize.itemName,
+            fontWeight: '600',
+        },
+        modifiersContainer: {
+            marginLeft: config.padding * 2,
+            marginTop: config.margin,
+        },
+        modifierText: {
+            fontSize: config.fontSize.modifier,
+            color: '#000',
+            marginBottom: config.margin / 2,
+        },
+        noteContainer: {
+            marginTop: config.padding,
+            padding: config.margin,
+            backgroundColor: '#F5F5F5',
+        },
+        noteText: {
+            fontSize: config.fontSize.note,
+            color: '#000',
+        },
+    });
+
     return (
-        <>
+        <View style={styles.container}>
             {orderPrint.itemInfoDetail?.items?.map((item, index) => (
                 <View key={index} style={styles.card}>
-                    <Text style={styles.foodApp}>
-                        <Text style={{ fontWeight: '700' }}>{"GRAB"} #</Text>
-                        <Text style={{ fontSize: 25, fontWeight: '700' }}>{orderPrint.displayID}</Text>
-                        <Text style={styles.page}>({index + 1}/{orderPrint.itemInfoDetail?.items?.length})</Text>
-                    </Text>
-                    <View style={styles.itemRow}>
-                        <Text style={styles.itemName}>{item.name}</Text>
+                    <View style={styles.header}>
+                        <Text style={styles.orderInfo}>
+                            <Text style={styles.orderLabel}>GRAB</Text>
+                            <Text style={styles.orderLabel}>#</Text>
+                            <Text style={styles.orderNumber}>{orderPrint.displayID}</Text>
+                            <Text style={styles.pageNumber}>({index + 1}/{orderPrint.itemInfoDetail?.items?.length})</Text>
+                        </Text>
                     </View>
-                    {
-                        modifiers.map((v, idx) => {
-                            return (
-                                <Text key={idx} style={styles.optionText}> - {v.modifierName}</Text>
-                            )
-                        })
-                    }
-                    {item.comment?.trim() !== '' && (
-                        <Text style={styles.orderNote}>** {item.comment}</Text>
-                    )}
-                    <View style={styles.amountRow}>
-                        <Text style={styles.amount}>{item.fare.priceDisplay}{item.fare.currencySymbol}</Text>
+                    <View style={styles.itemContainer}>
+                        <View style={styles.itemRow}>
+                            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                            <Text style={styles.itemPrice}>{item.fare.priceDisplay}{item.fare.currencySymbol}</Text>
+                        </View>
+                        {
+                            item.modifierGroups?.length > 0 && (
+                                <View style={styles.modifiersContainer}>
+                                    {item.modifierGroups?.map((modifierGroup, idx) => (
+                                        modifierGroup.modifiers.map((modifier, idx) => (
+                                            <Text key={idx} style={styles.modifierText} numberOfLines={1}>• {modifier.modifierName}</Text>
+                                        ))
+                                    ))}
+                                </View>
+                            )}
+
+                        {item.comment?.trim() !== '' && (
+                            <View style={styles.noteContainer}>
+                                <Text style={styles.noteText} numberOfLines={2}>{item.comment}</Text>
+                            </View>
+                        )}
                     </View>
                 </View>
             ))}
-        </>
+        </View>
     );
 };
-
-const styles = StyleSheet.create({
-    wrapper: {
-        position: 'absolute',
-        left: 0,
-        bottom: 0,
-        width: 400,
-        backgroundColor: 'white',
-    },
-    card: {
-        padding: 20,
-        height: 250,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 10,
-    },
-    billId: {
-        fontSize: 26,
-        fontWeight: '900',
-    },
-    table: {
-        fontSize: 24,
-        fontWeight: '900',
-    },
-    date: {
-        fontSize: 16,
-    },
-    page: {
-        fontSize: 24,
-        fontWeight: '700',
-    },
-    itemRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    itemName: {
-        fontSize: 24,
-        fontWeight: '700',
-    },
-    optionText: {
-        fontSize: 20,
-    },
-    noteText: {
-        fontSize: 20,
-        fontWeight: '700',
-    },
-    orderNote: {
-        fontSize: 20,
-        fontWeight: '700',
-    },
-    foodApp: {
-        fontSize: 20,
-    },
-    amountRow: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-    },
-    amount: {
-        fontSize: 20,
-        fontWeight: '700',
-    },
-});
 
 export default PrintTemplate;

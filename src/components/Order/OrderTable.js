@@ -21,10 +21,8 @@ const Badge = ({ text, colorText, colorBg, width }) => (
     </View>
 );
 
-
 const splitImageByHeight = async (uri, imageHeight, chunkHeight, imageWidth) => {
     const chunks = [];
-
     for (let y = 0; y < imageHeight; y += chunkHeight) {
         const cropData = {
             offset: { x: 0, y },
@@ -38,7 +36,6 @@ const splitImageByHeight = async (uri, imageHeight, chunkHeight, imageWidth) => 
             },
             resizeMode: 'contain',
         };
-
         const croppedUri = await ImageEditor.cropImage(uri, cropData);
         chunks.push(croppedUri);
     }
@@ -50,6 +47,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [isPrinterConnected, setIsPrinterConnected] = useState(false);
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
 
@@ -71,8 +69,30 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         setWidthArr(Array(numColumns).fill(columnWidth));
     }, [])
 
-    //#069C2E
-    //#CDEED8
+    // Connect to printer on component mount
+    useEffect(() => {
+        connectToPrinter();
+    }, []);
+
+    const connectToPrinter = async () => {
+        try {
+            const printerInfo = await AsyncStorage.getPrinterInfo();
+            if (printerInfo && printerInfo.IP) {
+                await netConnect(printerInfo.IP);
+                setIsPrinterConnected(true);
+            }
+        } catch (error) {
+            console.error('Printer connection error:', error);
+            setIsPrinterConnected(false);
+        }
+    };
+
+    const ensurePrinterConnection = async () => {
+        if (!isPrinterConnected) {
+            await connectToPrinter();
+        }
+        return isPrinterConnected;
+    };
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -109,169 +129,100 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     };
 
 
-    const printTem = () => {
-        if (Platform.OS != "android") {
+    const printTem = async () => {
+        if (Platform.OS !== "android") {
             Toast.show({
                 type: 'error',
                 text1: 'Chức năng chỉ hỗ trợ trên hệ điều hành android'
-            })
-            return
+            });
+            return;
         }
-        setLoadingVisible(true)
-        viewTemShotRef.current.capture().then(async (uri) => {
-            try {
-                const imageInfo = await Image.getSize(uri);
-                const chunks = await splitImageByHeight(uri, imageInfo.height, 500, imageInfo.width);
-                console.log("chunks", chunks);
-                AsyncStorage.getPrinterInfo().then(async (printerInfo) => {
-                    if (printerInfo == null || printerInfo.IP === "" || printerInfo.sWidth === "" || printerInfo.sHeight === "") {
-                        setLoadingVisible(false)
-                        Toast.show({
-                            type: 'error',
-                            text1: 'Vui lòng thiết lập máy in'
-                        })
-                        showSettingPrinter()
-                        return
-                    }
-                    await netConnect(printerInfo.IP)
-                    for (chunk in chunks) {
-                        const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                        tsplPrintBitmap(Number(printerInfo.sWidth), Number(printerInfo.sHeight), base64, imageInfo.width)
-                    }
-                    setLoadingVisible(false)
-                    Toast.show({
-                        type: 'success',
-                        text1: 'In tem thành công'
-                    })
-                }).catch((err) => {
-                    console.error(err)
-                    setLoadingVisible(false)
-                    Toast.show({
-                        type: 'error',
-                        text1: 'Vui lòng thiết lập máy in'
-                    })
-                    showSettingPrinter()
-                })
-            } catch (e) {
-                console.error(e)
+
+        setLoadingVisible(true);
+        try {
+            const printerInfo = await AsyncStorage.getPrinterInfo();
+            if (!printerInfo || !printerInfo.IP || !printerInfo.sWidth || !printerInfo.sHeight) {
+                throw new Error('Printer settings not configured');
             }
 
-
-        }).catch((err) => {
-            setLoadingVisible(false)
-            Toast.show({
-                type: 'error',
-                text1: 'Lỗi ' + err
-            })
-        });
-    }
-
-    const printBill = () => {
-        if (Platform.OS != "android") {
-            Toast.show({
-                type: 'error',
-                text1: 'Chức năng chỉ hỗ trợ trên hệ điều hành android'
-            })
-            return
-        }
-        setLoadingVisible(true)
-        viewBillShotRef.current.capture().then(imageData => {
-            AsyncStorage.getPrinterInfo().then((printerInfo) => {
-                if (printerInfo == null || printerInfo.IP === "") {
-                    setLoadingVisible(false)
-                    Toast.show({
-                        type: 'error',
-                        text1: 'Vui lòng thiết lập máy in'
-                    })
-                    showSettingPrinter()
-                    return
-                }
-                netConnect(printerInfo.IP).then(() => {
-                    printBitmap(imageData, 1, 554, 0)
-                    setLoadingVisible(false)
-                    Toast.show({
-                        type: 'success',
-                        text1: 'In hoá đơn thành công'
-                    })
-                }).catch((err) => {
-                    setLoadingVisible(false)
-                    Toast.show({
-                        type: 'error',
-                        text1: 'Lỗi ' + err
-                    })
-                })
-            }).catch(() => {
-                setLoadingVisible(false)
-                Toast.show({
-                    type: 'error',
-                    text1: 'Vui lòng thiết lập máy in'
-                })
-                showSettingPrinter()
-            })
-        }).catch((err) => {
-            setLoadingVisible(false)
-            Toast.show({
-                type: 'error',
-                text1: 'Lỗi ' + err
-            })
-        });
-    }
-
-    const printTest = (type) => {
-        if (Platform.OS != "android") {
-            Toast.show({
-                type: 'error',
-                text1: 'Chức năng chỉ hỗ trợ trên hệ điều hành android'
-            })
-            return
-        }
-        setLoadingVisible(true)
-        AsyncStorage.getPrinterInfo().then((printerInfo) => {
-            if (printerInfo == null || printerInfo.IP === "") {
-                setLoadingVisible(false)
-                Toast.show({
-                    type: 'error',
-                    text1: 'Vui lòng thiết lập máy in'
-                })
-                showSettingPrinter()
-                return
+            const isConnected = await ensurePrinterConnection();
+            if (!isConnected) {
+                throw new Error('Printer connection failed');
             }
-            netConnect(printerInfo.IP).then(() => {
-                switch (type) {
-                    case "PageModelData":
-                        printPageModelData()
-                        break
-                    case "ZPL":
-                        zplPrintTest()
-                        break
-                    case "CPCL":
-                        cpclPrintTest()
-                        break
-                    case "TSPL":
-                        tsplPrintTest()
-                        break
-                }
-                setLoadingVisible(false)
-                Toast.show({
-                    type: 'success',
-                    text1: 'In test thành công'
-                })
-            }).catch((err) => {
-                setLoadingVisible(false)
-                Toast.show({
-                    type: 'error',
-                    text1: 'Lỗi ' + err
-                })
-            })
-        }).catch(() => {
-            setLoadingVisible(false)
+
+            const uri = await viewTemShotRef.current.capture();
+            const imageInfo = await Image.getSize(uri);
+            const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
+            await tsplPrintBitmap(
+                Number(printerInfo.sWidth),
+                2 * Number(printerInfo.sHeight),
+                base64,
+                imageInfo.width
+            );
+
+            Toast.show({
+                type: 'success',
+                text1: 'In tem thành công'
+            });
+        } catch (error) {
+            console.error('Print error:', error);
             Toast.show({
                 type: 'error',
-                text1: 'Vui lòng thiết lập máy in'
-            })
-            showSettingPrinter()
-        })
-    }
+                text1: error.message === 'Printer settings not configured' ?
+                    'Vui lòng thiết lập máy in' :
+                    'Lỗi in tem: ' + error.message
+            });
+            if (error.message === 'Printer settings not configured') {
+                showSettingPrinter();
+            }
+        } finally {
+            setLoadingVisible(false);
+        }
+    };
+
+    const printBill = async () => {
+        if (Platform.OS !== "android") {
+            Toast.show({
+                type: 'error',
+                text1: 'Chức năng chỉ hỗ trợ trên hệ điều hành android'
+            });
+            return;
+        }
+
+        setLoadingVisible(true);
+        try {
+            const printerInfo = await AsyncStorage.getPrinterInfo();
+            if (!printerInfo || !printerInfo.IP) {
+                throw new Error('Printer settings not configured');
+            }
+
+            const isConnected = await ensurePrinterConnection();
+            if (!isConnected) {
+                throw new Error('Printer connection failed');
+            }
+
+            const imageData = await viewBillShotRef.current.capture();
+            await printBitmap(imageData, 1, 554, 0);
+
+            Toast.show({
+                type: 'success',
+                text1: 'In hoá đơn thành công'
+            });
+        } catch (error) {
+            console.error('Print error:', error);
+            Toast.show({
+                type: 'error',
+                text1: error.message === 'Printer settings not configured' ?
+                    'Vui lòng thiết lập máy in' :
+                    'Lỗi in hoá đơn: ' + error.message
+            });
+            if (error.message === 'Printer settings not configured') {
+                showSettingPrinter();
+            }
+        } finally {
+            setLoadingVisible(false);
+        }
+    };
 
     const tableData = orders.map(order => [
         "GRAB",
