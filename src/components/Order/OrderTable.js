@@ -24,6 +24,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [printedLabels, setPrintedLabels] = useState([]);
+    const [isAutoPrinting, setIsAutoPrinting] = useState(false);
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
 
@@ -191,6 +192,74 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             setLoadingVisible(false);
         }
     };
+
+    const autoPrintOrder = async (order) => {
+        if (Platform.OS !== "android") {
+            return;
+        }
+
+        try {
+            const printerInfo = await AsyncStorage.getPrinterInfo();
+            if (!printerInfo || !printerInfo.IP || !printerInfo.sWidth || !printerInfo.sHeight) {
+                throw new Error('Printer settings not configured');
+            }
+
+            // Set the order for printing
+            setSelectedOrder(order);
+
+            // Wait for the ViewShot to be ready
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Connect to printer
+            await netConnect(printerInfo.IP);
+
+            // Print the label
+            const uri = await viewTemShotRef.current.capture();
+            const imageInfo = await Image.getSize(uri);
+            const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
+            await tsplPrintBitmap(
+                Number(printerInfo.sWidth),
+                2 * Number(printerInfo.sHeight),
+                base64,
+                imageInfo.width
+            );
+
+            // Update print status
+            await AsyncStorage.setPrintedLabels(order.displayID);
+            setPrintedLabels(prev => [...prev, order.displayID]);
+
+            Toast.show({
+                type: 'success',
+                text1: `Đã tự động in tem cho đơn ${order.displayID}`
+            });
+        } catch (error) {
+            console.error('Auto print error:', error);
+            if (error.message === 'Printer settings not configured') {
+                showSettingPrinter();
+            }
+        }
+    };
+
+    // Monitor orders for new unprinted items
+    useEffect(() => {
+        const checkAndPrintNewOrders = async () => {
+            if (isAutoPrinting || !orders.length) return;
+            setIsAutoPrinting(true);
+            try {
+                for (const order of orders) {
+                    if (!printedLabels.includes(order.displayID)) {
+                        await autoPrintOrder(order);
+                        // Add a small delay between prints
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+            } finally {
+                setIsAutoPrinting(false);
+            }
+        };
+
+        checkAndPrintNewOrders();
+    }, [orders, printedLabels]);
 
     const tableData = orders.map(order => [
         "GRAB",
