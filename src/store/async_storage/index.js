@@ -125,10 +125,8 @@ const getTheFirstLogin = async () => {
 };
 
 const clearStorage = async () => {
-  // AsyncStorage.clear();
   try {
     await AsyncStorage.removeItem('user');
-    // await AsyncStorage.removeItem('recommendedProducts');
   } catch (e) {
     console.log(e);
   }
@@ -167,6 +165,29 @@ const setListRecommned = async listProduct => {
   }
 };
 
+const setPrintedLabels = async (orderId) => {
+  try {
+    const existingLabels = await AsyncStorage.getItem('printedLabels');
+    const printedLabels = existingLabels ? JSON.parse(existingLabels) : [];
+    if (!printedLabels.includes(orderId)) {
+      printedLabels.push(orderId);
+      await AsyncStorage.setItem('printedLabels', JSON.stringify(printedLabels));
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const getPrintedLabels = async () => {
+  try {
+    const printedLabels = await AsyncStorage.getItem('printedLabels');
+    return printedLabels ? JSON.parse(printedLabels) : [];
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -183,4 +204,6 @@ export default {
   clearStorage,
   setPrinterInfo,
   getPrinterInfo,
+  setPrintedLabels,
+  getPrintedLabels,
 };

@@ -23,7 +23,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
-    const [isPrinterConnected, setIsPrinterConnected] = useState(false);
+    const [printedLabels, setPrintedLabels] = useState([]);
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
 
@@ -33,7 +33,6 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const [tableWidth, setTableWidth] = useState([])
     const [widthArr, setWidthArr] = useState([]);
 
-
     useEffect(() => {
         const { width, height } = Dimensions.get("window");
         const calculatedTableWidth = width * 0.96;
@@ -42,33 +41,19 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         setWidthArr(Array(numColumns).fill(columnWidth));
     }, [])
 
-    // Connect to printer on component mount
     useEffect(() => {
-        connectToPrinter();
+        const loadPrintedLabels = async () => {
+            const labels = await AsyncStorage.getPrintedLabels();
+            setPrintedLabels(labels);
+        };
+        loadPrintedLabels();
+    }, []);
+
+    useEffect(() => {
         return () => {
             closeConnection();
         }
     }, []);
-
-    const connectToPrinter = async () => {
-        try {
-            const printerInfo = await AsyncStorage.getPrinterInfo();
-            if (printerInfo && printerInfo.IP) {
-                await netConnect(printerInfo.IP);
-                setIsPrinterConnected(true);
-            }
-        } catch (error) {
-            console.error('Printer connection error:', error);
-            setIsPrinterConnected(false);
-        }
-    };
-
-    const ensurePrinterConnection = async () => {
-        if (!isPrinterConnected) {
-            await connectToPrinter();
-        }
-        return isPrinterConnected;
-    };
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -79,7 +64,6 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         }
     };
 
-
     const getStatusColorBg = (status) => {
         switch (status) {
             case "Confirmed": return "#CDEED8";
@@ -88,7 +72,6 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             default: return "#9E9E9E";
         }
     };
-
 
     const getStatusText = (status) => {
         switch (status) {
@@ -103,7 +86,6 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         setSelectedOrder(order);
         setModalVisible(true);
     };
-
 
     const printTem = async () => {
         if (Platform.OS !== "android") {
@@ -124,7 +106,6 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             // Attempt to connect to printer before printing
             try {
                 await netConnect(printerInfo.IP);
-                setIsPrinterConnected(true);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');
@@ -139,6 +120,10 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                 base64,
                 imageInfo.width
             );
+
+            // Update print status after successful print
+            await AsyncStorage.setPrintedLabels(selectedOrder.displayID);
+            setPrintedLabels(prev => [...prev, selectedOrder.displayID]);
 
             Toast.show({
                 type: 'success',
@@ -179,7 +164,6 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             // Attempt to connect to printer before printing
             try {
                 await netConnect(printerInfo.IP);
-                setIsPrinterConnected(true);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');
@@ -213,8 +197,13 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         order.displayID,
         order.orderValue,
         order.itemInfoDetail?.count,
-        // 2,
-        <Badge text="chưa in" colorText="#EF0000" colorBg="#FED9DA" width="60%" key={order.displayID + "_tem"} />,
+        <Badge
+            text={printedLabels.includes(order.displayID) ? "Đã in" : "Chưa in"}
+            colorText={printedLabels.includes(order.displayID) ? "#069C2E" : "#EF0000"}
+            colorBg={printedLabels.includes(order.displayID) ? "#CDEED8" : "#FED9DA"}
+            width="60%"
+            key={order.displayID + "_tem"}
+        />,
         <Badge text={getStatusText(order.state)} colorText={getStatusColor(order.state)} colorBg={getStatusColorBg(order.state)} width="80%" key={order.displayID + "_status"} />
     ]);
 

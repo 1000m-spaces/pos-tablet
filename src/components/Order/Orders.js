@@ -19,81 +19,9 @@ import AsyncStorage from 'store/async_storage/index'
 
 const orderFilters = [
   { id: 1, name: 'Đơn mới' },
-  // { id: 2, name: 'Đơn đặt trước' },
   { id: 3, name: 'Lịch sử' },
 ];
 const Orders = () => {
-  // const [data, setData] = useState(
-  //   [
-  //     {
-  //       doiTac: "Grab",
-  //       displayID: "#GF-249",
-  //       thoiGianNhanDon: "15-01-2025 12:33",
-  //       orderValue: "95.500",
-  //       soMon: 3,
-  //       tem: "Chưa in",
-  //       state: "Delivered"
-  //     },
-  //     {
-  //       doiTac: "Grab",
-  //       displayID: "#GF-249",
-  //       thoiGianNhanDon: "15-01-2025 12:05",
-  //       orderValue: "316.000",
-  //       soMon: 5,
-  //       tem: "Chưa in",
-  //       state: "Confirmed"
-  //     },
-  //     {
-  //       doiTac: "Shopee",
-  //       displayID: "#8837",
-  //       thoiGianNhanDon: "15-01-2025 11:50",
-  //       orderValue: "187.000",
-  //       soMon: 4,
-  //       tem: "Chưa in",
-  //       state: "Confirmed"
-  //     },
-  //     {
-  //       doiTac: "Shopee",
-  //       displayID: "#3456",
-  //       thoiGianNhanDon: "15-01-2025 11:45",
-  //       orderValue: "95.500",
-  //       itemInfoDetail: [{id: 1}, {id: 2}],
-  //       soMon: 3,
-  //       tem: "Đã in",
-  //       state: "Cancelled"
-  //     },
-  //     {
-  //       doiTac: "Grab",
-  //       displayID: "#GF-546",
-  //       thoiGianNhanDon: "15-01-2025 11:40",
-  //       orderValue: "134.500",
-  //       soMon: 6,
-  //       tem: "Đã in",
-  //       itemInfoDetail: [{id: 1}, {id: 2}],
-  //       state: "Cancelled"
-  //     },
-  //     {
-  //       doiTac: "Shopee",
-  //       displayID: "#7678",
-  //       thoiGianNhanDon: "15-01-2025 11:38",
-  //       orderValue: "47.000",
-  //       soMon: 1,
-  //       tem: "Đã in",
-  //       itemInfoDetail: [{id: 1}, {id: 2}],
-  //       state: "Confirmed"
-  //     },
-  //     {
-  //       doiTac: "Shopee",
-  //       displayID: "#7678",
-  //       thoiGianNhanDon: "15-01-2025 11:38",
-  //       orderValue: "47.000",
-  //       soMon: 1,
-  //       tem: "Đã in",
-  //       itemInfoDetail: [{id: 1}, {id: 2}],
-  //       state: "Delivered"
-  //     }
-  //   ]
-  // )
   const [data, setData] = useState([]);
   const [orderType, setOrderType] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
@@ -101,23 +29,34 @@ const Orders = () => {
   const [sWidth, setSWidth] = useState(50)
   const [sHeight, setSHeight] = useState(30)
 
-  useEffect(() => {
-    AsyncStorage.getPrinterInfo().then((printerInfo) => {
-      if (printerInfo) {
-        setIP(printerInfo.IP)
-        setSWidth(printerInfo.sWidth)
-        setSHeight(printerInfo.sHeight)
-      }
-    })
+  const fetchOrders = () => {
     orderController.fetchOrder({
       branch_id: 249,
       brand_id: 110,
       merchant_id: 133,
       service: "GRAB"
     }).then((res) => {
-      console.log('res', res)
       if (res.success) {
         setData(res.data.orders ? res.data.orders : []);
+      }
+    })
+  }
+
+  useEffect(() => {
+    // Initial fetch
+    fetchOrders();
+    // Set up interval for fetching orders every 30 seconds
+    const intervalId = setInterval(fetchOrders, 30000);
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.getPrinterInfo().then((printerInfo) => {
+      if (printerInfo) {
+        setIP(printerInfo.IP)
+        setSWidth(printerInfo.sWidth)
+        setSHeight(printerInfo.sHeight)
       }
     })
   }, [])
