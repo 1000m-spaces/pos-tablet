@@ -58,28 +58,43 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case "Confirmed": return "#069C2E";
-            case "Delivered": return "#069C2E";
-            case "Cancelled": return "#EF0000";
-            default: return "#9E9E9E";
+            case "ORDER_CREATED": return "#2196F3";      // Blue
+            case "ORDER_IN_PREPARE": return "#FF9800";   // Orange
+            case "ORDER_READY": return "#4CAF50";        // Green
+            case "ORDER_PICKED_UP": return "#9C27B0";    // Purple
+            case "ORDER_DELIVERED": return "#069C2E";    // Dark Green
+            case "ORDER_CANCELLED": return "#EF0000";    // Red
+            case "ORDER_REJECTED": return "#F44336";     // Red
+            case "ORDER_FAILED": return "#795548";       // Brown
+            default: return "#9E9E9E";                   // Grey
         }
     };
 
     const getStatusColorBg = (status) => {
         switch (status) {
-            case "Confirmed": return "#CDEED8";
-            case "Delivered": return "#CDEED8";
-            case "Cancelled": return "#FED9DA";
-            default: return "#9E9E9E";
+            case "ORDER_CREATED": return "#E3F2FD";      // Light Blue
+            case "ORDER_IN_PREPARE": return "#FFF3E0";   // Light Orange
+            case "ORDER_READY": return "#E8F5E9";        // Light Green
+            case "ORDER_PICKED_UP": return "#F3E5F5";    // Light Purple
+            case "ORDER_DELIVERED": return "#CDEED8";    // Light Dark Green
+            case "ORDER_CANCELLED": return "#FED9DA";    // Light Red
+            case "ORDER_REJECTED": return "#FFEBEE";     // Light Red
+            case "ORDER_FAILED": return "#EFEBE9";       // Light Brown
+            default: return "#F5F5F5";                   // Light Grey
         }
     };
 
     const getStatusText = (status) => {
         switch (status) {
-            case "Confirmed": return "Đã có tài xế";
-            case "Delivered": return "Đã vận chuyển hàng";
-            case "Cancelled": return "Đã hủy";
-            default: return "#9E9E9E";
+            case "ORDER_CREATED": return "Đơn hàng mới";
+            case "ORDER_IN_PREPARE": return "Đang chuẩn bị";
+            case "ORDER_READY": return "Sẵn sàng giao";
+            case "ORDER_PICKED_UP": return "Đã nhận hàng";
+            case "ORDER_DELIVERED": return "Đã giao hàng";
+            case "ORDER_CANCELLED": return "Đã hủy";
+            case "ORDER_REJECTED": return "Đã từ chối";
+            case "ORDER_FAILED": return "Giao hàng thất bại";
+            default: return "Không xác định";
         }
     };
 
@@ -244,6 +259,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     useEffect(() => {
         const checkAndPrintNewOrders = async () => {
             if (isAutoPrinting || !orders.length) return;
+
             setIsAutoPrinting(true);
             try {
                 for (const order of orders) {
