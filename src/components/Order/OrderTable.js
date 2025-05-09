@@ -10,8 +10,14 @@ import Toast from 'react-native-toast-message'
 import Spinner from 'react-native-loading-spinner-overlay';
 import { netConnect, printBitmap, closeConnection, tsplPrintBitmap } from 'rn-xprinter';
 import RNFS from 'react-native-fs';
+import ImageManipulator from 'react-native-photo-manipulator';
 
 const { width, height } = Dimensions.get("window");
+
+// Convert mm to pixels (96 DPI)
+const mmToPixels = (mm) => {
+    return Math.round((mm * 96) / 25.4); // 25.4mm = 1 inch
+};
 
 const Badge = ({ text, colorText, colorBg, width }) => (
     <View style={[styles.badge, { backgroundColor: colorBg, width: width }]}>
@@ -23,8 +29,10 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
+    const [printingOrder, setPrintingOrder] = useState(null);
     const [printedLabels, setPrintedLabels] = useState([]);
     const [isAutoPrinting, setIsAutoPrinting] = useState(false);
+    const [printerInfo, setPrinterInfo] = useState(null);
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
 
@@ -48,6 +56,14 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             setPrintedLabels(labels);
         };
         loadPrintedLabels();
+    }, []);
+
+    useEffect(() => {
+        const loadPrinterInfo = async () => {
+            const info = await AsyncStorage.getPrinterInfo();
+            setPrinterInfo(info);
+        };
+        loadPrinterInfo();
     }, []);
 
     useEffect(() => {
@@ -98,6 +114,28 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         }
     };
 
+    const getPreparationStatusText = (status) => {
+        switch (status) {
+            case "ACCEPTED": return "Đã nhận đơn";
+            case "PREPARING": return "Đang chuẩn bị";
+            case "READY": return "Sẵn sàng";
+            case "COMPLETED": return "Hoàn thành";
+            case "CANCELLED": return "Đã hủy";
+            default: return "Không xác định";
+        }
+    };
+
+    const getDeliveryStatusText = (status) => {
+        switch (status) {
+            case "DRIVER_AT_STORE": return "Tài xế đã đến cửa hàng";
+            case "DRIVER_PICKED_UP": return "Tài xế đã nhận hàng";
+            case "DRIVER_DELIVERING": return "Đang giao hàng";
+            case "DRIVER_DELIVERED": return "Đã giao hàng";
+            case "DRIVER_CANCELLED": return "Đã hủy giao hàng";
+            default: return "Không xác định";
+        }
+    };
+
     const handleRowPress = (order) => {
         setSelectedOrder(order);
         setModalVisible(true);
@@ -127,19 +165,50 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                 throw new Error('Printer settings not configured');
             }
 
-            const uri = await viewTemShotRef.current.capture();
-            const imageInfo = await Image.getSize(uri);
-            const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-            await tsplPrintBitmap(
-                Number(printerInfo.sWidth),
-                2 * Number(printerInfo.sHeight),
-                base64,
-                imageInfo.width
-            );
+            // Store the original order
+            const originalOrder = selectedOrder;
+            setPrintingOrder(originalOrder);
+
+            // Print each item separately
+            for (let i = 0; i < originalOrder.itemInfoDetail.items.length; i++) {
+                // Create a temporary order with just this item
+                const tempOrder = {
+                    ...originalOrder,
+                    itemInfoDetail: {
+                        ...originalOrder.itemInfoDetail,
+                        items: [originalOrder.itemInfoDetail.items[i]],
+                        itemIdx: i,
+                        totalItems: originalOrder.itemInfoDetail.items.length,
+                    }
+                };
+
+                // Update the ViewShot with the temporary order
+                setPrintingOrder(tempOrder);
+
+                // Wait for the ViewShot to be ready
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Capture and print the label
+                const uri = await viewTemShotRef.current.capture();
+                const imageInfo = await Image.getSize(uri);
+                const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
+                await tsplPrintBitmap(
+                    Number(printerInfo.sWidth),
+                    Number(printerInfo.sHeight),
+                    base64,
+                    imageInfo.width
+                );
+
+                // Add a small delay between prints
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            // Restore the original order
+            setPrintingOrder(null);
 
             // Update print status after successful print
-            await AsyncStorage.setPrintedLabels(selectedOrder.displayID);
-            setPrintedLabels(prev => [...prev, selectedOrder.displayID]);
+            await AsyncStorage.setPrintedLabels(originalOrder.displayID);
+            setPrintedLabels(prev => [...prev, originalOrder.displayID]);
 
             Toast.show({
                 type: 'success',
@@ -158,6 +227,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             }
         } finally {
             setLoadingVisible(false);
+            setPrintingOrder(null);
         }
     };
 
@@ -176,6 +246,12 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             if (!printerInfo || !printerInfo.IP) {
                 throw new Error('Printer settings not configured');
             }
+
+            // Set the order for printing
+            setPrintingOrder(selectedOrder);
+
+            // Wait for the ViewShot to be ready
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // Attempt to connect to printer before printing
             try {
@@ -205,6 +281,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             }
         } finally {
             setLoadingVisible(false);
+            setPrintingOrder(null);
         }
     };
 
@@ -220,7 +297,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             }
 
             // Set the order for printing
-            setSelectedOrder(order);
+            setPrintingOrder(order);
 
             // Wait for the ViewShot to be ready
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -252,6 +329,8 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             if (error.message === 'Printer settings not configured') {
                 showSettingPrinter();
             }
+        } finally {
+            setPrintingOrder(null);
         }
     };
 
@@ -316,36 +395,126 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                 <View style={styles.modalContainer}>
                     <View style={styles.modalContent}>
                         {selectedOrder && (
-                            <>
-                                <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
-                                <View style={styles.detailRow}><Text style={styles.label}>Mã đơn hàng:</Text><Text>{selectedOrder.displayID}</Text></View>
-                                <View style={styles.detailRow}><Text style={styles.label}>Tổng tiền:</Text><Text>{selectedOrder.orderValue}</Text></View>
-                                <View style={styles.detailRow}><Text style={styles.label}>Số món:</Text><Text>{selectedOrder?.itemInfoDetail?.count || 0}</Text></View>
-                                <View style={styles.detailRow}><Text style={styles.label}>Trạng thái:</Text><Badge text={selectedOrder.state} color={getStatusColor(selectedOrder.state)} /></View>
-                                <Text style={styles.modalTitle}>Danh sách món</Text>
-                                {selectedOrder?.itemInfoDetail?.items?.map((item, idx) => (
-                                    <View key={idx} style={styles.itemRow}>
-                                        <Text style={styles.itemName}>{item.name}</Text>
-                                        <Text style={styles.itemQuantity}>x{item.quantity}</Text>
+                            <ScrollView
+                                showsVerticalScrollIndicator={true}
+                                contentContainerStyle={styles.modalScrollContent}
+                            >
+                                <View style={styles.modalHeader}>
+                                    <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
+                                    <Badge
+                                        text={getStatusText(selectedOrder.state)}
+                                        colorText={getStatusColor(selectedOrder.state)}
+                                        colorBg={getStatusColorBg(selectedOrder.state)}
+                                        width="auto"
+                                    />
+                                </View>
+
+                                <View style={styles.orderInfoSection}>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.label}>Mã đơn hàng:</Text>
+                                        <Text style={styles.value}>{selectedOrder.displayID}</Text>
                                     </View>
-                                ))}
-                                <View style={{
-                                    display: 'flex',
-                                    width: 200,
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-between'
-                                }}>
-                                    <Pressable style={styles.printButton} onPress={() => printTem(selectedOrder)}>
-                                        <Text style={styles.printButtonText}>Print Tem</Text>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.label}>Trạng thái đơn:</Text>
+                                        <Text style={styles.value}>{getStatusText(selectedOrder.state)}</Text>
+                                    </View>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.label}>Trạng thái chuẩn bị:</Text>
+                                        <Text style={styles.value}>{getPreparationStatusText(selectedOrder.preparationTaskpoolStatus)}</Text>
+                                    </View>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.label}>Trạng thái giao hàng:</Text>
+                                        <Text style={styles.value}>{getDeliveryStatusText(selectedOrder.deliveryTaskpoolStatus)}</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.customerSection}>
+                                    <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.label}>Tên khách hàng:</Text>
+                                        <Text style={styles.value}>{selectedOrder.eater?.name || 'N/A'}</Text>
+                                    </View>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.label}>Số điện thoại:</Text>
+                                        <Text style={styles.value}>{selectedOrder.eater?.mobileNumber || 'N/A'}</Text>
+                                    </View>
+                                    {selectedOrder.eater?.address && (
+                                        <View style={styles.detailRow}>
+                                            <Text style={styles.label}>Địa chỉ:</Text>
+                                            <Text style={styles.value}>{selectedOrder.eater.address.address}</Text>
+                                        </View>
+                                    )}
+                                    {selectedOrder.eater?.comment && (
+                                        <View style={styles.detailRow}>
+                                            <Text style={styles.label}>Ghi chú:</Text>
+                                            <Text style={styles.value}>{selectedOrder.eater.comment}</Text>
+                                        </View>
+                                    )}
+                                </View>
+
+                                {selectedOrder.driver && (
+                                    <View style={styles.driverSection}>
+                                        <Text style={styles.sectionTitle}>Thông tin tài xế</Text>
+                                        <View style={styles.detailRow}>
+                                            <Text style={styles.label}>Tên tài xế:</Text>
+                                            <Text style={styles.value}>{selectedOrder.driver.name}</Text>
+                                        </View>
+                                        <View style={styles.detailRow}>
+                                            <Text style={styles.label}>Số điện thoại:</Text>
+                                            <Text style={styles.value}>{selectedOrder.driver.mobileNumber}</Text>
+                                        </View>
+                                    </View>
+                                )}
+
+                                <View style={styles.itemsSection}>
+                                    <Text style={styles.sectionTitle}>Danh sách món</Text>
+                                    {selectedOrder?.itemInfoDetail?.items?.map((item, idx) => (
+                                        <View key={idx} style={styles.itemRow}>
+                                            <View style={styles.itemInfo}>
+                                                <Text style={styles.itemName}>{item.name}</Text>
+                                                {item.comment && (
+                                                    <Text style={styles.itemNote}>Ghi chú: {item.comment}</Text>
+                                                )}
+                                                {item.modifierGroups?.map((group, gIdx) => (
+                                                    <View key={gIdx} style={styles.modifierGroup}>
+                                                        <Text style={styles.modifierGroupName}>{group.modifierGroupName}</Text>
+                                                        {group.modifiers?.map((modifier, mIdx) => (
+                                                            <Text key={mIdx} style={styles.modifierName}>
+                                                                • {modifier.modifierName}
+                                                            </Text>
+                                                        ))}
+                                                    </View>
+                                                ))}
+                                            </View>
+                                            <View style={styles.itemQuantity}>
+                                                <Text style={styles.quantityText}>x{item.quantity}</Text>
+                                                <Text style={styles.itemPrice}>
+                                                    {item.fare?.priceDisplay}{item.fare?.currencySymbol}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+
+                                <View style={styles.summarySection}>
+                                    <View style={styles.summaryRow}>
+                                        <Text style={styles.summaryLabel}>Tổng cộng:</Text>
+                                        <Text style={styles.summaryValue}>{selectedOrder.orderValue}₫</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.actionButtons}>
+                                    <Pressable style={[styles.actionButton, styles.printButton]} onPress={() => printTem(selectedOrder)}>
+                                        <Text style={styles.actionButtonText}>In Tem</Text>
                                     </Pressable>
-                                    <Pressable style={styles.printButton} onPress={() => printBill(selectedOrder)}>
-                                        <Text style={styles.printButtonText}>Print Bill</Text>
+                                    <Pressable style={[styles.actionButton, styles.printButton]} onPress={() => printBill(selectedOrder)}>
+                                        <Text style={styles.actionButtonText}>In Hoá Đơn</Text>
+                                    </Pressable>
+                                    <Pressable style={[styles.actionButton, styles.closeButton]} onPress={() => setModalVisible(false)}>
+                                        <Text style={styles.actionButtonText}>Đóng</Text>
                                     </Pressable>
                                 </View>
-                                <Pressable style={styles.closeButton} onPress={() => setModalVisible(false)}>
-                                    <Text style={styles.closeButtonText}>Đóng</Text>
-                                </Pressable>
-                            </>
+                            </ScrollView>
                         )}
                     </View>
                 </View>
@@ -355,11 +524,11 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                 options={{ format: "jpg", quality: 1.0 }}
                 style={{
                     position: 'absolute',
-                    left: -400,
+                    left: printerInfo ? -mmToPixels(Number(printerInfo.sWidth)) : -mmToPixels(50),
                     bottom: 0,
-                    width: 400,
+                    width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
                     backgroundColor: 'white',
-                }}>{selectedOrder && (<PrintTemplate orderPrint={selectedOrder} />)}</ViewShot>
+                }}>{printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}</ViewShot>
             <ViewShot
                 ref={viewBillShotRef}
                 options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
@@ -371,11 +540,9 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                     backgroundColor: 'white',
                 }}
             >
-                {
-                    selectedOrder && (
-                        <BillTemplate selectedOrder={selectedOrder} />
-                    )
-                }
+                {printingOrder && (
+                    <BillTemplate selectedOrder={printingOrder} />
+                )}
             </ViewShot>
             <Toast />
         </>
@@ -420,59 +587,158 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(0,0,0,0.5)",
     },
     modalContent: {
-        width: "80%",
-        padding: 20,
+        width: "90%",
+        maxWidth: 500,
         backgroundColor: "#fff",
         borderRadius: 10,
-        alignItems: "center",
+        maxHeight: "90%",
+    },
+    modalScrollView: {
+        flex: 1,
+    },
+    modalScrollContent: {
+        padding: 20,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        paddingBottom: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: "bold",
-        marginBottom: 10,
+    },
+    orderInfoSection: {
+        marginBottom: 20,
+        padding: 15,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 8,
     },
     detailRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        width: "100%",
-        paddingVertical: 5,
+        paddingVertical: 8,
     },
     label: {
+        fontWeight: "600",
+        color: '#666',
+    },
+    value: {
+        fontWeight: "500",
+    },
+    itemsSection: {
+        marginBottom: 20,
+    },
+    sectionTitle: {
+        fontSize: 18,
         fontWeight: "bold",
+        marginBottom: 10,
     },
     itemRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        width: "100%",
-        paddingVertical: 5,
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    itemInfo: {
+        flex: 1,
     },
     itemName: {
         fontSize: 16,
+        fontWeight: "500",
+    },
+    itemNote: {
+        fontSize: 14,
+        color: '#666',
+        fontStyle: 'italic',
+        marginTop: 4,
     },
     itemQuantity: {
+        alignItems: 'flex-end',
+    },
+    quantityText: {
         fontSize: 16,
         fontWeight: "bold",
+        color: '#666',
+    },
+    itemPrice: {
+        fontSize: 14,
+        color: '#666',
+        marginTop: 4,
+    },
+    summarySection: {
+        marginTop: 20,
+        padding: 15,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 8,
+    },
+    summaryRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingVertical: 8,
+    },
+    summaryLabel: {
+        fontWeight: "600",
+        color: '#666',
+    },
+    summaryValue: {
+        fontWeight: "bold",
+    },
+    actionButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 20,
+        gap: 10,
+    },
+    actionButton: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    actionButtonText: {
+        color: "#fff",
+        fontWeight: "bold",
+        fontSize: 16,
     },
     printButton: {
-        marginTop: 15,
-        marginHorizontal: 5,
         backgroundColor: "#FF9800",
-        padding: 10,
-        borderRadius: 5,
-    },
-    printButtonText: {
-        color: "#fff",
-        fontWeight: "bold",
     },
     closeButton: {
-        marginTop: 15,
         backgroundColor: "#2196F3",
-        padding: 10,
-        borderRadius: 5,
     },
-    closeButtonText: {
-        color: "#fff",
-        fontWeight: "bold",
+    customerSection: {
+        marginBottom: 20,
+        padding: 15,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 8,
+    },
+    driverSection: {
+        marginBottom: 20,
+        padding: 15,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 8,
+    },
+    modifierGroup: {
+        marginTop: 8,
+        marginLeft: 8,
+    },
+    modifierGroupName: {
+        fontSize: 14,
+        color: '#666',
+        fontWeight: '500',
+        marginBottom: 4,
+    },
+    modifierName: {
+        fontSize: 13,
+        color: '#666',
+        marginLeft: 8,
+        marginBottom: 2,
     },
 });
 

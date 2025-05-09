@@ -63,7 +63,6 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         card: {
             padding: config.padding,
             height: config.height,
-            marginBottom: mmToPixels(4),
         },
         header: {
             marginBottom: config.margin * 2,
@@ -144,7 +143,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                             <Text style={styles.orderLabel}>GRAB</Text>
                             <Text style={styles.orderLabel}>#</Text>
                             <Text style={styles.orderNumber}>{orderPrint.displayID}</Text>
-                            <Text style={styles.pageNumber}>({index + 1}/{orderPrint.itemInfoDetail?.items?.length})</Text>
+                            <Text style={styles.pageNumber}>({orderPrint.itemInfoDetail?.itemIdx + 1}/{orderPrint.itemInfoDetail?.totalItems})</Text>
                         </Text>
                     </View>
                     <View style={styles.itemContainer}>
