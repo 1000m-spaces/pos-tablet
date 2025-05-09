@@ -27,10 +27,24 @@ const Main = () => {
         drawerStyle: {
           width: 108,
         },
+        swipeEnabled: false,
+        drawerPosition: 'left',
       }}
       initialRouteName={NAVIGATION_HOME}>
-      <Drawer.Screen name={NAVIGATION_HOME} component={Screens.Home} />
-      <Drawer.Screen name={NAVIGATION_ORDER} component={Screens.Order} />
+      <Drawer.Screen
+        name={NAVIGATION_HOME}
+        component={Screens.Home}
+        options={{
+          drawerLabel: 'Menu'
+        }}
+      />
+      <Drawer.Screen
+        name={NAVIGATION_ORDER}
+        component={Screens.Orders}
+        options={{
+          drawerLabel: 'Đơn online'
+        }}
+      />
       {/* <Drawer.Screen name="Notifications" component={NotificationsScreen} /> */}
     </Drawer.Navigator>
   );
