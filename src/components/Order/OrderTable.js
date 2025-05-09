@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Modal, Pressable, Platform, Image } from "react-native";
+import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform, Image } from "react-native";
 import { Table, Row } from "react-native-table-component";
 import ViewShot from "react-native-view-shot";
 import PrintTemplate from "./TemTemplate";
@@ -11,6 +11,7 @@ import Spinner from 'react-native-loading-spinner-overlay';
 import { netConnect, printBitmap, closeConnection, tsplPrintBitmap } from 'rn-xprinter';
 import RNFS from 'react-native-fs';
 import ImageManipulator from 'react-native-photo-manipulator';
+import OrderDetailDialog from './OrderDetailDialog';
 
 const { width, height } = Dimensions.get("window");
 
@@ -296,25 +297,49 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                 throw new Error('Printer settings not configured');
             }
 
-            // Set the order for printing
-            setPrintingOrder(order);
-
-            // Wait for the ViewShot to be ready
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Store the original order
+            const originalOrder = order;
+            setPrintingOrder(originalOrder);
 
             // Connect to printer
             await netConnect(printerInfo.IP);
 
-            // Print the label
-            const uri = await viewTemShotRef.current.capture();
-            const imageInfo = await Image.getSize(uri);
-            const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-            await tsplPrintBitmap(
-                Number(printerInfo.sWidth),
-                2 * Number(printerInfo.sHeight),
-                base64,
-                imageInfo.width
-            );
+            // Print each item separately
+            for (let i = 0; i < originalOrder.itemInfoDetail.items.length; i++) {
+                // Create a temporary order with just this item
+                const tempOrder = {
+                    ...originalOrder,
+                    itemInfoDetail: {
+                        ...originalOrder.itemInfoDetail,
+                        items: [originalOrder.itemInfoDetail.items[i]],
+                        itemIdx: i,
+                        totalItems: originalOrder.itemInfoDetail.items.length,
+                    }
+                };
+
+                // Update the ViewShot with the temporary order
+                setPrintingOrder(tempOrder);
+
+                // Wait for the ViewShot to be ready
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Print the label
+                const uri = await viewTemShotRef.current.capture();
+                const imageInfo = await Image.getSize(uri);
+                const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
+                await tsplPrintBitmap(
+                    Number(printerInfo.sWidth),
+                    Number(printerInfo.sHeight),
+                    base64,
+                    imageInfo.width
+                );
+
+                // Add a small delay between prints
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            // Restore the original order
+            setPrintingOrder(null);
 
             // Update print status
             await AsyncStorage.setPrintedLabels(order.displayID);
@@ -339,6 +364,10 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         const checkAndPrintNewOrders = async () => {
             if (isAutoPrinting || !orders.length) return;
 
+            // Check if auto-print is enabled in printer settings
+            const printerInfo = await AsyncStorage.getPrinterInfo();
+            if (!printerInfo?.autoPrint) return;
+
             setIsAutoPrinting(true);
             try {
                 for (const order of orders) {
@@ -356,11 +385,20 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         checkAndPrintNewOrders();
     }, [orders, printedLabels]);
 
+    // Update printerInfo when it changes
+    useEffect(() => {
+        const loadPrinterInfo = async () => {
+            const info = await AsyncStorage.getPrinterInfo();
+            setPrinterInfo(info);
+        };
+        loadPrinterInfo();
+    }, []);
+
     const tableData = orders.map(order => [
         "GRAB",
         order.displayID,
         order.orderValue,
-        order.itemInfoDetail?.count,
+        order.itemInfoDetail?.items?.length,
         <Badge
             text={printedLabels.includes(order.displayID) ? "Đã in" : "Chưa in"}
             colorText={printedLabels.includes(order.displayID) ? "#069C2E" : "#EF0000"}
@@ -387,138 +425,17 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
                     </View>
                 </ScrollView>
             </ScrollView>
-            <Modal supportedOrientations={['portrait', 'landscape']} visible={modalVisible} transparent animationType="slide">
-                <Toast />
-                <Spinner
-                    visible={loadingVisible}
-                    textContent={''} />
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        {selectedOrder && (
-                            <ScrollView
-                                showsVerticalScrollIndicator={true}
-                                contentContainerStyle={styles.modalScrollContent}
-                            >
-                                <View style={styles.modalHeader}>
-                                    <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
-                                    <Badge
-                                        text={getStatusText(selectedOrder.state)}
-                                        colorText={getStatusColor(selectedOrder.state)}
-                                        colorBg={getStatusColorBg(selectedOrder.state)}
-                                        width="auto"
-                                    />
-                                </View>
 
-                                <View style={styles.orderInfoSection}>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Mã đơn hàng:</Text>
-                                        <Text style={styles.value}>{selectedOrder.displayID}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Trạng thái đơn:</Text>
-                                        <Text style={styles.value}>{getStatusText(selectedOrder.state)}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Trạng thái chuẩn bị:</Text>
-                                        <Text style={styles.value}>{getPreparationStatusText(selectedOrder.preparationTaskpoolStatus)}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Trạng thái giao hàng:</Text>
-                                        <Text style={styles.value}>{getDeliveryStatusText(selectedOrder.deliveryTaskpoolStatus)}</Text>
-                                    </View>
-                                </View>
+            <OrderDetailDialog
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                selectedOrder={selectedOrder}
+                printedLabels={printedLabels}
+                onPrintTem={printTem}
+                onPrintBill={printBill}
+                loadingVisible={loadingVisible}
+            />
 
-                                <View style={styles.customerSection}>
-                                    <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Tên khách hàng:</Text>
-                                        <Text style={styles.value}>{selectedOrder.eater?.name || 'N/A'}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Số điện thoại:</Text>
-                                        <Text style={styles.value}>{selectedOrder.eater?.mobileNumber || 'N/A'}</Text>
-                                    </View>
-                                    {selectedOrder.eater?.address && (
-                                        <View style={styles.detailRow}>
-                                            <Text style={styles.label}>Địa chỉ:</Text>
-                                            <Text style={styles.value}>{selectedOrder.eater.address.address}</Text>
-                                        </View>
-                                    )}
-                                    {selectedOrder.eater?.comment && (
-                                        <View style={styles.detailRow}>
-                                            <Text style={styles.label}>Ghi chú:</Text>
-                                            <Text style={styles.value}>{selectedOrder.eater.comment}</Text>
-                                        </View>
-                                    )}
-                                </View>
-
-                                {selectedOrder.driver && (
-                                    <View style={styles.driverSection}>
-                                        <Text style={styles.sectionTitle}>Thông tin tài xế</Text>
-                                        <View style={styles.detailRow}>
-                                            <Text style={styles.label}>Tên tài xế:</Text>
-                                            <Text style={styles.value}>{selectedOrder.driver.name}</Text>
-                                        </View>
-                                        <View style={styles.detailRow}>
-                                            <Text style={styles.label}>Số điện thoại:</Text>
-                                            <Text style={styles.value}>{selectedOrder.driver.mobileNumber}</Text>
-                                        </View>
-                                    </View>
-                                )}
-
-                                <View style={styles.itemsSection}>
-                                    <Text style={styles.sectionTitle}>Danh sách món</Text>
-                                    {selectedOrder?.itemInfoDetail?.items?.map((item, idx) => (
-                                        <View key={idx} style={styles.itemRow}>
-                                            <View style={styles.itemInfo}>
-                                                <Text style={styles.itemName}>{item.name}</Text>
-                                                {item.comment && (
-                                                    <Text style={styles.itemNote}>Ghi chú: {item.comment}</Text>
-                                                )}
-                                                {item.modifierGroups?.map((group, gIdx) => (
-                                                    <View key={gIdx} style={styles.modifierGroup}>
-                                                        <Text style={styles.modifierGroupName}>{group.modifierGroupName}</Text>
-                                                        {group.modifiers?.map((modifier, mIdx) => (
-                                                            <Text key={mIdx} style={styles.modifierName}>
-                                                                • {modifier.modifierName}
-                                                            </Text>
-                                                        ))}
-                                                    </View>
-                                                ))}
-                                            </View>
-                                            <View style={styles.itemQuantity}>
-                                                <Text style={styles.quantityText}>x{item.quantity}</Text>
-                                                <Text style={styles.itemPrice}>
-                                                    {item.fare?.priceDisplay}{item.fare?.currencySymbol}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                    ))}
-                                </View>
-
-                                <View style={styles.summarySection}>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Tổng cộng:</Text>
-                                        <Text style={styles.summaryValue}>{selectedOrder.orderValue}₫</Text>
-                                    </View>
-                                </View>
-
-                                <View style={styles.actionButtons}>
-                                    <Pressable style={[styles.actionButton, styles.printButton]} onPress={() => printTem(selectedOrder)}>
-                                        <Text style={styles.actionButtonText}>In Tem</Text>
-                                    </Pressable>
-                                    <Pressable style={[styles.actionButton, styles.printButton]} onPress={() => printBill(selectedOrder)}>
-                                        <Text style={styles.actionButtonText}>In Hoá Đơn</Text>
-                                    </Pressable>
-                                    <Pressable style={[styles.actionButton, styles.closeButton]} onPress={() => setModalVisible(false)}>
-                                        <Text style={styles.actionButtonText}>Đóng</Text>
-                                    </Pressable>
-                                </View>
-                            </ScrollView>
-                        )}
-                    </View>
-                </View>
-            </Modal>
             <ViewShot
                 ref={viewTemShotRef}
                 options={{ format: "jpg", quality: 1.0 }}
@@ -567,7 +484,6 @@ const styles = StyleSheet.create({
     },
     text: {
         textAlign: "center",
-        // padding: 10,
     },
     badge: {
         paddingVertical: 5,
@@ -579,166 +495,6 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontWeight: "bold",
         textAlign: "center",
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.5)",
-    },
-    modalContent: {
-        width: "90%",
-        maxWidth: 500,
-        backgroundColor: "#fff",
-        borderRadius: 10,
-        maxHeight: "90%",
-    },
-    modalScrollView: {
-        flex: 1,
-    },
-    modalScrollContent: {
-        padding: 20,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-        paddingBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    modalTitle: {
-        fontSize: 24,
-        fontWeight: "bold",
-    },
-    orderInfoSection: {
-        marginBottom: 20,
-        padding: 15,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
-    },
-    detailRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingVertical: 8,
-    },
-    label: {
-        fontWeight: "600",
-        color: '#666',
-    },
-    value: {
-        fontWeight: "500",
-    },
-    itemsSection: {
-        marginBottom: 20,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 10,
-    },
-    itemRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    itemInfo: {
-        flex: 1,
-    },
-    itemName: {
-        fontSize: 16,
-        fontWeight: "500",
-    },
-    itemNote: {
-        fontSize: 14,
-        color: '#666',
-        fontStyle: 'italic',
-        marginTop: 4,
-    },
-    itemQuantity: {
-        alignItems: 'flex-end',
-    },
-    quantityText: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: '#666',
-    },
-    itemPrice: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 4,
-    },
-    summarySection: {
-        marginTop: 20,
-        padding: 15,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
-    },
-    summaryRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingVertical: 8,
-    },
-    summaryLabel: {
-        fontWeight: "600",
-        color: '#666',
-    },
-    summaryValue: {
-        fontWeight: "bold",
-    },
-    actionButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-        gap: 10,
-    },
-    actionButton: {
-        flex: 1,
-        padding: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    actionButtonText: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 16,
-    },
-    printButton: {
-        backgroundColor: "#FF9800",
-    },
-    closeButton: {
-        backgroundColor: "#2196F3",
-    },
-    customerSection: {
-        marginBottom: 20,
-        padding: 15,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
-    },
-    driverSection: {
-        marginBottom: 20,
-        padding: 15,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
-    },
-    modifierGroup: {
-        marginTop: 8,
-        marginLeft: 8,
-    },
-    modifierGroupName: {
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '500',
-        marginBottom: 4,
-    },
-    modifierName: {
-        fontSize: 13,
-        color: '#666',
-        marginLeft: 8,
-        marginBottom: 2,
     },
 });
 

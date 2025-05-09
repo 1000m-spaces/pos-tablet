@@ -9,7 +9,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView, TextInput, Pressable, Text
+  SafeAreaView, TextInput, Pressable, Text, Switch
 } from 'react-native';
 import orderController from 'store/order/orderController';
 import Colors from 'theme/Colors';
@@ -25,9 +25,12 @@ const Orders = () => {
   const [data, setData] = useState([]);
   const [orderType, setOrderType] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
-  const [ip, setIP] = useState("")
-  const [sWidth, setSWidth] = useState(50)
-  const [sHeight, setSHeight] = useState(30)
+  const [ip, setIP] = useState("");
+  const [sWidth, setSWidth] = useState(50);
+  const [sHeight, setSHeight] = useState(30);
+  const [errors, setErrors] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [autoPrint, setAutoPrint] = useState(false);
 
   const fetchOrders = () => {
     orderController.fetchOrder({
@@ -57,6 +60,7 @@ const Orders = () => {
         setIP(printerInfo.IP)
         setSWidth(printerInfo.sWidth)
         setSHeight(printerInfo.sHeight)
+        setAutoPrint(printerInfo.autoPrint || false)
       }
     })
   }, [])
@@ -83,6 +87,52 @@ const Orders = () => {
         </TextNormal>
       </TouchableOpacity>
     );
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!ip) {
+      newErrors.ip = 'Vui lòng nhập địa chỉ IP';
+    } else if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+      newErrors.ip = 'Định dạng địa chỉ IP không hợp lệ';
+    }
+    if (!sWidth || isNaN(sWidth) || sWidth <= 0) {
+      newErrors.sWidth = 'Chiều rộng phải là số dương';
+    }
+    if (!sHeight || isNaN(sHeight) || sHeight <= 0) {
+      newErrors.sHeight = 'Chiều cao phải là số dương';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    setIsSaving(true);
+    try {
+      await AsyncStorage.setPrinterInfo({
+        IP: ip,
+        sWidth: parseInt(sWidth),
+        sHeight: parseInt(sHeight),
+        autoPrint: autoPrint
+      });
+      Toast.show({
+        type: 'success',
+        text1: 'Lưu cài đặt thành công',
+        position: 'bottom',
+      });
+      setModalVisible(false);
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Lưu cài đặt thất bại',
+        text2: error.message,
+        position: 'bottom',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -146,87 +196,102 @@ const Orders = () => {
               isVisible={modalVisible}
               onBackButtonPress={() => setModalVisible(false)}
               propagateSwipe
-              style={[
-                {
-                  width: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
-                  height:
-                    heightDevice > widthDevice ? widthDevice * 0.5 : heightDevice * 0.5,
-                  backgroundColor: Colors.bgInput,
-                  position: 'absolute',
-                  borderRadius: 16,
-                  left: heightDevice > widthDevice ? heightDevice * 0.375 : widthDevice * 0.375,
-                  top: heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
-                  margin: 0,
-                },
-                modalVisible && { marginBottom: 3, marginLeft: 50 },
-              ]}
+              style={styles.modal}
             >
               <View style={styles.modalContainer}>
-                <TextNormal style={styles.modalTitle}>{"Thiết lập máy in"}</TextNormal>
-                <View>
-                  <TextNormal style={styles.lable}>{"Địa chỉ ip của máy"}</TextNormal>
-                  <View style={styles.dialogInput}>
-                    <TextInput
-                      placeholder="Printer IP"
-                      value={ip}
-                      onChangeText={(text) => setIP(text)}
-                      style={{
-                        width: 200,
-                        height: 50,
-                        color: 'black',
-                        backgroundColor: Colors.whiteColor,
-                      }}
-                      autoFocus
-                      placeholderTextColor={"gray"}
-                    />
+                <View style={styles.modalHeader}>
+                  <TextNormal style={styles.modalTitle}>{"Thiết lập máy in"}</TextNormal>
+                </View>
+
+                <View style={styles.modalContent}>
+                  <View style={styles.inputGroup}>
+                    <TextNormal style={styles.label}>{"Địa chỉ IP máy in"}</TextNormal>
+                    <View style={[styles.inputContainer, errors.ip && styles.inputError]}>
+                      <TextInput
+                        placeholder="Ví dụ: 192.168.1.100"
+                        value={ip}
+                        onChangeText={(text) => {
+                          setIP(text);
+                          setErrors(prev => ({ ...prev, ip: null }));
+                        }}
+                        style={styles.input}
+                        keyboardType="numeric"
+                        placeholderTextColor={Colors.textSecondary}
+                      />
+                    </View>
+                    {errors.ip && <Text style={styles.errorText}>{errors.ip}</Text>}
                   </View>
-                  <TextNormal style={styles.lable}>{"Chiều dài khổ giấy"}</TextNormal>
-                  <View style={styles.dialogInput}>
-                    <TextInput
-                      placeholder="Chiều dài (50mm)"
-                      value={sWidth}
-                      onChangeText={(text) => setSWidth(text)}
-                      style={{
-                        width: 200,
-                        height: 50,
-                        color: 'black',
-                        backgroundColor: Colors.whiteColor,
-                      }}
-                      autoFocus
-                      placeholderTextColor={"gray"}
-                    />
+
+                  <View style={styles.inputGroup}>
+                    <TextNormal style={styles.label}>{"Chiều rộng giấy (mm)"}</TextNormal>
+                    <View style={[styles.inputContainer, errors.sWidth && styles.inputError]}>
+                      <TextInput
+                        placeholder="Ví dụ: 50"
+                        value={sWidth.toString()}
+                        onChangeText={(text) => {
+                          setSWidth(text);
+                          setErrors(prev => ({ ...prev, sWidth: null }));
+                        }}
+                        style={styles.input}
+                        keyboardType="numeric"
+                        placeholderTextColor={Colors.textSecondary}
+                      />
+                    </View>
+                    {errors.sWidth && <Text style={styles.errorText}>{errors.sWidth}</Text>}
                   </View>
-                  <TextNormal style={styles.lable}>{"Chiều cao khổ giấy"}</TextNormal>
-                  <View style={styles.dialogInput}>
-                    <TextInput
-                      placeholder="Chiều cao (30mm)"
-                      value={sHeight}
-                      onChangeText={(text) => setSHeight(text)}
-                      style={{
-                        width: 200,
-                        height: 50,
-                        color: 'black',
-                        backgroundColor: Colors.whiteColor,
-                      }}
-                      autoFocus
-                      placeholderTextColor={"gray"}
+                  <View style={styles.inputGroup}>
+                    <TextNormal style={styles.label}>{"Chiều cao giấy (mm)"}</TextNormal>
+                    <View style={[styles.inputContainer, errors.sHeight && styles.inputError]}>
+                      <TextInput
+                        placeholder="Ví dụ: 30"
+                        value={sHeight.toString()}
+                        onChangeText={(text) => {
+                          setSHeight(text);
+                          setErrors(prev => ({ ...prev, sHeight: null }));
+                        }}
+                        style={styles.input}
+                        keyboardType="numeric"
+                        placeholderTextColor={Colors.textSecondary}
+                      />
+                    </View>
+                    {errors.sHeight && <Text style={styles.errorText}>{errors.sHeight}</Text>}
+                  </View>
+
+                  <View style={styles.toggleGroup}>
+                    <View style={styles.toggleLabelContainer}>
+                      <TextNormal style={styles.label}>{"Tự động in đơn mới"}</TextNormal>
+                      <Text style={styles.toggleDescription}>
+                        {"Tự động in hóa đơn khi có đơn hàng mới"}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={autoPrint}
+                      onValueChange={setAutoPrint}
+                      trackColor={{ false: Colors.border, true: Colors.primary }}
+                      thumbColor={Colors.whiteColor}
+                      ios_backgroundColor={Colors.border}
                     />
                   </View>
                 </View>
-                <Pressable style={{
-                  marginTop: 15,
-                  backgroundColor: "#FF9800",
-                  padding: 10,
-                  borderRadius: 5,
-                }} onPress={() => {
-                  AsyncStorage.setPrinterInfo({ IP: ip, sWidth: sWidth, sHeight: sHeight }).then(() => {
-                    setModalVisible(false)
-                  })
-                }}>
-                  <Text style={styles.printButtonText}>Save</Text>
-                </Pressable>
+
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.cancelButton]}
+                    onPress={() => setModalVisible(false)}
+                  >
+                    <Text style={styles.buttonText}>{"Hủy"}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.saveButton, isSaving && styles.buttonDisabled]}
+                    onPress={handleSave}
+                    disabled={isSaving}
+                  >
+                    <Text style={styles.buttonText}>
+                      {isSaving ? 'Đang lưu...' : 'Lưu cài đặt'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <Toast />
             </Modal>
           </View>
         </View>
@@ -345,22 +410,118 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#000',
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: Colors.backgroundColor,
+  modal: {
+    margin: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-
+  modalContainer: {
+    width: '90%',
+    maxWidth: 400,
+    backgroundColor: Colors.whiteColor,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
   modalTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
+    fontWeight: '600',
+    color: Colors.textPrimary,
   },
-
-  lable: {
+  closeButton: {
+    padding: 5,
+  },
+  modalContent: {
+    marginBottom: 20,
+  },
+  inputGroup: {
+    marginBottom: 15,
+  },
+  label: {
     fontSize: 14,
-    marginBottom: 10,
+    fontWeight: '500',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  inputContainer: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    backgroundColor: Colors.whiteColor,
+  },
+  inputError: {
+    borderColor: Colors.error,
+  },
+  input: {
+    height: 45,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    color: Colors.textPrimary,
+  },
+  errorText: {
+    color: Colors.error,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  button: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: Colors.bgInput,
+  },
+  saveButton: {
+    backgroundColor: Colors.primary,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonText: {
+    color: Colors.whiteColor,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  toggleGroup: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  toggleLabelContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  toggleDescription: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 4,
   },
 });
 
