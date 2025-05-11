@@ -1,10 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, PixelRatio } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Convert mm to pixels (96 DPI)
+// Convert mm to pixels using device's actual DPI, optimized for tablets
 const mmToPixels = (mm) => {
-    return Math.round((mm * 96) / 25.4); // 25.4mm = 1 inch
+    const { width, height } = Dimensions.get('window');
+    const screenWidth = Math.max(width, height); // Use the larger dimension for tablets
+    const screenHeight = Math.min(width, height);
+
+    // Get physical dimensions in inches (assuming standard tablet sizes)
+    // Most tablets are around 10-12 inches diagonally
+    const diagonalInches = Math.sqrt(Math.pow(screenWidth / PixelRatio.get(), 2) + Math.pow(screenHeight / PixelRatio.get(), 2)) / 160;
+
+    // Calculate actual DPI based on physical screen size
+    const actualDpi = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / diagonalInches;
+
+    return Math.round((mm * actualDpi) / 25.4); // 25.4mm = 1 inch
 };
 
 // Default printer settings (50mm x 30mm at 96 DPI)

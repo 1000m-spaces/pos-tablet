@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform, Image } from "react-native";
+import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform, Image, PixelRatio } from "react-native";
 import { Table, Row } from "react-native-table-component";
 import ViewShot from "react-native-view-shot";
 import PrintTemplate from "./TemTemplate";
@@ -7,17 +7,26 @@ import { useRef } from "react";
 import AsyncStorage from 'store/async_storage/index'
 import BillTemplate from "./BillTemplate";
 import Toast from 'react-native-toast-message'
-import Spinner from 'react-native-loading-spinner-overlay';
 import { netConnect, printBitmap, closeConnection, tsplPrintBitmap } from 'rn-xprinter';
 import RNFS from 'react-native-fs';
-import ImageManipulator from 'react-native-photo-manipulator';
 import OrderDetailDialog from './OrderDetailDialog';
 
 const { width, height } = Dimensions.get("window");
 
-// Convert mm to pixels (96 DPI)
+// Convert mm to pixels using device's actual DPI, optimized for tablets
 const mmToPixels = (mm) => {
-    return Math.round((mm * 96) / 25.4); // 25.4mm = 1 inch
+    const { width, height } = Dimensions.get('window');
+    const screenWidth = Math.max(width, height); // Use the larger dimension for tablets
+    const screenHeight = Math.min(width, height);
+
+    // Get physical dimensions in inches (assuming standard tablet sizes)
+    // Most tablets are around 10-12 inches diagonally
+    const diagonalInches = Math.sqrt(Math.pow(screenWidth / PixelRatio.get(), 2) + Math.pow(screenHeight / PixelRatio.get(), 2)) / 160;
+
+    // Calculate actual DPI based on physical screen size
+    const actualDpi = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / diagonalInches;
+
+    return Math.round((mm * actualDpi) / 25.4); // 25.4mm = 1 inch
 };
 
 const Badge = ({ text, colorText, colorBg, width }) => (
@@ -111,28 +120,6 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
             case "ORDER_CANCELLED": return "Đã hủy";
             case "ORDER_REJECTED": return "Đã từ chối";
             case "ORDER_FAILED": return "Giao hàng thất bại";
-            default: return "Không xác định";
-        }
-    };
-
-    const getPreparationStatusText = (status) => {
-        switch (status) {
-            case "ACCEPTED": return "Đã nhận đơn";
-            case "PREPARING": return "Đang chuẩn bị";
-            case "READY": return "Sẵn sàng";
-            case "COMPLETED": return "Hoàn thành";
-            case "CANCELLED": return "Đã hủy";
-            default: return "Không xác định";
-        }
-    };
-
-    const getDeliveryStatusText = (status) => {
-        switch (status) {
-            case "DRIVER_AT_STORE": return "Tài xế đã đến cửa hàng";
-            case "DRIVER_PICKED_UP": return "Tài xế đã nhận hàng";
-            case "DRIVER_DELIVERING": return "Đang giao hàng";
-            case "DRIVER_DELIVERED": return "Đã giao hàng";
-            case "DRIVER_CANCELLED": return "Đã hủy giao hàng";
             default: return "Không xác định";
         }
     };
