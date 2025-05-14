@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NAVIGATION_HOME, NAVIGATION_ORDER } from 'navigation/routes';
 import { StyleSheet } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -6,47 +6,80 @@ import * as Screens from 'components';
 const Drawer = createDrawerNavigator();
 
 import Colors from 'theme/Colors';
-
+import AsyncStorage from 'store/async_storage/index';
 import DrawerContent from './DrawerContent';
 import { useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
+import StoreSelectionDialog from '../Order/StoreSelectionDialog';
+
 const Main = () => {
   const currentScreen = useSelector(state => screenSelector(state));
-  // console.log('currentScreen:::', currentScreen);
+  const [showStoreDialog, setShowStoreDialog] = useState(false);
+  const [selectedStore, setSelectedStore] = useState(null);
+
+  useEffect(() => {
+    const checkStoreSelection = async () => {
+      const storeInfo = await AsyncStorage.getSelectedStore();
+      if (!storeInfo) {
+        setShowStoreDialog(true);
+      } else {
+        setSelectedStore(storeInfo);
+      }
+    };
+    checkStoreSelection();
+  }, []);
+
+  const handleStoreSelect = async (store) => {
+    setSelectedStore(store);
+    await AsyncStorage.setSelectedStore(store);
+    setShowStoreDialog(false);
+  };
+
+  if (!selectedStore) {
+    return (
+      <StoreSelectionDialog
+        visible={showStoreDialog}
+        onClose={() => { }} // Prevent closing without selection
+        onStoreSelect={handleStoreSelect}
+      />
+    );
+  }
+
   return (
-    <Drawer.Navigator
-      drawerContent={props => (
-        <DrawerContent {...props} />
-      )}
-      overlayColor="rgba(0, 0, 0, 0.7)"
-      screenOptions={{
-        headerShown: false,
-        drawerType: 'permanent',
-        drawerActiveBackgroundColor: Colors.primary,
-        drawerActiveTintColor: Colors.whiteColor,
-        drawerStyle: {
-          width: 108,
-        },
-        swipeEnabled: false,
-        drawerPosition: 'left',
-      }}
-      initialRouteName={NAVIGATION_HOME}>
-      <Drawer.Screen
-        name={NAVIGATION_HOME}
-        component={Screens.Home}
-        options={{
-          drawerLabel: 'Menu'
+    <>
+      <Drawer.Navigator
+        drawerContent={props => (
+          <DrawerContent {...props} />
+        )}
+        overlayColor="rgba(0, 0, 0, 0.7)"
+        screenOptions={{
+          headerShown: false,
+          drawerType: 'permanent',
+          drawerActiveBackgroundColor: Colors.primary,
+          drawerActiveTintColor: Colors.whiteColor,
+          drawerStyle: {
+            width: 108,
+          },
+          swipeEnabled: false,
+          drawerPosition: 'left',
         }}
-      />
-      <Drawer.Screen
-        name={NAVIGATION_ORDER}
-        component={Screens.Orders}
-        options={{
-          drawerLabel: 'Đơn online'
-        }}
-      />
-      {/* <Drawer.Screen name="Notifications" component={NotificationsScreen} /> */}
-    </Drawer.Navigator>
+        initialRouteName={NAVIGATION_HOME}>
+        <Drawer.Screen
+          name={NAVIGATION_HOME}
+          component={Screens.Home}
+          options={{
+            drawerLabel: 'Menu'
+          }}
+        />
+        <Drawer.Screen
+          name={NAVIGATION_ORDER}
+          component={Screens.Orders}
+          options={{
+            drawerLabel: 'Đơn online'
+          }}
+        />
+      </Drawer.Navigator>
+    </>
   );
 };
 

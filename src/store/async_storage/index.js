@@ -188,6 +188,26 @@ const getPrintedLabels = async () => {
   }
 };
 
+const setSelectedStore = async (store) => {
+  try {
+    await AsyncStorage.setItem('selectedStore', JSON.stringify(store));
+  } catch (error) {
+    console.log('Error saving selected store:', error);
+  }
+};
+
+const getSelectedStore = async () => {
+  try {
+    const value = await AsyncStorage.getItem('selectedStore');
+    if (value !== null) {
+      return JSON.parse(value);
+    }
+  } catch (error) {
+    console.log('Error getting selected store:', error);
+  }
+  return null;
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -206,4 +226,6 @@ export default {
   getPrinterInfo,
   setPrintedLabels,
   getPrintedLabels,
+  setSelectedStore,
+  getSelectedStore,
 };

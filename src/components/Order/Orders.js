@@ -16,27 +16,36 @@ import Colors from 'theme/Colors';
 import OrderTable from './OrderTable';
 import Modal from 'react-native-modal';
 import AsyncStorage from 'store/async_storage/index'
+import StoreSelectionDialog from './StoreSelectionDialog';
 
 const orderFilters = [
   { id: 1, name: 'Đơn mới' },
   { id: 3, name: 'Lịch sử' },
 ];
+
 const Orders = () => {
   const [data, setData] = useState([]);
   const [orderType, setOrderType] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
+  const [storeDialogVisible, setStoreDialogVisible] = useState(false);
   const [ip, setIP] = useState("");
   const [sWidth, setSWidth] = useState(50);
   const [sHeight, setSHeight] = useState(30);
   const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [autoPrint, setAutoPrint] = useState(false);
+  const [selectedStore, setSelectedStore] = useState(null);
 
-  const fetchOrders = () => {
+  const fetchOrders = async () => {
+    if (!selectedStore) {
+      setStoreDialogVisible(true);
+      return;
+    }
+
     orderController.fetchOrder({
-      branch_id: 249,
-      brand_id: 110,
-      merchant_id: 133,
+      branch_id: selectedStore.branch_id,
+      brand_id: selectedStore.brand_id,
+      merchant_id: selectedStore.merchant_id,
       service: "GRAB"
     }).then((res) => {
       if (res.success) {
@@ -46,13 +55,28 @@ const Orders = () => {
   }
 
   useEffect(() => {
-    // Initial fetch
-    fetchOrders();
-    // Set up interval for fetching orders every 30 seconds
-    const intervalId = setInterval(fetchOrders, 30000);
-    // Clean up interval on component unmount
-    return () => clearInterval(intervalId);
+    // Load selected store on component mount
+    const loadSelectedStore = async () => {
+      const storeInfo = await AsyncStorage.getItem('selectedStore');
+      if (storeInfo) {
+        setSelectedStore(JSON.parse(storeInfo));
+      } else {
+        setStoreDialogVisible(true);
+      }
+    };
+    loadSelectedStore();
   }, []);
+
+  useEffect(() => {
+    if (selectedStore) {
+      // Initial fetch
+      fetchOrders();
+      // Set up interval for fetching orders every 30 seconds
+      const intervalId = setInterval(fetchOrders, 30000);
+      // Clean up interval on component unmount
+      return () => clearInterval(intervalId);
+    }
+  }, [selectedStore]);
 
   useEffect(() => {
     AsyncStorage.getPrinterInfo().then((printerInfo) => {
@@ -64,6 +88,10 @@ const Orders = () => {
       }
     })
   }, [])
+
+  const handleStoreSelect = (store) => {
+    setSelectedStore(store);
+  };
 
   const renderFilter = ({ item, index }) => {
     return (
@@ -160,14 +188,28 @@ const Orders = () => {
                   showsHorizontalScrollIndicator={false}
                   renderItem={renderFilter}
                 />
-                <TouchableOpacity style={{
-                  paddingVertical: 12,
-                  marginRight: 20
-                }} onPress={() => {
-                  setModalVisible(true)
-                }}>
-                  <Svg name={'printer'} size={40} color={'transparent'} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row' }}>
+                  <TouchableOpacity
+                    style={{
+                      paddingVertical: 12,
+                      marginRight: 20
+                    }}
+                    onPress={() => setStoreDialogVisible(true)}
+                  >
+                    <TextNormal style={{ marginRight: 10 }}>
+                      {selectedStore ? selectedStore.name : 'Select Store'}
+                    </TextNormal>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      paddingVertical: 12,
+                      marginRight: 20
+                    }}
+                    onPress={() => setModalVisible(true)}
+                  >
+                    <Svg name={'printer'} size={40} color={'transparent'} />
+                  </TouchableOpacity>
+                </View>
               </View>
               <View style={{ flexDirection: 'row' }}>
                 <TouchableOpacity style={styles.searchInput}>
@@ -295,7 +337,12 @@ const Orders = () => {
             </Modal>
           </View>
         </View>
-      </SafeAreaView >
+      </SafeAreaView>
+      <StoreSelectionDialog
+        visible={storeDialogVisible}
+        onClose={() => setStoreDialogVisible(false)}
+        onStoreSelect={handleStoreSelect}
+      />
       <Toast />
     </>
   );

@@ -37,5 +37,14 @@ class OrderController {
       return { success: false, error: error.message };
     }
   };
+  fetchOrderHistory = async payload => {
+    console.log('fetchOrderHistory', UrlApi.fetchOrderHistory, payload);
+    try {
+      const { data } = await HttpClient.post(UrlApi.fetchOrderHistory, payload);
+      return { success: true, data: data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
 }
 export default new OrderController();

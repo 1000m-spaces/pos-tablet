@@ -18,16 +18,29 @@ const mmToPixels = (mm) => {
     return Math.round((mm * actualDpi) / 25.4); // 25.4mm = 1 inch
 };
 
+// Convert px to dp
+const pxToDp = (px) => {
+    return px / PixelRatio.get();
+};
+
+// Calculate dynamic font size based on DPI using dp
+const calculateDynamicFontSize = (baseSize) => {
+    // Convert base size to dp and scale it
+    const baseSizeDp = pxToDp(baseSize);
+    // Scale based on device's pixel ratio
+    return Math.round(baseSizeDp * PixelRatio.get());
+};
+
 // Default printer settings (50mm x 30mm at 96 DPI)
 const DEFAULT_SETTINGS = {
     width: mmToPixels(50), // 50mm
     height: mmToPixels(30), // 30mm
     fontSize: {
-        storeName: 12,
-        orderNumber: 12,
-        itemName: 11,
-        modifier: 10,
-        note: 10
+        storeName: calculateDynamicFontSize(13),
+        orderNumber: calculateDynamicFontSize(13),
+        itemName: calculateDynamicFontSize(13),
+        modifier: calculateDynamicFontSize(12),
+        note: calculateDynamicFontSize(12)
     },
     padding: 4,
     margin: 2

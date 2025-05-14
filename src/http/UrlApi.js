@@ -39,6 +39,7 @@ export const UrlApi = {
 
   fetchOrder: BASE_PATH_1000M + 'synthetic/orders/v1/fetch',
   fetchOrderDetail: BASE_PATH_1000M + 'synthetic/orders/v1/detail',
+  fetchOrderHistory: BASE_PATH_1000M + 'synthetic/orders/v1/histories',
 
 
   createOrder: BASE_PATH_MENU + 'order',
