@@ -43,7 +43,7 @@ const DEFAULT_SETTINGS = {
         note: calculateDynamicFontSize(12)
     },
     padding: 4,
-    margin: 2
+    margin: 1
 };
 
 const PrintTemplate = ({ orderPrint, settings = {} }) => {
@@ -89,7 +89,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             height: config.height,
         },
         header: {
-            marginBottom: config.margin * 2,
+            marginBottom: config.margin,
             borderBottomWidth: 1,
             borderBottomColor: '#000',
             paddingBottom: config.padding,

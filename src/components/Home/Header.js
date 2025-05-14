@@ -1,12 +1,36 @@
-import React from 'react';
-import {FlatList, TouchableOpacity, View} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { FlatList, TouchableOpacity, View } from 'react-native';
 import styles from './styles';
-import {TextNormal, TextSemiBold} from 'common/Text/TextFont';
+import {
+  TextNormal,
+  TextSemiBold,
+} from 'common/Text/TextFont';
 import Colors from 'theme/Colors';
 import Svg from 'common/Svg/Svg';
+import AsyncStorage from 'store/async_storage/index';
+import StoreSelectionDialog from '../Order/StoreSelectionDialog';
 
-const Header = ({productMenu, currentCate, setCurrentCate}) => {
-  const renderTabCate = ({item, index}) => {
+const Header = ({ navigation, productMenu, currentCate, setCurrentCate }) => {
+  const [selectedStore, setSelectedStore] = useState(null);
+  const [showStoreDialog, setShowStoreDialog] = useState(false);
+
+  useEffect(() => {
+    const loadSelectedStore = async () => {
+      const storeInfo = await AsyncStorage.getSelectedStore();
+      if (storeInfo) {
+        setSelectedStore(storeInfo);
+      }
+    };
+    loadSelectedStore();
+  }, []);
+
+  const handleStoreSelect = async (store) => {
+    setSelectedStore(store);
+    await AsyncStorage.setSelectedStore(store);
+    setShowStoreDialog(false);
+  };
+
+  const renderTabCate = ({ item, index }) => {
     return (
       <TouchableOpacity
         onPress={() => setCurrentCate(index)}
@@ -29,20 +53,21 @@ const Header = ({productMenu, currentCate, setCurrentCate}) => {
       </TouchableOpacity>
     );
   };
+
   return (
     <View style={styles.containerHeader}>
       <View style={styles.wrapperHeader}>
-        <View>
+        <TouchableOpacity onPress={() => setShowStoreDialog(true)}>
           <TextSemiBold style={styles.storeText}>
-            {'45 Nguyễn Thị Định'}
+            {selectedStore ? selectedStore.name : 'Select Store'}
           </TextSemiBold>
           <TextNormal style={styles.timeText}>
             {new Date().toLocaleDateString('vi-VN')}
           </TextNormal>
-        </View>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.searchHeader}>
           <Svg name={'search'} size={20} />
-          <TextNormal style={{color: Colors.secondary}}>
+          <TextNormal style={{ color: Colors.secondary }}>
             {' Tìm kiếm món'}
           </TextNormal>
         </TouchableOpacity>
@@ -57,6 +82,11 @@ const Header = ({productMenu, currentCate, setCurrentCate}) => {
           paddingTop: 18,
         }}
         showsVerticalScrollIndicator={false}
+      />
+      <StoreSelectionDialog
+        visible={showStoreDialog}
+        onClose={() => setShowStoreDialog(false)}
+        onStoreSelect={handleStoreSelect}
       />
     </View>
   );

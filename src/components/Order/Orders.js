@@ -53,17 +53,18 @@ const Orders = () => {
       }
     })
   }
+  // Load selected store on component mount
+  const loadSelectedStore = async () => {
+    const storeInfo = await AsyncStorage.getSelectedStore();
+    if (storeInfo) {
+      setSelectedStore(storeInfo);
+      console.log('storeInfo', storeInfo);
+    } else {
+      setStoreDialogVisible(true);
+    }
+  };
 
   useEffect(() => {
-    // Load selected store on component mount
-    const loadSelectedStore = async () => {
-      const storeInfo = await AsyncStorage.getItem('selectedStore');
-      if (storeInfo) {
-        setSelectedStore(JSON.parse(storeInfo));
-      } else {
-        setStoreDialogVisible(true);
-      }
-    };
     loadSelectedStore();
   }, []);
 
@@ -75,6 +76,8 @@ const Orders = () => {
       const intervalId = setInterval(fetchOrders, 30000);
       // Clean up interval on component unmount
       return () => clearInterval(intervalId);
+    } else {
+      loadSelectedStore();
     }
   }, [selectedStore]);
 

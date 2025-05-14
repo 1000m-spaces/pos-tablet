@@ -6,21 +6,51 @@ import {
     Text,
     Modal,
     FlatList,
+    ActivityIndicator,
 } from 'react-native';
 import { TextNormal } from 'common/Text/TextFont';
 import Colors from 'theme/Colors';
 import AsyncStorage from 'store/async_storage/index';
+import storeController from 'store/store/storeController';
 
 const StoreSelectionDialog = ({ visible, onClose, onStoreSelect }) => {
-    const [stores, setStores] = useState([
-        { id: 1, name: 'Trà 1000M 45 Nguyễn Thị Định', branch_id: 246, brand_id: 110, merchant_id: 133 },
-        { id: 2, name: 'Trà 1000M B14 Bồ Hỏa', branch_id: 247, brand_id: 110, merchant_id: 133 },
-        { id: 2, name: 'Trà 1000M 33 Lê Đại Hành', branch_id: 248, brand_id: 110, merchant_id: 133 },
-        { id: 2, name: 'Trà 1000M 130A Nguyễn Đình Chiểu', branch_id: 249, brand_id: 110, merchant_id: 133 },
-        // Add more stores as needed
-    ]);
-
+    const [stores, setStores] = useState([]);
     const [selectedStore, setSelectedStore] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStores = async () => {
+            try {
+                setLoading(true);
+                const response = await storeController.getListStore(110); // partnerID is 110
+                console.log('response', response);
+                if (response.success) {
+                    // Map API response to our store format
+                    const mappedStores = response.data.map(store => ({
+                        id: store.restid,
+                        name: store.restname,
+                        address: store.restaddr,
+                        phone: store.restphone,
+                        branch_id: store.restid,
+                        brand_id: store.partnerid,
+                        merchant_id: 133, // Hardcoded as requested
+                        latitude: store.latitude,
+                        longitude: store.longitude,
+                        image: store.img
+                    }));
+                    setStores(mappedStores);
+                }
+            } catch (error) {
+                console.error('Error fetching stores:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (visible) {
+            fetchStores();
+        }
+    }, [visible]);
 
     useEffect(() => {
         // Load previously selected store
@@ -56,6 +86,14 @@ const StoreSelectionDialog = ({ visible, onClose, onStoreSelect }) => {
             >
                 {item.name}
             </TextNormal>
+            <TextNormal
+                style={[
+                    styles.storeAddress,
+                    selectedStore?.id === item.id && styles.selectedStoreText,
+                ]}
+            >
+                {item.address}
+            </TextNormal>
         </TouchableOpacity>
     );
 
@@ -64,7 +102,7 @@ const StoreSelectionDialog = ({ visible, onClose, onStoreSelect }) => {
             visible={visible}
             transparent
             animationType="fade"
-            onRequestClose={() => { }}
+            onRequestClose={() => { }} // Prevent back button from closing
         >
             <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
@@ -79,12 +117,18 @@ const StoreSelectionDialog = ({ visible, onClose, onStoreSelect }) => {
                     <TextNormal style={styles.description}>
                         Please select a store to continue
                     </TextNormal>
-                    <FlatList
-                        data={stores}
-                        renderItem={renderStoreItem}
-                        keyExtractor={(item) => item.id.toString()}
-                        contentContainerStyle={styles.storeList}
-                    />
+                    {loading ? (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color={Colors.primary} />
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={stores}
+                            renderItem={renderStoreItem}
+                            keyExtractor={(item) => item.id.toString()}
+                            contentContainerStyle={styles.storeList}
+                        />
+                    )}
                 </View>
             </View>
         </Modal>
@@ -146,9 +190,21 @@ const styles = StyleSheet.create({
     storeName: {
         fontSize: 16,
         color: Colors.textPrimary,
+        fontWeight: '500',
+        marginBottom: 4,
+    },
+    storeAddress: {
+        fontSize: 14,
+        color: Colors.textSecondary,
     },
     selectedStoreText: {
         color: Colors.whiteColor,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
     },
 });
 

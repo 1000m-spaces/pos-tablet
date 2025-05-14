@@ -3,6 +3,7 @@ import { BASE_PATH_MENU } from 'assets/config';
 const BASE_PATH_CAFE = 'https://api.neocafe.tech/v1/';
 const BASE_PATH_CASE_DEV = 'https://dev-api-php.1000m.vn/api1.0.php/';
 
+
 const BASE_PATH_1000M = 'https://api.1000m.vn/'
 // const BASE_PATH_1000M = 'https://dev-api.1000m.vn/'
 
@@ -82,4 +83,6 @@ export const UrlApi = {
   showingPackage: BASE_PATH_CAFE + 'subscriptions/packages/all',
   unrenewPackage: BASE_PATH_CAFE + 'subscriptions/users/unrenew',
   storeShipmentAddress: BASE_PATH_MENU + 'addAddressWhenSubscriptionFalse',
+
+  getListStore: BASE_PATH_CASE_DEV + 'getListShop',
 };
