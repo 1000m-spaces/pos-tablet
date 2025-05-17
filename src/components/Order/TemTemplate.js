@@ -36,11 +36,11 @@ const DEFAULT_SETTINGS = {
     width: mmToPixels(50), // 50mm
     height: mmToPixels(30), // 30mm
     fontSize: {
-        storeName: calculateDynamicFontSize(13),
-        orderNumber: calculateDynamicFontSize(13),
-        itemName: calculateDynamicFontSize(13),
-        modifier: calculateDynamicFontSize(12),
-        note: calculateDynamicFontSize(12)
+        storeName: calculateDynamicFontSize(15),
+        orderNumber: calculateDynamicFontSize(15),
+        itemName: calculateDynamicFontSize(15),
+        modifier: calculateDynamicFontSize(14),
+        note: calculateDynamicFontSize(14)
     },
     padding: 4,
     margin: 1

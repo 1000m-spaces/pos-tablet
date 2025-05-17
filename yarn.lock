@@ -1749,6 +1749,13 @@
     prompts "^2.4.2"
     semver "^7.5.2"
 
+"@react-native-community/datetimepicker@^8.3.0":
+  version "8.3.0"
+  resolved "https://registry.yarnpkg.com/@react-native-community/datetimepicker/-/datetimepicker-8.3.0.tgz#d734a77ae5fdf9585ea2eba0d2b5cf47404c0a09"
+  integrity sha512-K/KgaJbLtjMpx4PaG4efrVIcSe6+DbLufeX1lwPB5YY8i3sq9dOh6WcAcMTLbaRTUpurebQTkl7puHPFm9GalA==
+  dependencies:
+    invariant "^2.2.4"
+
 "@react-native-community/image-editor@^4.3.0":
   version "4.3.0"
   resolved "https://registry.npmjs.org/@react-native-community/image-editor/-/image-editor-4.3.0.tgz"
@@ -6471,11 +6478,6 @@ react-native-global-props@^1.1.5:
   version "1.1.5"
   resolved "https://registry.npmjs.org/react-native-global-props/-/react-native-global-props-1.1.5.tgz"
   integrity sha512-QDeAdRel6zyJfbgyFxZi9QXZe78OdlANxJae0rJn76uTqdt/A+iWBVjJy3NmaN/fpKy0uV0HhW6Hu4xM0QCisQ==
-
-react-native-image-manipulator@^1.0.6:
-  version "1.0.6"
-  resolved "https://registry.yarnpkg.com/react-native-image-manipulator/-/react-native-image-manipulator-1.0.6.tgz#704291184de3ebccf5eaccfbf2e250ef5abe1df5"
-  integrity sha512-MdbSlD144STW6iQThlg2WKyopTJYbWDDs19nng7QGlNO60nz7UGRZWNRuFL8LOURUnWn7Fa0zp5VLOSEOqyrnQ==
 
 react-native-image-progress@^1.2.0:
   version "1.2.0"

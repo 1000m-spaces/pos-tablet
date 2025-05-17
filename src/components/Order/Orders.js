@@ -1,15 +1,16 @@
 import Svg from 'common/Svg/Svg';
 import { TextNormal } from 'common/Text/TextFont';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { heightDevice, widthDevice } from 'assets/constans';
 import Toast from 'react-native-toast-message'
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import {
   View,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView, TextInput, Pressable, Text, Switch
+  SafeAreaView, TextInput, Text, Switch, ActivityIndicator, Platform
 } from 'react-native';
 import orderController from 'store/order/orderController';
 import Colors from 'theme/Colors';
@@ -20,7 +21,7 @@ import StoreSelectionDialog from './StoreSelectionDialog';
 
 const orderFilters = [
   { id: 1, name: 'Đơn mới' },
-  { id: 3, name: 'Lịch sử' },
+  { id: 2, name: 'Lịch sử' },
 ];
 
 const Orders = () => {
@@ -35,25 +36,91 @@ const Orders = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [autoPrint, setAutoPrint] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const fetchOrders = async () => {
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).split('/').join('-');
+  };
+
+  const fetchOrders = useCallback(async () => {
     if (!selectedStore) {
       setStoreDialogVisible(true);
       return;
     }
+    console.log('fetchOrders', orderType);
+    if (orderType === 1) {
+      orderController.fetchOrder({
+        branch_id: selectedStore.branch_id,
+        brand_id: selectedStore.brand_id,
+        merchant_id: selectedStore.merchant_id,
+        service: "GRAB",
+      }).then((res) => {
+        if (res.success) {
+          setData(res.data.orders ? res.data.orders : []);
+        }
+      })
+    } else {
+      setIsLoadingHistory(true);
+      const formattedDate = formatDate(selectedDate);
+      orderController.fetchOrderHistory({
+        branch_id: selectedStore.branch_id,
+        brand_id: selectedStore.brand_id,
+        merchant_id: selectedStore.merchant_id,
+        from_at: formattedDate,
+        to_at: formattedDate,
+        page: 1,
+        service: "GRAB",
+        size: 1000,
+      }).then(async (res) => {
+        if (res.success) {
+          const statements = res.data.statements ? res.data.statements : [];
+          try {
+            // Fetch all order details concurrently
+            const orderDetailsPromises = statements.map(statement =>
+              orderController.getOrderDetail({
+                order_id: statement.ID,
+                branch_id: selectedStore.branch_id,
+                brand_id: selectedStore.brand_id,
+                service: "GRAB",
+                merchant_id: selectedStore.merchant_id,
+              })
+            );
+            const orderDetailsResults = await Promise.all(orderDetailsPromises);
+            const orders = orderDetailsResults.map((result, index) => {
+              return {
+                ...result?.data?.order,
+                ...statements[index]
+              }
+            });
+            setData(orders);
+          } catch (error) {
+            console.error('Error fetching order details:', error);
+            Toast.show({
+              type: 'error',
+              text1: 'Lỗi khi tải chi tiết đơn hàng',
+              position: 'bottom',
+            });
+          }
+        }
+        setIsLoadingHistory(false);
+      }).catch(error => {
+        console.error('Error fetching order history:', error);
+        setIsLoadingHistory(false);
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi khi tải lịch sử đơn hàng',
+          position: 'bottom',
+        });
+      });
+    }
+  }, [selectedStore, orderType, selectedDate]);
 
-    orderController.fetchOrder({
-      branch_id: selectedStore.branch_id,
-      brand_id: selectedStore.brand_id,
-      merchant_id: selectedStore.merchant_id,
-      service: "GRAB"
-    }).then((res) => {
-      if (res.success) {
-        setData(res.data.orders ? res.data.orders : []);
-      }
-    })
-  }
-  // Load selected store on component mount
   const loadSelectedStore = async () => {
     const storeInfo = await AsyncStorage.getSelectedStore();
     if (storeInfo) {
@@ -72,6 +139,9 @@ const Orders = () => {
     if (selectedStore) {
       // Initial fetch
       fetchOrders();
+      if (orderType != 1) {
+        return;
+      }
       // Set up interval for fetching orders every 30 seconds
       const intervalId = setInterval(fetchOrders, 30000);
       // Clean up interval on component unmount
@@ -79,7 +149,7 @@ const Orders = () => {
     } else {
       loadSelectedStore();
     }
-  }, [selectedStore]);
+  }, [selectedStore, orderType, selectedDate]);
 
   useEffect(() => {
     AsyncStorage.getPrinterInfo().then((printerInfo) => {
@@ -166,6 +236,13 @@ const Orders = () => {
     }
   };
 
+  const onDateChange = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setSelectedDate(selectedDate);
+    }
+  };
+
   return (
     <>
       <SafeAreaView
@@ -214,28 +291,42 @@ const Orders = () => {
                   </TouchableOpacity>
                 </View>
               </View>
-              <View style={{ flexDirection: 'row' }}>
-                <TouchableOpacity style={styles.searchInput}>
-                  <Svg name={'clock'} size={20} color={'gray'} />
-                  <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
-                    {new Date().toLocaleDateString('en-GB')}
-                  </TextNormal>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.searchInput}>
-                  <Svg name={'search'} size={20} color={'gray'} />
-                  <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
-                    {'All'}
-                  </TextNormal>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.searchInput, { flex: 1 }]}>
-                  <Svg name={'search'} size={20} />
-                  <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
-                    {' Tìm kiếm theo mã đơn hàng'}
-                  </TextNormal>
-                </TouchableOpacity>
-              </View>
+              {
+                orderType !== 1 && (
+                  <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity
+                      style={styles.searchInput}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Svg name={'clock'} size={20} color={'gray'} />
+                      <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                        {selectedDate.toLocaleDateString('en-GB')}
+                      </TextNormal>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.searchInput}>
+                      <Svg name={'search'} size={20} color={'gray'} />
+                      <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                        {'All'}
+                      </TextNormal>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.searchInput, { flex: 1 }]}>
+                      <Svg name={'search'} size={20} />
+                      <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                        {' Tìm kiếm theo mã đơn hàng'}
+                      </TextNormal>
+                    </TouchableOpacity>
+                  </View>
+                )
+              }
             </View>
-            <OrderTable orders={data} showSettingPrinter={() => setModalVisible(true)} />
+            {isLoadingHistory && orderType === 2 ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <TextNormal style={styles.loadingText}>Đang tải lịch sử đơn hàng...</TextNormal>
+              </View>
+            ) : (
+              <OrderTable orderType={orderType} orders={data} showSettingPrinter={() => setModalVisible(true)} />
+            )}
             <Modal
               onBackdropPress={() => setModalVisible(false)}
               isVisible={modalVisible}
@@ -338,6 +429,15 @@ const Orders = () => {
                 </View>
               </View>
             </Modal>
+            {showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onDateChange}
+                maximumDate={new Date()}
+              />
+            )}
           </View>
         </View>
       </SafeAreaView>
@@ -572,6 +672,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textSecondary,
     marginTop: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.whiteColor,
+    borderRadius: 10,
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: Colors.textSecondary,
   },
 });
 

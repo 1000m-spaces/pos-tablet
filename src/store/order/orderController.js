@@ -41,8 +41,10 @@ class OrderController {
     console.log('fetchOrderHistory', UrlApi.fetchOrderHistory, payload);
     try {
       const { data } = await HttpClient.post(UrlApi.fetchOrderHistory, payload);
+      console.log('fetchOrderHistory', data);
       return { success: true, data: data };
     } catch (error) {
+      console.log('fetchOrderHistory', error);
       return { success: false, error: error.message };
     }
   };

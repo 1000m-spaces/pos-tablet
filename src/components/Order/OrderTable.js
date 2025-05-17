@@ -35,7 +35,7 @@ const Badge = ({ text, colorText, colorBg, width }) => (
     </View>
 );
 
-const OrderTable = ({ orders, showSettingPrinter }) => {
+const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -348,6 +348,9 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
 
     // Monitor orders for new unprinted items
     useEffect(() => {
+        if (orderType != 1) {
+            return;
+        }
         const checkAndPrintNewOrders = async () => {
             if (isAutoPrinting || !orders.length) return;
 
@@ -370,7 +373,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         };
 
         checkAndPrintNewOrders();
-    }, [orders, printedLabels]);
+    }, [orders, printedLabels, orderType]);
 
     // Update printerInfo when it changes
     useEffect(() => {
@@ -381,7 +384,7 @@ const OrderTable = ({ orders, showSettingPrinter }) => {
         loadPrinterInfo();
     }, []);
 
-    const tableData = orders.map(order => [
+    const tableData = orders?.map(order => [
         "GRAB",
         order.displayID,
         order.orderValue,
