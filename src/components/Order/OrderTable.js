@@ -157,38 +157,103 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
             const originalOrder = selectedOrder;
             setPrintingOrder(originalOrder);
 
+            // Calculate total number of labels to be printed
+            let totalLabels = 0;
+            originalOrder.itemInfoDetail.items.forEach(item => {
+                if (item.separate && item.modifierGroups && item.modifierGroups.length > 0) {
+                    totalLabels += item.modifierGroups.length;
+                } else {
+                    totalLabels += 1;
+                }
+            });
+
+            let currentLabelIndex = 0;
+
             // Print each item separately
             for (let i = 0; i < originalOrder.itemInfoDetail.items.length; i++) {
-                // Create a temporary order with just this item
-                const tempOrder = {
-                    ...originalOrder,
-                    itemInfoDetail: {
-                        ...originalOrder.itemInfoDetail,
-                        items: [originalOrder.itemInfoDetail.items[i]],
-                        itemIdx: i,
-                        totalItems: originalOrder.itemInfoDetail.items.length,
+                const item = originalOrder.itemInfoDetail.items[i];
+
+                if (item.separate && item.modifierGroups && item.modifierGroups.length > 0) {
+                    // If item has separate flag and modifier groups, print each modifier group
+                    for (let j = 0; j < item.modifierGroups.length; j++) {
+                        const modifierGroup = item.modifierGroups[j];
+
+                        // Create a temporary order with just this modifier group
+                        const tempOrder = {
+                            ...originalOrder,
+                            itemInfoDetail: {
+                                ...originalOrder.itemInfoDetail,
+                                items: [{
+                                    ...item,
+                                    // name: `${item.name} - ${modifierGroup.modifierGroupName}`,
+                                    name: `${modifierGroup.modifierGroupName}`,
+                                    modifierGroups: [modifierGroup],
+                                    itemIdx: currentLabelIndex,
+                                    totalItems: totalLabels,
+                                }],
+                                itemIdx: currentLabelIndex,
+                                totalItems: totalLabels,
+                            }
+                        };
+
+                        // Update the ViewShot with the temporary order
+                        setPrintingOrder(tempOrder);
+
+                        // Wait for the ViewShot to be ready
+                        await new Promise(resolve => setTimeout(resolve, 500));
+
+                        // Capture and print the label
+                        const uri = await viewTemShotRef.current.capture();
+                        const imageInfo = await Image.getSize(uri);
+                        const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
+                        await tsplPrintBitmap(
+                            Number(printerInfo.sWidth),
+                            Number(printerInfo.sHeight),
+                            base64,
+                            imageInfo.width
+                        );
+
+                        // Add a small delay between prints
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        currentLabelIndex++;
                     }
-                };
+                } else {
+                    // Original behavior for non-separate items
+                    const tempOrder = {
+                        ...originalOrder,
+                        itemInfoDetail: {
+                            ...originalOrder.itemInfoDetail,
+                            items: [{
+                                ...item,
+                                itemIdx: currentLabelIndex,
+                                totalItems: totalLabels,
+                            }],
+                            itemIdx: currentLabelIndex,
+                            totalItems: totalLabels,
+                        }
+                    };
 
-                // Update the ViewShot with the temporary order
-                setPrintingOrder(tempOrder);
+                    // Update the ViewShot with the temporary order
+                    setPrintingOrder(tempOrder);
 
-                // Wait for the ViewShot to be ready
-                await new Promise(resolve => setTimeout(resolve, 500));
+                    // Wait for the ViewShot to be ready
+                    await new Promise(resolve => setTimeout(resolve, 500));
 
-                // Capture and print the label
-                const uri = await viewTemShotRef.current.capture();
-                const imageInfo = await Image.getSize(uri);
-                const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                await tsplPrintBitmap(
-                    Number(printerInfo.sWidth),
-                    Number(printerInfo.sHeight),
-                    base64,
-                    imageInfo.width
-                );
+                    // Capture and print the label
+                    const uri = await viewTemShotRef.current.capture();
+                    const imageInfo = await Image.getSize(uri);
+                    const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
+                    await tsplPrintBitmap(
+                        Number(printerInfo.sWidth),
+                        Number(printerInfo.sHeight),
+                        base64,
+                        imageInfo.width
+                    );
 
-                // Add a small delay between prints
-                await new Promise(resolve => setTimeout(resolve, 500));
+                    // Add a small delay between prints
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    currentLabelIndex++;
+                }
             }
 
             // Restore the original order
@@ -406,11 +471,19 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                     <View style={{ flex: 1, width: tableWidth }}>
                         <Table borderStyle={styles.border}>
                             <Row data={tableHead} widthArr={widthArr} style={styles.head} textStyle={styles.textHead} />
-                            {orders.map((order, index) => (
-                                <TouchableOpacity key={index} onPress={() => handleRowPress(order)}>
-                                    <Row data={tableData[index]} widthArr={widthArr} style={styles.row} textStyle={styles.text} />
-                                </TouchableOpacity>
-                            ))}
+                            {orders && orders.length > 0 ? (
+                                orders.map((order, index) => (
+                                    <TouchableOpacity key={index} onPress={() => handleRowPress(order)}>
+                                        <Row data={tableData[index]} widthArr={widthArr} style={styles.row} textStyle={styles.text} />
+                                    </TouchableOpacity>
+                                ))
+                            ) : (
+                                <Row
+                                    data={[<Text style={styles.emptyText}>Không tồn tại đơn hàng nào</Text>]}
+                                    widthArr={[tableWidth]}
+                                    style={styles.row}
+                                />
+                            )}
                         </Table>
                     </View>
                 </ScrollView>
@@ -485,6 +558,11 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontWeight: "bold",
         textAlign: "center",
+    },
+    emptyText: {
+        textAlign: "center",
+        color: "#666",
+        fontSize: 16,
     },
 });
 
