@@ -181,7 +181,7 @@ const OrderDetailDialog = ({
 
                     <View style={styles.itemsSection}>
                         <Text style={styles.sectionTitle}>Danh sách món</Text>
-                        {selectedOrder?.itemInfoDetail?.items?.map((item, idx) => (
+                        {selectedOrder?.itemInfo?.items?.map((item, idx) => (
                             <View key={idx} style={styles.itemRow}>
                                 <View style={styles.itemInfo}>
                                     <Text style={styles.itemName}>{item.name}</Text>

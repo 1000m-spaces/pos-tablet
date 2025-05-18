@@ -7,7 +7,7 @@ const BillTemplate = ({ selectedOrder }) => {
             <Text style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center' }}>*** HÓA ĐƠN ***</Text>
             <Text>Mã đơn: {selectedOrder.displayID}</Text>
             <Text>--------------------------------</Text>
-            {selectedOrder?.itemInfoDetail?.items?.map((item, index) => (
+            {selectedOrder?.itemInfo?.items?.map((item, index) => (
                 <Text key={index}>{item.name} x{item.quantity}  {item.price * item.quantity}đ</Text>
             ))}
             <Text>--------------------------------</Text>

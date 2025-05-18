@@ -160,14 +160,14 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
     return (
         <View style={styles.container}>
-            {orderPrint.itemInfoDetail?.items?.map((item, index) => (
+            {orderPrint.itemInfo?.items?.map((item, index) => (
                 <View key={index} style={styles.card}>
                     <View style={styles.header}>
                         <Text style={styles.orderInfo}>
                             <Text style={styles.orderLabel}>GRAB</Text>
                             <Text style={styles.orderLabel}>#</Text>
                             <Text style={styles.orderNumber}>{orderPrint.displayID}</Text>
-                            <Text style={styles.pageNumber}>({orderPrint.itemInfoDetail?.itemIdx + 1}/{orderPrint.itemInfoDetail?.totalItems})</Text>
+                            <Text style={styles.pageNumber}>({orderPrint.itemInfo?.itemIdx + 1}/{orderPrint.itemInfo?.totalItems})</Text>
                         </Text>
                     </View>
                     <View style={styles.itemContainer}>

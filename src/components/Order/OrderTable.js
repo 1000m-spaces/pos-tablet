@@ -159,7 +159,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
 
             // Calculate total number of labels to be printed
             let totalLabels = 0;
-            originalOrder.itemInfoDetail.items.forEach(item => {
+            originalOrder.itemInfo.items.forEach(item => {
                 if (item.separate && item.modifierGroups && item.modifierGroups.length > 0) {
                     totalLabels += item.modifierGroups.length;
                 } else {
@@ -170,8 +170,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
             let currentLabelIndex = 0;
 
             // Print each item separately
-            for (let i = 0; i < originalOrder.itemInfoDetail.items.length; i++) {
-                const item = originalOrder.itemInfoDetail.items[i];
+            for (let i = 0; i < originalOrder.itemInfo.items.length; i++) {
+                const item = originalOrder.itemInfo.items[i];
 
                 if (item.separate && item.modifierGroups && item.modifierGroups.length > 0) {
                     // If item has separate flag and modifier groups, print each modifier group
@@ -181,8 +181,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                         // Create a temporary order with just this modifier group
                         const tempOrder = {
                             ...originalOrder,
-                            itemInfoDetail: {
-                                ...originalOrder.itemInfoDetail,
+                            itemInfo: {
+                                ...originalOrder.itemInfo,
                                 items: [{
                                     ...item,
                                     // name: `${item.name} - ${modifierGroup.modifierGroupName}`,
@@ -221,8 +221,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                     // Original behavior for non-separate items
                     const tempOrder = {
                         ...originalOrder,
-                        itemInfoDetail: {
-                            ...originalOrder.itemInfoDetail,
+                        itemInfo: {
+                            ...originalOrder.itemInfo,
                             items: [{
                                 ...item,
                                 itemIdx: currentLabelIndex,
@@ -357,15 +357,15 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
             await netConnect(printerInfo.IP);
 
             // Print each item separately
-            for (let i = 0; i < originalOrder.itemInfoDetail.items.length; i++) {
+            for (let i = 0; i < originalOrder.itemInfo.items.length; i++) {
                 // Create a temporary order with just this item
                 const tempOrder = {
                     ...originalOrder,
-                    itemInfoDetail: {
-                        ...originalOrder.itemInfoDetail,
-                        items: [originalOrder.itemInfoDetail.items[i]],
+                    itemInfo: {
+                        ...originalOrder.itemInfo,
+                        items: [originalOrder.itemInfo.items[i]],
                         itemIdx: i,
-                        totalItems: originalOrder.itemInfoDetail.items.length,
+                        totalItems: originalOrder.itemInfo.items.length,
                     }
                 };
 
@@ -453,7 +453,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
         "GRAB",
         order.displayID,
         order.orderValue,
-        order.itemInfoDetail?.items?.length,
+        order.itemInfo?.items?.length,
         <Badge
             text={printedLabels.includes(order.displayID) ? "Đã in" : "Chưa in"}
             colorText={printedLabels.includes(order.displayID) ? "#069C2E" : "#EF0000"}
