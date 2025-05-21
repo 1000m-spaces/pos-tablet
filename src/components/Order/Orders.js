@@ -36,7 +36,7 @@ const Orders = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [autoPrint, setAutoPrint] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -53,35 +53,49 @@ const Orders = () => {
       setStoreDialogVisible(true);
       return;
     }
-    console.log('fetchOrders', orderType);
-    if (orderType === 1) {
-      orderController.fetchOrder({
-        branch_id: selectedStore.branch_id,
-        brand_id: selectedStore.brand_id,
-        merchant_id: selectedStore.merchant_id,
-        service: "GRAB",
-      }).then((res) => {
+
+    // Prevent multiple simultaneous fetches
+    if (isLoading) {
+      return;
+    }
+
+    setIsLoading(true);
+    setData([]); // Clear data while loading
+
+    try {
+      if (orderType === 1) {
+        const res = await orderController.fetchOrder({
+          branch_id: selectedStore.branch_id,
+          brand_id: selectedStore.brand_id,
+          merchant_id: selectedStore.merchant_id,
+          service: "GRAB",
+        });
+
         if (res.success) {
-          setData(res.data.orders ? res.data.orders : []);
+          setData(res?.data?.orders || []);
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Lỗi khi tải đơn hàng mới',
+            position: 'bottom',
+          });
         }
-      })
-    } else {
-      setIsLoadingHistory(true);
-      const formattedDate = formatDate(selectedDate);
-      orderController.fetchOrderHistory({
-        branch_id: selectedStore.branch_id,
-        brand_id: selectedStore.brand_id,
-        merchant_id: selectedStore.merchant_id,
-        from_at: formattedDate,
-        to_at: formattedDate,
-        page: 1,
-        service: "GRAB",
-        size: 1000,
-      }).then(async (res) => {
+      } else {
+        const formattedDate = formatDate(selectedDate);
+        const res = await orderController.fetchOrderHistory({
+          branch_id: selectedStore.branch_id,
+          brand_id: selectedStore.brand_id,
+          merchant_id: selectedStore.merchant_id,
+          from_at: formattedDate,
+          to_at: formattedDate,
+          page: 1,
+          service: "GRAB",
+          size: 1000,
+        });
+
         if (res.success) {
-          const statements = res.data.statements ? res.data.statements : [];
+          const statements = res.data.statements || [];
           try {
-            // Fetch all order details concurrently
             const orderDetailsPromises = statements.map(statement =>
               orderController.getOrderDetail({
                 order_id: statement.ID,
@@ -92,12 +106,10 @@ const Orders = () => {
               })
             );
             const orderDetailsResults = await Promise.all(orderDetailsPromises);
-            const orders = orderDetailsResults.map((result, index) => {
-              return {
-                ...result?.data?.order,
-                ...statements[index]
-              }
-            });
+            const orders = orderDetailsResults.map((result, index) => ({
+              ...result?.data?.order,
+              ...statements[index]
+            }));
             setData(orders);
           } catch (error) {
             console.error('Error fetching order details:', error);
@@ -107,19 +119,25 @@ const Orders = () => {
               position: 'bottom',
             });
           }
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Lỗi khi tải lịch sử đơn hàng',
+            position: 'bottom',
+          });
         }
-        setIsLoadingHistory(false);
-      }).catch(error => {
-        console.error('Error fetching order history:', error);
-        setIsLoadingHistory(false);
-        Toast.show({
-          type: 'error',
-          text1: 'Lỗi khi tải lịch sử đơn hàng',
-          position: 'bottom',
-        });
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi khi tải đơn hàng',
+        position: 'bottom',
       });
+    } finally {
+      setIsLoading(false);
     }
-  }, [selectedStore, orderType, selectedDate]);
+  }, [selectedStore, orderType, selectedDate, isLoading]);
 
   const loadSelectedStore = async () => {
     const storeInfo = await AsyncStorage.getSelectedStore();
@@ -139,11 +157,15 @@ const Orders = () => {
     if (selectedStore) {
       // Initial fetch
       fetchOrders();
-      if (orderType != 1) {
+      if (orderType !== 1) {
         return;
       }
       // Set up interval for fetching orders every 30 seconds
-      const intervalId = setInterval(fetchOrders, 30000);
+      const intervalId = setInterval(() => {
+        if (!isLoading) {
+          fetchOrders();
+        }
+      }, 30000);
       // Clean up interval on component unmount
       return () => clearInterval(intervalId);
     } else {
@@ -170,7 +192,11 @@ const Orders = () => {
     return (
       <TouchableOpacity
         key={item.id}
-        onPress={() => setOrderType(item.id)}
+        onPress={() => {
+          if (!isLoading) {
+            setOrderType(item.id)
+          }
+        }}
         style={[
           styles.wrapperOrderType,
           orderType === item.id && {
@@ -272,9 +298,11 @@ const Orders = () => {
                   <TouchableOpacity
                     style={{
                       paddingVertical: 12,
-                      marginRight: 20
+                      marginRight: 20,
+                      opacity: isLoading ? 0.5 : 1
                     }}
-                    onPress={() => setStoreDialogVisible(true)}
+                    onPress={() => !isLoading && setStoreDialogVisible(true)}
+                    disabled={isLoading}
                   >
                     <TextNormal style={{ marginRight: 10 }}>
                       {selectedStore ? selectedStore.name : 'Select Store'}
@@ -283,46 +311,55 @@ const Orders = () => {
                   <TouchableOpacity
                     style={{
                       paddingVertical: 12,
-                      marginRight: 20
+                      marginRight: 20,
+                      opacity: isLoading ? 0.5 : 1
                     }}
-                    onPress={() => setModalVisible(true)}
+                    onPress={() => !isLoading && setModalVisible(true)}
+                    disabled={isLoading}
                   >
                     <Svg name={'printer'} size={40} color={'transparent'} />
                   </TouchableOpacity>
                 </View>
               </View>
-              {
-                orderType !== 1 && (
-                  <View style={{ flexDirection: 'row' }}>
-                    <TouchableOpacity
-                      style={styles.searchInput}
-                      onPress={() => setShowDatePicker(true)}
-                    >
-                      <Svg name={'clock'} size={20} color={'gray'} />
-                      <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
-                        {selectedDate.toLocaleDateString('en-GB')}
-                      </TextNormal>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.searchInput}>
-                      <Svg name={'search'} size={20} color={'gray'} />
-                      <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
-                        {'All'}
-                      </TextNormal>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.searchInput, { flex: 1 }]}>
-                      <Svg name={'search'} size={20} />
-                      <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
-                        {' Tìm kiếm theo mã đơn hàng'}
-                      </TextNormal>
-                    </TouchableOpacity>
-                  </View>
-                )
-              }
+              {orderType !== 1 && (
+                <View style={{ flexDirection: 'row' }}>
+                  <TouchableOpacity
+                    style={[styles.searchInput, isLoading && styles.disabledInput]}
+                    onPress={() => !isLoading && setShowDatePicker(true)}
+                    disabled={isLoading}
+                  >
+                    <Svg name={'clock'} size={20} color={'gray'} />
+                    <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                      {selectedDate.toLocaleDateString('en-GB')}
+                    </TextNormal>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.searchInput, isLoading && styles.disabledInput]}
+                    disabled={isLoading}
+                  >
+                    <Svg name={'search'} size={20} color={'gray'} />
+                    <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                      {'All'}
+                    </TextNormal>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.searchInput, { flex: 1 }, isLoading && styles.disabledInput]}
+                    disabled={isLoading}
+                  >
+                    <Svg name={'search'} size={20} />
+                    <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                      {' Tìm kiếm theo mã đơn hàng'}
+                    </TextNormal>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
-            {isLoadingHistory && orderType === 2 ? (
+            {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={Colors.primary} />
-                <TextNormal style={styles.loadingText}>Đang tải lịch sử đơn hàng...</TextNormal>
+                <TextNormal style={styles.loadingText}>
+                  {orderType === 1 ? 'Đang tải đơn hàng mới...' : 'Đang tải lịch sử đơn hàng...'}
+                </TextNormal>
               </View>
             ) : (
               <OrderTable orderType={orderType} orders={data} showSettingPrinter={() => setModalVisible(true)} />
@@ -684,6 +721,9 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     color: Colors.textSecondary,
+  },
+  disabledInput: {
+    opacity: 0.5,
   },
 });
 

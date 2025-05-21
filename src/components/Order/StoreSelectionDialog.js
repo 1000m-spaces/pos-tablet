@@ -33,7 +33,7 @@ const StoreSelectionDialog = ({ visible, onClose, onStoreSelect }) => {
                         phone: store.restphone,
                         branch_id: store.restid,
                         brand_id: store.partnerid,
-                        merchant_id: 133, // Hardcoded as requested
+                        merchant_id: 132, // Hardcoded as requested
                         latitude: store.latitude,
                         longitude: store.longitude,
                         image: store.img

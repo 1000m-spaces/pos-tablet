@@ -413,12 +413,12 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
 
     // Monitor orders for new unprinted items
     useEffect(() => {
-        if (orderType != 1) {
-            return;
-        }
         const checkAndPrintNewOrders = async () => {
             if (isAutoPrinting || !orders.length) return;
 
+            if (orderType != 1) {
+                return;
+            }
             // Check if auto-print is enabled in printer settings
             const printerInfo = await AsyncStorage.getPrinterInfo();
             if (!printerInfo?.autoPrint) return;
@@ -426,7 +426,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
             setIsAutoPrinting(true);
             try {
                 for (const order of orders) {
-                    if (!printedLabels.includes(order.displayID)) {
+                    if (order && !printedLabels.includes(order.displayID)) {
                         await autoPrintOrder(order);
                         // Add a small delay between prints
                         await new Promise(resolve => setTimeout(resolve, 1000));
