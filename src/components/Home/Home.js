@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, SafeAreaView, View } from 'react-native';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { getMenuAction, setProductAction } from 'store/actions';
+import { getMenuAction, setProductAction, getShopTablesAction } from 'store/actions';
 import { currentOrderSelector, productMenuSelector } from 'store/selectors';
 import ProductItemMenu from './ProductItemMenu';
 import Colors from 'theme/Colors';
@@ -27,6 +27,9 @@ const Home = ({ navigation }) => {
         restid: user?.shifts.rest_id || '246',
       };
       dispatch(getMenuAction(body));
+      dispatch(getShopTablesAction({
+        rest_id: user?.shifts.rest_id || '246',
+      }));
     };
     initData();
   }, []);
@@ -47,9 +50,6 @@ const Home = ({ navigation }) => {
     setShowModal(-1);
   };
   const onShowTable = () => setShowModal(2);
-  // useEffect(() => {
-  //   console.log('currentOrder::', JSON.stringify(currentOrder));
-  // }, [currentOrder]);
 
   return (
     <SafeAreaView

@@ -3,23 +3,31 @@ import {
   formatMoney,
   heightDevice,
   IMAGE_URL,
-  orderTypes,
   widthDevice,
 } from 'assets/constans';
 import Svg from 'common/Svg/Svg';
-import {TextNormal} from 'common/Text/TextFont';
-import React, {useEffect, useState} from 'react';
-import {FlatList, StyleSheet, TouchableOpacity, View} from 'react-native';
-import {useDispatch, useSelector} from 'react-redux';
-import {currentOrderSelector} from 'store/selectors';
+import { TextNormal } from 'common/Text/TextFont';
+import React, { useEffect, useState } from 'react';
+import { FlatList, StyleSheet, TouchableOpacity, View, Text } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { currentOrderSelector } from 'store/selectors';
+import { getPaymentChannelsSelector } from 'store/payment/paymentSelector';
+import { getPaymentChannelsAction } from 'store/payment/paymentAction';
 import Colors from 'theme/Colors';
 import PaymentCart from './PaymentCart';
 import FastImage from 'react-native-fast-image';
-import {setOrderAction} from 'store/actions';
-const Cart = ({showTable}) => {
+import { setOrderAction } from 'store/actions';
+const Cart = ({ showTable }) => {
   const dispatch = useDispatch();
   const currentOrder = useSelector(state => currentOrderSelector(state));
+  const paymentChannels = useSelector(state => getPaymentChannelsSelector(state));
+  console.log('paymentChannels::', paymentChannels)
   const [orderType, setOrderType] = useState(1);
+  console.log('currentOrder::', currentOrder)
+  useEffect(() => {
+    dispatch(getPaymentChannelsAction());
+  }, [dispatch]);
+
   const updateQuantity = (product, val) => {
     const tempProducts = JSON.parse(JSON.stringify(currentOrder.products));
     tempProducts.map((prod, i) => {
@@ -47,11 +55,11 @@ const Cart = ({showTable}) => {
   };
   const onSelectOrderType = i => {
     setOrderType(i.id);
-    if (i.id === 1) {
+    if (i.id === 1 || i.id === "1") {
       showTable();
     }
   };
-  const renderProductCart = ({item, _}) => {
+  const renderProductCart = ({ item, _ }) => {
     return (
       <View style={styles.containerProduct}>
         <FastImage
@@ -94,7 +102,7 @@ const Cart = ({showTable}) => {
       </View>
     );
   };
-  const renderOrderType = ({item, index}) => {
+  const renderOrderType = ({ item, index }) => {
     return (
       <TouchableOpacity
         key={item.id}
@@ -112,11 +120,11 @@ const Cart = ({showTable}) => {
             color:
               orderType === item.id ? Colors.whiteColor : Colors.inactiveText,
           }}>
-          {item.id === 1
+          {item.id === "1" || item.id === 1
             ? currentOrder.table > 0
               ? `Thẻ ${currentOrder.table}`
-              : 'Chọn số thẻ'
-            : item.name}
+              : item.name_vn
+            : item.name_vn}
         </TextNormal>
       </TouchableOpacity>
     );
@@ -130,7 +138,7 @@ const Cart = ({showTable}) => {
           borderStyle: 'dashed',
         }}>
         <FlatList
-          data={orderTypes}
+          data={paymentChannels}
           keyExtractor={i => i.id}
           horizontal
           contentContainerStyle={{
@@ -141,17 +149,13 @@ const Cart = ({showTable}) => {
           showsHorizontalScrollIndicator={false}
           renderItem={renderOrderType}
         />
-        {/* {currentOrder && currentOrder?.table > 0 && (
-          <View style={{paddingHorizontal: 16, paddingBottom: 8}}>
-            <TextNormal
-              style={{
-                fontSize: 16,
-                fontWeight: '600',
-                textDecorationLine: 'underline',
-              }}>{`Số thẻ: ${currentOrder?.table}`}</TextNormal>
-          </View>
-        )} */}
       </View>
+      {currentOrder && currentOrder?.tableId > 0 && (
+        <View style={styles.tableNumberContainer}>
+          <Text style={styles.tableLabel}>Số thẻ:</Text>
+          <Text style={styles.tableNumber}>{currentOrder?.tableId}</Text>
+        </View>
+      )}
       <FlatList
         data={currentOrder.products}
         keyExtractor={(i, idx) =>
@@ -172,8 +176,8 @@ const Cart = ({showTable}) => {
 export default Cart;
 
 const styles = StyleSheet.create({
-  containerProduct: {flexDirection: 'row', flex: 1, marginBottom: 8},
-  wrapperProductInfo: {paddingLeft: 6, flex: 1},
+  containerProduct: { flexDirection: 'row', flex: 1, marginBottom: 8 },
+  wrapperProductInfo: { paddingLeft: 6, flex: 1 },
   container: {
     backgroundColor: Colors.whiteColor,
     flex: 0.6,
@@ -206,8 +210,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  textQuantity: {paddingHorizontal: 12, fontSize: 14},
-  productTopping: {color: '#949494'},
-  productName: {fontSize: 16, marginBottom: 4},
-  productPrice: {color: Colors.primary, fontWeight: 'bold'},
+  textQuantity: { paddingHorizontal: 12, fontSize: 14 },
+  productTopping: { color: '#949494' },
+  productName: { fontSize: 16, marginBottom: 4 },
+  productPrice: { color: Colors.primary, fontWeight: 'bold' },
+  tableNumberContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  tableLabel: {
+    color: 'black',
+    fontSize: 16,
+    fontWeight: '600',
+    fontStyle: 'bold',
+    lineHeight: 22.4,
+  },
+  tableNumber: {
+    color: 'black',
+    fontStyle: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 22.4,
+  },
 });

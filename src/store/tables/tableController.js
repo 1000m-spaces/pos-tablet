@@ -5,7 +5,7 @@ class TableController {
     getShopTables = async body => {
         try {
             const { data } = await HttpClient.post(UrlApi.getListShopTable, body);
-            console.log('shop tables data:::', data);
+            console.log('shop tables data:::', data, body);
             return {
                 success: data ? true : false,
                 tables: data ? data : [],

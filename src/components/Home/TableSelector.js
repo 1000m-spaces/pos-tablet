@@ -1,18 +1,27 @@
-import {heightDevice, widthDevice} from 'assets/constans';
-import {TextNormal} from 'common/Text/TextFont';
-import React from 'react';
-import {StyleSheet, TouchableOpacity, View} from 'react-native';
+import { heightDevice, widthDevice } from 'assets/constans';
+import { TextNormal } from 'common/Text/TextFont';
+import React, { useEffect } from 'react';
+import { StyleSheet, TouchableOpacity, View, ScrollView } from 'react-native';
 import Modal from 'react-native-modal';
-import {useDispatch} from 'react-redux';
-import {setOrderAction} from 'store/actions';
+import { useDispatch, useSelector } from 'react-redux';
+import { setOrderAction } from 'store/actions';
+import { getTablesSelector } from 'store/tables/tableSelector';
 import Colors from 'theme/Colors';
 
-const TableSelector = ({isVisible, close, currentOrder}) => {
+const TableSelector = ({ isVisible, close, currentOrder }) => {
   const dispatch = useDispatch();
-  const onSelectTable = val => {
+  const tables = useSelector((state) => getTablesSelector(state));
+  console.log('tables::', tables)
+
+  const onSelectTable = (table) => {
     close();
-    dispatch(setOrderAction({...currentOrder, table: val}));
+    dispatch(setOrderAction({
+      ...currentOrder,
+      table: table.shoptablename,
+      tableId: table.shoptableid
+    }));
   };
+
   return (
     <Modal
       isVisible={isVisible}
@@ -22,21 +31,31 @@ const TableSelector = ({isVisible, close, currentOrder}) => {
       style={styles.containerModal}>
       <View style={styles.containerView}>
         <TextNormal style={styles.title}>{'Số thẻ'}</TextNormal>
-        <View style={styles.wrapperTable}>
-          {[...new Array(20)].map((_, index) => {
+        <ScrollView
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.wrapperTable}
+          showsVerticalScrollIndicator={true}>
+          {tables?.map((table, index) => {
+            const isOccupied = table.state === "true" || table.orderId !== "0";
             return (
               <TouchableOpacity
-                onPress={() =>
-                  onSelectTable(index + 1 < 10 ? `0${index + 1}` : index + 1)
-                }
-                style={styles.tableBtn}>
-                <TextNormal>
-                  {index + 1 < 10 ? `0${index + 1}` : index + 1}
+                key={table.shoptableid}
+                onPress={() => onSelectTable(table)}
+                style={[
+                  styles.tableBtn,
+                  isOccupied && styles.tableBtnOccupied
+                ]}
+                disabled={isOccupied}>
+                <TextNormal style={[
+                  styles.tableBtnText,
+                  isOccupied && styles.tableBtnTextOccupied
+                ]}>
+                  {table.shoptablename}
                 </TextNormal>
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -44,12 +63,16 @@ const TableSelector = ({isVisible, close, currentOrder}) => {
 
 export default TableSelector;
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flex: 1,
+    width: '100%',
+  },
   wrapperTable: {
     flexDirection: 'row',
-    flex: 1,
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
   },
   tableBtn: {
     width: 68,
@@ -61,6 +84,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.btnDisabled,
+    backgroundColor: 'white',
+  },
+  tableBtnOccupied: {
+    backgroundColor: '#f0f0f0',
+    borderColor: '#d0d0d0',
+  },
+  tableBtnText: {
+    fontSize: 12,
+    color: 'black',
+  },
+  tableBtnTextOccupied: {
+    color: '#888',
   },
   title: {
     fontSize: 20,
@@ -77,7 +112,7 @@ const styles = StyleSheet.create({
   },
   containerModal: {
     width: heightDevice * 0.6,
-    height: widthDevice * 0.1,
+    maxHeight: widthDevice * 0.7,
     backgroundColor: 'white',
     borderRadius: 16,
     // position: 'absolute',
@@ -85,5 +120,5 @@ const styles = StyleSheet.create({
     left: heightDevice * 0.2,
     marginVertical: 150,
   },
-  line: {height: 6, backgroundColor: '#F5F5F5'},
+  line: { height: 6, backgroundColor: '#F5F5F5' },
 });
