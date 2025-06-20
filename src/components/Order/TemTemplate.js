@@ -47,6 +47,7 @@ const DEFAULT_SETTINGS = {
 };
 
 const PrintTemplate = ({ orderPrint, settings = {} }) => {
+    console.log("orderPrint", orderPrint);
     const [printerSettings, setPrinterSettings] = useState(null);
     useEffect(() => {
         const loadPrinterSettings = async () => {
@@ -160,7 +161,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
     return (
         <View style={styles.container}>
-            {orderPrint.itemInfo?.items?.map((item, index) => (
+            {orderPrint?.itemInfo?.items?.map((item, index) => (
                 <View key={index} style={styles.card}>
                     <View style={styles.header}>
                         <Text style={styles.orderInfo}>

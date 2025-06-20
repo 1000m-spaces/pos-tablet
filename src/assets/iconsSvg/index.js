@@ -73,6 +73,7 @@ import order_pos from './svgs/order_pos.svg';
 import menu_pos from './svgs/menu_pos.svg';
 import settings from './svgs/settings.svg';
 import printer from './svgs/printer.svg';
+import invoice_pos from './svgs/invoice_pos.svg';
 export default {
   // POS
   icon_login_logo,
@@ -81,6 +82,7 @@ export default {
   history_pos,
   order_pos,
   menu_pos,
+  invoice_pos,
   search,
   clock,
   arrow_right,

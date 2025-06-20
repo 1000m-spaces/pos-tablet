@@ -269,6 +269,8 @@ const Orders = () => {
     }
   };
 
+
+
   return (
     <>
       <SafeAreaView
@@ -319,9 +321,10 @@ const Orders = () => {
                   >
                     <Svg name={'printer'} size={40} color={'transparent'} />
                   </TouchableOpacity>
+
                 </View>
               </View>
-              {orderType !== 1 && (
+              {orderType === 2 && (
                 <View style={{ flexDirection: 'row' }}>
                   <TouchableOpacity
                     style={[styles.searchInput, isLoading && styles.disabledInput]}

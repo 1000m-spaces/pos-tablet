@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NAVIGATION_HOME, NAVIGATION_ORDER } from 'navigation/routes';
+import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_INVOICE } from 'navigation/routes';
 import { StyleSheet } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import * as Screens from 'components';
@@ -76,6 +76,13 @@ const Main = () => {
           component={Screens.Orders}
           options={{
             drawerLabel: 'Đơn online'
+          }}
+        />
+        <Drawer.Screen
+          name={NAVIGATION_INVOICE}
+          component={Screens.Invoice}
+          options={{
+            drawerLabel: 'Hóa Đơn'
           }}
         />
       </Drawer.Navigator>

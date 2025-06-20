@@ -17,7 +17,8 @@ const OrderDetailDialog = ({
     printedLabels,
     onPrintTem,
     onPrintBill,
-    loadingVisible
+    loadingVisible,
+    isOfflineOrder = false
 }) => {
     const getStatusColor = (status) => {
         switch (status) {
@@ -106,9 +107,9 @@ const OrderDetailDialog = ({
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
                         <Badge
-                            text={getStatusText(selectedOrder.state)}
-                            colorText={getStatusColor(selectedOrder.state)}
-                            colorBg={getStatusColorBg(selectedOrder.state)}
+                            text={isOfflineOrder ? "Đơn offline" : getStatusText(selectedOrder.state)}
+                            colorText={isOfflineOrder ? "#FF9800" : getStatusColor(selectedOrder.state)}
+                            colorBg={isOfflineOrder ? "#FFF3E0" : getStatusColorBg(selectedOrder.state)}
                             width="auto"
                         />
                     </View>
@@ -116,56 +117,68 @@ const OrderDetailDialog = ({
                     <View style={styles.orderInfoSection}>
                         <View style={styles.detailRow}>
                             <Text style={styles.label}>Mã đơn hàng:</Text>
-                            <Text style={styles.value}>{selectedOrder.displayID}</Text>
+                            <Text style={styles.value}>{isOfflineOrder ? selectedOrder.session : selectedOrder.displayID}</Text>
                         </View>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.label}>Trạng thái đơn:</Text>
-                            <Text style={styles.value}>{getStatusText(selectedOrder.state)}</Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.label}>Trạng thái chuẩn bị:</Text>
-                            <Text style={styles.value}>{getPreparationStatusText(selectedOrder.preparationTaskpoolStatus)}</Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.label}>Trạng thái giao hàng:</Text>
-                            <Text style={styles.value}>{getDeliveryStatusText(selectedOrder.deliveryTaskpoolStatus)}</Text>
-                        </View>
+                        {!isOfflineOrder && (
+                            <>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>Trạng thái đơn:</Text>
+                                    <Text style={styles.value}>{getStatusText(selectedOrder.state)}</Text>
+                                </View>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>Trạng thái chuẩn bị:</Text>
+                                    <Text style={styles.value}>{getPreparationStatusText(selectedOrder.preparationTaskpoolStatus)}</Text>
+                                </View>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>Trạng thái giao hàng:</Text>
+                                    <Text style={styles.value}>{getDeliveryStatusText(selectedOrder.deliveryTaskpoolStatus)}</Text>
+                                </View>
+                            </>
+                        )}
+                        {isOfflineOrder && (
+                            <View style={styles.detailRow}>
+                                <Text style={styles.label}>Bàn/Khách:</Text>
+                                <Text style={styles.value}>{selectedOrder.shopTableName || 'N/A'}</Text>
+                            </View>
+                        )}
                         <View style={styles.detailRow}>
                             <Text style={styles.label}>Trạng thái in:</Text>
                             <Badge
-                                text={printedLabels.includes(selectedOrder.displayID) ? "Đã in" : "Chưa in"}
-                                colorText={printedLabels.includes(selectedOrder.displayID) ? "#069C2E" : "#EF0000"}
-                                colorBg={printedLabels.includes(selectedOrder.displayID) ? "#CDEED8" : "#FED9DA"}
+                                text={printedLabels.includes(isOfflineOrder ? selectedOrder.session : selectedOrder.displayID) ? "Đã in" : "Chưa in"}
+                                colorText={printedLabels.includes(isOfflineOrder ? selectedOrder.session : selectedOrder.displayID) ? "#069C2E" : "#EF0000"}
+                                colorBg={printedLabels.includes(isOfflineOrder ? selectedOrder.session : selectedOrder.displayID) ? "#CDEED8" : "#FED9DA"}
                                 width="auto"
                             />
                         </View>
                     </View>
 
-                    <View style={styles.customerSection}>
-                        <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.label}>Tên khách hàng:</Text>
-                            <Text style={styles.value}>{selectedOrder.eater?.name || 'N/A'}</Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.label}>Số điện thoại:</Text>
-                            <Text style={styles.value}>{selectedOrder.eater?.mobileNumber || 'N/A'}</Text>
-                        </View>
-                        {selectedOrder.eater?.address && (
+                    {!isOfflineOrder && (
+                        <View style={styles.customerSection}>
+                            <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
                             <View style={styles.detailRow}>
-                                <Text style={styles.label}>Địa chỉ:</Text>
-                                <Text style={styles.value}>{selectedOrder.eater.address.address}</Text>
+                                <Text style={styles.label}>Tên khách hàng:</Text>
+                                <Text style={styles.value}>{selectedOrder.eater?.name || 'N/A'}</Text>
                             </View>
-                        )}
-                        {selectedOrder.eater?.comment && (
                             <View style={styles.detailRow}>
-                                <Text style={styles.label}>Ghi chú:</Text>
-                                <Text style={styles.value}>{selectedOrder.eater.comment}</Text>
+                                <Text style={styles.label}>Số điện thoại:</Text>
+                                <Text style={styles.value}>{selectedOrder.eater?.mobileNumber || 'N/A'}</Text>
                             </View>
-                        )}
-                    </View>
+                            {selectedOrder.eater?.address && (
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>Địa chỉ:</Text>
+                                    <Text style={styles.value}>{selectedOrder.eater.address.address}</Text>
+                                </View>
+                            )}
+                            {selectedOrder.eater?.comment && (
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>Ghi chú:</Text>
+                                    <Text style={styles.value}>{selectedOrder.eater.comment}</Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
 
-                    {selectedOrder.driver && (
+                    {!isOfflineOrder && selectedOrder.driver && (
                         <View style={styles.driverSection}>
                             <Text style={styles.sectionTitle}>Thông tin tài xế</Text>
                             <View style={styles.detailRow}>
@@ -181,38 +194,72 @@ const OrderDetailDialog = ({
 
                     <View style={styles.itemsSection}>
                         <Text style={styles.sectionTitle}>Danh sách món</Text>
-                        {selectedOrder?.itemInfo?.items?.map((item, idx) => (
-                            <View key={idx} style={styles.itemRow}>
-                                <View style={styles.itemInfo}>
-                                    <Text style={styles.itemName}>{item.name}</Text>
-                                    {item.comment && (
-                                        <Text style={styles.itemNote}>Ghi chú: {item.comment}</Text>
-                                    )}
-                                    {item.modifierGroups?.map((group, gIdx) => (
-                                        <View key={gIdx} style={styles.modifierGroup}>
-                                            <Text style={styles.modifierGroupName}>{group.modifierGroupName}</Text>
-                                            {group.modifiers?.map((modifier, mIdx) => (
-                                                <Text key={mIdx} style={styles.modifierName}>
-                                                    • {modifier.modifierName}
+                        {isOfflineOrder ? (
+                            // Handle offline order structure
+                            selectedOrder?.products?.map((product, idx) => (
+                                <View key={idx} style={styles.itemRow}>
+                                    <View style={styles.itemInfo}>
+                                        <Text style={styles.itemName}>{product.name}</Text>
+                                        {product.note && (
+                                            <Text style={styles.itemNote}>Ghi chú: {product.note}</Text>
+                                        )}
+                                        {product.extras?.map((extra, eIdx) => (
+                                            <View key={eIdx} style={styles.modifierGroup}>
+                                                <Text style={styles.modifierGroupName}>{extra.group_extra_name || 'Extras'}</Text>
+                                                <Text style={styles.modifierName}>
+                                                    • {extra.name} {extra.price ? `(+${extra.price.toLocaleString('vi-VN')}₫)` : ''}
                                                 </Text>
-                                            ))}
-                                        </View>
-                                    ))}
+                                            </View>
+                                        ))}
+                                    </View>
+                                    <View style={styles.itemQuantity}>
+                                        <Text style={styles.quantityText}>x{product.quanlity || 1}</Text>
+                                        <Text style={styles.itemPrice}>
+                                            {product.price ? `${product.price.toLocaleString('vi-VN')}₫` : 'N/A'}
+                                        </Text>
+                                    </View>
                                 </View>
-                                <View style={styles.itemQuantity}>
-                                    <Text style={styles.quantityText}>x{item.quantity}</Text>
-                                    <Text style={styles.itemPrice}>
-                                        {item.fare?.priceDisplay}{item.fare?.currencySymbol}
-                                    </Text>
+                            ))
+                        ) : (
+                            // Handle online order structure
+                            selectedOrder?.itemInfo?.items?.map((item, idx) => (
+                                <View key={idx} style={styles.itemRow}>
+                                    <View style={styles.itemInfo}>
+                                        <Text style={styles.itemName}>{item.name}</Text>
+                                        {item.comment && (
+                                            <Text style={styles.itemNote}>Ghi chú: {item.comment}</Text>
+                                        )}
+                                        {item.modifierGroups?.map((group, gIdx) => (
+                                            <View key={gIdx} style={styles.modifierGroup}>
+                                                <Text style={styles.modifierGroupName}>{group.modifierGroupName}</Text>
+                                                {group.modifiers?.map((modifier, mIdx) => (
+                                                    <Text key={mIdx} style={styles.modifierName}>
+                                                        • {modifier.modifierName}
+                                                    </Text>
+                                                ))}
+                                            </View>
+                                        ))}
+                                    </View>
+                                    <View style={styles.itemQuantity}>
+                                        <Text style={styles.quantityText}>x{item.quantity}</Text>
+                                        <Text style={styles.itemPrice}>
+                                            {item.fare?.priceDisplay}{item.fare?.currencySymbol}
+                                        </Text>
+                                    </View>
                                 </View>
-                            </View>
-                        ))}
+                            ))
+                        )}
                     </View>
 
                     <View style={styles.summarySection}>
                         <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>Tổng cộng:</Text>
-                            <Text style={styles.summaryValue}>{selectedOrder.orderValue}₫</Text>
+                            <Text style={styles.summaryValue}>
+                                {isOfflineOrder ?
+                                    `${(selectedOrder.total_amount || 0).toLocaleString('vi-VN')}₫` :
+                                    `${selectedOrder.orderValue}₫`
+                                }
+                            </Text>
                         </View>
                     </View>
 

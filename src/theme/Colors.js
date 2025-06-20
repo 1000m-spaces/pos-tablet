@@ -22,6 +22,9 @@ const Colors = {
   placeholder: '#ABABAB',
   line: '#E4E4E4',
   bgInputNote: '#EDEDED',
+  borderColor: '#E0E0E0',
+  textPrimary: '#212121',
+  textSecondary: '#757575',
 };
 
 export default Colors;

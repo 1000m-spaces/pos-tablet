@@ -9,4 +9,5 @@ import Home from './Home/Home';
 import Login from './Login/Login';
 import VerifyCode from './VerifyCode/VerifyCode';
 import Orders from './Order/Orders';
-export { Splash, Main, Home, Login, VerifyCode, Orders };
+import Invoice from './Order/Invoice';
+export { Splash, Main, Home, Login, VerifyCode, Orders, Invoice };
