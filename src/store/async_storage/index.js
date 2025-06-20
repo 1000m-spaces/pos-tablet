@@ -208,6 +208,50 @@ const getSelectedStore = async () => {
   return null;
 };
 
+const setPendingOrders = async (orders) => {
+  try {
+    await AsyncStorage.setItem('pendingOrders', JSON.stringify(orders));
+  } catch (error) {
+    console.log('Error saving pending orders:', error);
+  }
+};
+
+const getPendingOrders = async () => {
+  try {
+    const value = await AsyncStorage.getItem('pendingOrders');
+    if (value !== null) {
+      return JSON.parse(value);
+    }
+  } catch (error) {
+    console.log('Error getting pending orders:', error);
+  }
+  return [];
+};
+
+const addPendingOrder = async (order) => {
+  try {
+    const existingOrders = await getPendingOrders();
+    const updatedOrders = [...existingOrders, order];
+    await setPendingOrders(updatedOrders);
+    return updatedOrders;
+  } catch (error) {
+    console.log('Error adding pending order:', error);
+    return [];
+  }
+};
+
+const removePendingOrder = async (orderId) => {
+  try {
+    const existingOrders = await getPendingOrders();
+    const updatedOrders = existingOrders.filter(order => order.session !== orderId);
+    await setPendingOrders(updatedOrders);
+    return updatedOrders;
+  } catch (error) {
+    console.log('Error removing pending order:', error);
+    return [];
+  }
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -228,4 +272,8 @@ export default {
   getPrintedLabels,
   setSelectedStore,
   getSelectedStore,
+  setPendingOrders,
+  getPendingOrders,
+  addPendingOrder,
+  removePendingOrder,
 };

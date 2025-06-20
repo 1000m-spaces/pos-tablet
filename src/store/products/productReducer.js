@@ -1,6 +1,6 @@
 import Status from 'common/Status/Status';
 import strings from 'localization/Localization';
-import {NEOCAFE} from 'store/actionsTypes';
+import { NEOCAFE } from 'store/actionsTypes';
 
 const initialState = {
   productMenu: [],
@@ -10,11 +10,15 @@ const initialState = {
   currentProduct: null,
   statusSetProduct: Status.DEFAULT,
 
+  productDetail: null,
+  statusProductDetail: Status.DEFAULT,
+  errorProductDetail: '',
+
   vouchers: [],
   statusGetVoucher: Status.DEFAULT,
 };
 
-export default (state = initialState, {type, payload}) => {
+export default (state = initialState, { type, payload }) => {
   switch (type) {
     // GET VOUCHER
     case NEOCAFE.GET_VOUCHER_REQUEST:
@@ -39,7 +43,7 @@ export default (state = initialState, {type, payload}) => {
         statusGetVoucher: Status.DEFAULT,
       };
     // SET CURRENT PRODUCT
-     case NEOCAFE.SET_PRODUCT_REQUEST:
+    case NEOCAFE.SET_PRODUCT_REQUEST:
       return {
         ...state,
         statusSetProduct: Status.LOADING,
@@ -68,6 +72,7 @@ export default (state = initialState, {type, payload}) => {
       };
     case NEOCAFE.GET_MENU_SUCCESS:
       const products = setupProduct(payload);
+      console.log('products::', products)
       return {
         ...state,
         productMenu: products.filter(a => a.products.length > 0) || [],
@@ -83,32 +88,84 @@ export default (state = initialState, {type, payload}) => {
         ...state,
         statusProductMenu: Status.DEFAULT,
       };
+    // GET PRODUCT DETAIL
+    case NEOCAFE.GET_PRODUCT_DETAIL_REQUEST:
+      return {
+        ...state,
+        statusProductDetail: Status.LOADING,
+        errorProductDetail: '',
+      };
+    case NEOCAFE.GET_PRODUCT_DETAIL_SUCCESS:
+      return {
+        ...state,
+        productDetail: payload,
+        statusProductDetail: Status.SUCCESS,
+        errorProductDetail: '',
+      };
+    case NEOCAFE.GET_PRODUCT_DETAIL_ERROR:
+      return {
+        ...state,
+        statusProductDetail: Status.ERROR,
+        errorProductDetail: payload.errorMsg || 'Failed to get product detail',
+      };
+    case NEOCAFE.GET_PRODUCT_DETAIL_RESET:
+      return {
+        ...state,
+        productDetail: null,
+        statusProductDetail: Status.DEFAULT,
+        errorProductDetail: '',
+      };
     default:
       return state;
   }
 };
+
 function getFirstExtraType1(listExtra, type) {
+  if (!Array.isArray(listExtra) || listExtra.length === 0) {
+    return [];
+  }
+
   const tempExtraItem = listExtra.find(item => item.group_type === 1);
-  return type === 1 && tempExtraItem ? [tempExtraItem] : [tempExtraItem.id];
+
+  if (!tempExtraItem) {
+    return [];
+  }
+
+  return type === 1 ? [tempExtraItem] : [tempExtraItem.id];
 }
+
 function setupProduct(payload) {
-  if (payload) {
-    payload.map(cate => {
-      cate?.products.map((product, index) => {
+  if (!payload || !Array.isArray(payload)) {
+    return [];
+  }
+  payload.forEach(cate => {
+    if (cate && Array.isArray(cate.products)) {
+      cate.products.forEach((product, index) => {
+        // Set option_item
         product.option_item =
-          product.options === false ? {id: -1} : product.options[0][0];
+          (!product.options || product.options === false || !Array.isArray(product.options) || product.options.length === 0)
+            ? { id: -1 }
+            : (Array.isArray(product.options[0]) && product.options[0].length > 0 ? product.options[0][0] : { id: -1 });
+
+        // Set extra_items
         product.extra_items =
-          product.extras !== false && product.extras.length > 0
+          (product.extras && product.extras !== false && Array.isArray(product.extras) && product.extras.length > 0)
             ? getFirstExtraType1(product.extras[0], 1)
             : [];
+
+        // Set quantity
         product.quantity = 0;
+
+        // Set extraIds
         product.extraIds =
-          product.extras !== false && product.extras.length > 0
+          (product.extras && product.extras !== false && Array.isArray(product.extras) && product.extras.length > 0)
             ? getFirstExtraType1(product.extras[0], 2)
             : [];
+
+        // Set isExpired
         product.isExpired = false;
       });
-    });
-  }
+    }
+  });
   return payload;
 }

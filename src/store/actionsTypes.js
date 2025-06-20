@@ -45,9 +45,17 @@ export const NEOCAFE = createRequestTypes(
     // product
     'GET_MENU',
     'SET_PRODUCT',
+    'GET_PRODUCT_DETAIL',
     // VOUCHER
     'APPLY_VOUCHER',
     'GET_VOUCHER',
+    // TABLES
+    'GET_SHOP_TABLES',
+    // PAYMENT CHANNELS
+    'GET_PAYMENT_CHANNELS',
+    // SYNC
+    'SYNC_ORDERS',
+    'SYNC_PENDING_ORDERS',
   ],
   suffixTypes,
 );

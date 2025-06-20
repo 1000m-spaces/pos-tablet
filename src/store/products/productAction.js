@@ -1,4 +1,4 @@
-import {NEOCAFE} from 'store/actionsTypes';
+import { NEOCAFE } from 'store/actionsTypes';
 
 export const resetMenuAction = () => ({
   type: NEOCAFE.GET_MENU_RESET,
@@ -25,4 +25,13 @@ export const applyVoucherAction = payload => ({
 export const getVoucherAction = payload => ({
   type: NEOCAFE.GET_VOUCHER_REQUEST,
   payload,
+});
+
+export const getProductDetailAction = payload => ({
+  type: NEOCAFE.GET_PRODUCT_DETAIL_REQUEST,
+  payload,
+});
+
+export const resetProductDetailAction = () => ({
+  type: NEOCAFE.GET_PRODUCT_DETAIL_RESET,
 });

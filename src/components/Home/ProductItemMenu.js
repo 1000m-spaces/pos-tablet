@@ -1,13 +1,13 @@
-import {TextNormalSemiBold, TextSmallMedium} from 'common/Text/TextFont';
-import {IMAGE_URL} from 'assets/constans';
-import React, {memo} from 'react';
-import {TouchableOpacity, View} from 'react-native';
-import {formatMoney} from 'assets/constans';
+import { TextNormalSemiBold, TextSmallMedium } from 'common/Text/TextFont';
+import { IMAGE_URL } from 'assets/constans';
+import React, { memo } from 'react';
+import { TouchableOpacity, View } from 'react-native';
+import { formatMoney } from 'assets/constans';
 import FastImage from 'react-native-fast-image';
 
-import {StyleSheet} from 'react-native';
+import { StyleSheet } from 'react-native';
 import Colors from 'theme/Colors';
-const ProductItemMenu = ({onPressDetail, product}) => {
+const ProductItemMenu = ({ onPressDetail, product }) => {
   if (!product) {
     console.log('product is undefined');
     return;
@@ -27,7 +27,7 @@ const ProductItemMenu = ({onPressDetail, product}) => {
           }}
           resizeMode={FastImage.resizeMode.cover}
         />
-        <View style={{padding: 16, alignItems: 'center'}}>
+        <View style={{ padding: 16, alignItems: 'center' }}>
           <TextSmallMedium numberOfLines={2} style={styles.textName}>
             {product.prodname}
           </TextSmallMedium>

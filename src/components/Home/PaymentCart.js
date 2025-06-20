@@ -7,19 +7,32 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { currentOrderSelector } from 'store/selectors';
+import {
+  currentOrderSelector,
+  getTablesSelector,
+  userInfo
+} from 'store/selectors';
 import Colors from 'theme/Colors';
 import Modal from 'react-native-modal';
-import { getVoucherAction, setOrderAction } from 'store/actions';
+import { getVoucherAction, setOrderAction, getPaymentChannelsAction } from 'store/actions';
+import AsyncStorageService from 'store/async_storage';
 import NoteModal from './NoteModal';
+import VoucherModal from './VoucherModal';
+import PaymentMethodModal from './PaymentMethodModal';
+
 const PaymentCart = () => {
   const dispatch = useDispatch();
   const currentOrder = useSelector(state => currentOrderSelector(state));
+  const tables = useSelector(state => getTablesSelector(state));
+  const user = useSelector(state => userInfo(state));
   const [payment, setPayment] = useState(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState({ id: 'cash', name: 'Tiền mặt', icon: 'cash' });
 
   const [modal, setModal] = useState(false);
+
   useEffect(() => {
     let numOfProduct = 0;
     let initTotal = 0;
@@ -36,6 +49,12 @@ const PaymentCart = () => {
     });
     fetchVoucher();
   }, [currentOrder]);
+
+  useEffect(() => {
+    // Fetch payment channels when component mounts
+    dispatch(getPaymentChannelsAction());
+  }, [dispatch]);
+
   const fetchVoucher = () => {
     const items = Array.from(currentOrder.products, val => {
       return {
@@ -65,6 +84,174 @@ const PaymentCart = () => {
     Keyboard.dismiss();
     setModal(-1);
   };
+
+  const onApplyVoucher = (voucher) => {
+    console.log('Applied voucher:', voucher);
+    // Handle voucher application logic here
+    onCloseModal();
+  };
+
+  const processPayment = async () => {
+    try {
+      // Validate that there are products in the cart
+      if (!currentOrder.products || currentOrder.products.length === 0) {
+        Alert.alert('Thông báo', 'Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán');
+        return;
+      }
+
+      // Filter products with quantity > 0
+      const validProducts = currentOrder.products.filter(product => product.quantity > 0);
+
+      if (validProducts.length === 0) {
+        Alert.alert('Thông báo', 'Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán');
+        return;
+      }
+
+      // Get selected table info
+      const selectedTable = currentOrder.table || (tables && tables.length > 0 ? tables[0] : null);
+
+      // Transform products to API format
+      const transformedProducts = validProducts.map(product => {
+        // Calculate extra price
+        const extraPrice = product.extra_items ?
+          product.extra_items.reduce((sum, extra) => sum + (extra.price || 0), 0) : 0;
+
+        const productPrice = product.prodprice || 0;
+        const totalProductPrice = (productPrice + extraPrice) * product.quantity;
+
+        // Transform options
+        const option = [
+          {
+            optdetailid: product.option_item ? product.option_item.id : null,
+            optdetailname: product.option_item ? product.option_item.name_vn : null,
+            stat: product.option_item ? 1 : 0
+          },
+          { optdetailid: null },
+          { optdetailid: null }
+        ];
+
+        // Transform extras
+        const extras = product.extra_items ? product.extra_items.map(extra => ({
+          id: extra.id,
+          quantity: 1,
+          name: extra.name_vn || extra.display_name,
+          idcha: 0,
+          isExtra: 1,
+          price: extra.price || 0,
+          amount: extra.price || 0,
+          group_extra_id: extra.group_extra_id,
+          group_extra_name: extra.group_extra_name,
+          group_type: extra.group_type
+        })) : [];
+
+        return {
+          prodid: product.prodid,
+          prodprice: productPrice,
+          rate_discount: 0,
+          opt1: product.option_item ? product.option_item.id : null,
+          opt2: null,
+          opt3: null,
+          option: option,
+          extras: extras,
+          name: product.prodname,
+          amount: totalProductPrice,
+          note: product.note || "",
+          typeOrder: "Tại quầy",
+          quanlity: product.quantity
+        };
+      });
+
+      // Calculate totals
+      const subPrice = transformedProducts.reduce((sum, product) => sum + product.amount, 0);
+
+      // Generate session ID
+      const session = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // Create order object
+      const orderData = {
+        subPrice: subPrice,
+        svFee: "0",
+        svFee_amount: 0,
+        shopTableid: selectedTable ? selectedTable.id : "0",
+        shopTableName: selectedTable ? selectedTable.name : "Mang về",
+        orderNote: currentOrder.note || "",
+        products: transformedProducts,
+        cust_id: 0,
+        transType: selectedPaymentMethod ? selectedPaymentMethod.id : "41", // Default to cash
+        chanel_type_id: selectedPaymentMethod ? selectedPaymentMethod.chanel_type_id : "1",
+        phuthu: 0,
+        total_amount: subPrice,
+        fix_discount: 0,
+        perDiscount: 0,
+        session: session,
+        shopid: user?.shop_id || "246", // Default shop ID
+        userid: user?.id || "1752", // Default user ID
+        roleid: user?.role_id || "4", // Default role ID
+        timestamp: new Date().toISOString(),
+        status: "pending"
+      };
+
+      // Save to local storage as last order and add to pending orders queue
+      await AsyncStorageService.setLastOrder(orderData);
+      await AsyncStorageService.addPendingOrder(orderData);
+
+      console.log('Order saved to local storage:', orderData);
+
+      // Show success message
+      Alert.alert(
+        'Thành công',
+        'Đơn hàng hoàn tất',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Reset cart after successful payment
+              dispatch(setOrderAction({
+                take_away: false,
+                products: [],
+                applied_products: [],
+                table: currentOrder.table,
+                note: '',
+                delivery: null,
+              }));
+            }
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      Alert.alert('Lỗi', 'Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.');
+    }
+  };
+
+  const onSelectPaymentMethod = (method) => {
+    setSelectedPaymentMethod(method);
+    console.log('Selected payment method:', method);
+    onCloseModal();
+    // Process payment after payment method is selected
+    setTimeout(() => {
+      processPayment();
+    }, 300); // Small delay to allow modal to close smoothly
+  };
+
+  const handlePaymentClick = () => {
+    // Validate that there are products in the cart before showing payment modal
+    if (!currentOrder.products || currentOrder.products.length === 0) {
+      Alert.alert('Thông báo', 'Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán');
+      return;
+    }
+
+    const validProducts = currentOrder.products.filter(product => product.quantity > 0);
+    if (validProducts.length === 0) {
+      Alert.alert('Thông báo', 'Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán');
+      return;
+    }
+
+    // Show payment method modal
+    setModal(3);
+  };
+
   return (
     <View style={styles.wrapperContent}>
       <TouchableOpacity onPress={() => setModal(2)} style={styles.rowBetween}>
@@ -91,6 +278,7 @@ const PaymentCart = () => {
           <Svg name={'arrow_right'} size={16} />
         </View>
       </TouchableOpacity>
+
       <View style={styles.line} />
 
       <View style={styles.rowBetween}>
@@ -107,7 +295,7 @@ const PaymentCart = () => {
           {payment !== null && `${formatMoney(payment?.commitedTotal)}đ`}
         </TextNormal>
       </View>
-      <TouchableOpacity style={styles.orderBtn}>
+      <TouchableOpacity style={styles.orderBtn} onPress={handlePaymentClick}>
         <TextNormal style={styles.orderBtnText}>{'Thanh toán'}</TextNormal>
       </TouchableOpacity>
       <Modal
@@ -118,9 +306,25 @@ const PaymentCart = () => {
         style={[
           styles.containerModal,
           modal === 1 && { marginBottom: 3, marginLeft: 50 },
+          modal === 2 && { marginBottom: 3, marginLeft: 50 },
+          modal === 3 && { marginBottom: 3, marginLeft: 50 },
         ]}>
         {modal === 1 && (
           <NoteModal currentOrder={currentOrder} onCloseModal={onCloseModal} />
+        )}
+        {modal === 2 && (
+          <VoucherModal
+            onCloseModal={onCloseModal}
+            onApplyVoucher={onApplyVoucher}
+          />
+        )}
+        {modal === 3 && (
+          <PaymentMethodModal
+            paymentMethods={[{ id: 'cash', name: 'Tiền mặt', icon: 'cash' }]}
+            loading={false}
+            onCloseModal={onCloseModal}
+            onSelectPayment={onSelectPaymentMethod}
+          />
         )}
       </Modal>
     </View>
@@ -196,4 +400,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 8,
   },
+
 });

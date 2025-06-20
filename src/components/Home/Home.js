@@ -1,17 +1,17 @@
-import React, {useEffect, useState} from 'react';
-import {FlatList, SafeAreaView, View} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { FlatList, SafeAreaView, View } from 'react-native';
 
-import {useDispatch, useSelector} from 'react-redux';
-import {getMenuAction, setProductAction} from 'store/actions';
-import {currentOrderSelector, productMenuSelector} from 'store/selectors';
+import { useDispatch, useSelector } from 'react-redux';
+import { getMenuAction, setProductAction } from 'store/actions';
+import { currentOrderSelector, productMenuSelector } from 'store/selectors';
 import ProductItemMenu from './ProductItemMenu';
 import Colors from 'theme/Colors';
-import {asyncStorage} from 'store/index';
+import { asyncStorage } from 'store/index';
 import Header from './Header';
 import DetailProduct from './DetailProduct';
 import Cart from './Cart';
 import TableSelector from './TableSelector';
-const Home = ({navigation}) => {
+const Home = ({ navigation }) => {
   const dispatch = useDispatch();
   const productMenu = useSelector(state => productMenuSelector(state));
   const [showModal, setShowModal] = useState(-1);
@@ -23,15 +23,17 @@ const Home = ({navigation}) => {
       let user = await asyncStorage.getUser();
       const body = {
         roleid: user?.roleid || '4',
-        userid: user?.userid || '444',
-        restid: user?.shifts.rest_id || '248',
+        userid: user?.userid || '1752',
+        restid: user?.shifts.rest_id || '246',
       };
       dispatch(getMenuAction(body));
     };
     initData();
-    console.log('productMenu', productMenu)
   }, []);
-  const renderProductItems = ({item, _}) => {
+
+  console.log('productMenu', productMenu)
+
+  const renderProductItems = ({ item, _ }) => {
     return (
       <ProductItemMenu product={item} onPressDetail={handlePressProduct} />
     );
@@ -56,7 +58,7 @@ const Home = ({navigation}) => {
         backgroundColor: Colors.bgInput,
         flexDirection: 'row',
       }}>
-      <View style={{flex: 1}}>
+      <View style={{ flex: 1 }}>
         <Header
           currentCate={currentCate}
           productMenu={productMenu}
