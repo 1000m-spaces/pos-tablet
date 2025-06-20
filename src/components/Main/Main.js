@@ -17,9 +17,12 @@ const Main = () => {
   const [showStoreDialog, setShowStoreDialog] = useState(false);
   const [selectedStore, setSelectedStore] = useState(null);
 
+  console.log('Main: Current screen from selector:', currentScreen);
+
   useEffect(() => {
     const checkStoreSelection = async () => {
       const storeInfo = await AsyncStorage.getSelectedStore();
+      console.log('Main: Store info:', storeInfo);
       if (!storeInfo) {
         setShowStoreDialog(true);
       } else {
@@ -30,12 +33,14 @@ const Main = () => {
   }, []);
 
   const handleStoreSelect = async (store) => {
+    console.log('Main: Store selected:', store);
     setSelectedStore(store);
     await AsyncStorage.setSelectedStore(store);
     setShowStoreDialog(false);
   };
 
   if (!selectedStore) {
+    console.log('Main: No store selected, showing store dialog');
     return (
       <StoreSelectionDialog
         visible={showStoreDialog}
@@ -44,6 +49,8 @@ const Main = () => {
       />
     );
   }
+
+  console.log('Main: Rendering drawer navigator with selected store:', selectedStore?.name);
 
   return (
     <>

@@ -5,7 +5,6 @@ import { View, StyleSheet, Text } from 'react-native';
 import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 // import {Avatar, Title} from 'react-native-paper';
 import { TouchableOpacity } from 'react-native-gesture-handler';
-import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Images from 'common/Images/Images';
 import { TextNormal } from 'common/Text/TextFont';
@@ -20,12 +19,39 @@ const DrawerList = [
   { icon: 'menu_pos', label: 'Menu', navigateTo: NAVIGATION_HOME },
   { icon: 'order_pos', label: 'Đơn online', navigateTo: NAVIGATION_ORDER },
   { icon: 'invoice_pos', label: 'Hóa Đơn', navigateTo: NAVIGATION_INVOICE },
-  { icon: 'history_pos', label: 'Lich sử', navigateTo: 'History' },
-  { icon: 'account_pos', label: 'Tài khoản', navigateTo: 'Account' },
+  // Temporarily comment out invalid routes until they are properly implemented
+  // { icon: 'history_pos', label: 'Lich sử', navigateTo: 'History' },
+  // { icon: 'account_pos', label: 'Tài khoản', navigateTo: 'Account' },
 ];
-const DrawerLayout = ({ icon, label, navigateTo, currentScreen }) => {
+const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation }) => {
   const dispatch = useDispatch();
-  const navigation = useNavigation();
+
+  const handlePress = () => {
+    console.log('DrawerLayout: Attempting to navigate to:', navigateTo);
+    console.log('DrawerLayout: Current screen:', currentScreen);
+    console.log('DrawerLayout: Navigation object:', navigation);
+
+    try {
+      // First update the Redux state
+      dispatch(setScreenAction(navigateTo));
+      console.log('DrawerLayout: Redux action dispatched successfully');
+
+      // Use drawer-specific navigation methods
+      if (navigation && typeof navigation.navigate === 'function') {
+        navigation.navigate(navigateTo);
+        console.log('DrawerLayout: Navigation successful to:', navigateTo);
+      } else if (navigation && typeof navigation.jumpTo === 'function') {
+        navigation.jumpTo(navigateTo);
+        console.log('DrawerLayout: JumpTo navigation successful to:', navigateTo);
+      } else {
+        console.error('DrawerLayout: No valid navigation method available');
+      }
+    } catch (error) {
+      console.error('DrawerLayout: Navigation error:', error);
+      console.error('DrawerLayout: Error stack:', error.stack);
+    }
+  };
+
   return (
     <DrawerItem
       icon={() => (
@@ -60,20 +86,18 @@ const DrawerLayout = ({ icon, label, navigateTo, currentScreen }) => {
       label={label}
       activeTintColor={Colors.whiteColor}
       inactiveTintColor={Colors.whiteColor}
-      onPress={() => {
-        dispatch(setScreenAction(navigateTo));
-        navigation.navigate(navigateTo);
-      }}
+      onPress={handlePress}
     />
   );
 };
 
-const DrawerItems = ({ currentScreen }) => {
+const DrawerItems = ({ currentScreen, navigation }) => {
   return DrawerList.map((el, i) => {
     return (
       <DrawerLayout
         key={i}
         currentScreen={currentScreen}
+        navigation={navigation}
         icon={el.icon}
         label={el.label}
         navigateTo={el.navigateTo}
@@ -81,8 +105,14 @@ const DrawerItems = ({ currentScreen }) => {
     );
   });
 };
+
 const DrawerContent = props => {
   const currentScreen = useSelector(state => screenSelector(state));
+
+  console.log('DrawerContent: Rendering with props:', props);
+  console.log('DrawerContent: Current screen from selector:', currentScreen);
+  console.log('DrawerContent: Props navigation:', props.navigation);
+
   return (
     <View style={{ flex: 1, backgroundColor: '#001f3f', width: 108 }}>
       <DrawerContentScrollView {...props}>
@@ -91,7 +121,7 @@ const DrawerContent = props => {
             <Svg name={'logo_menu'} size={60} />
           </TouchableOpacity>
           <View style={styles.drawerSection}>
-            <DrawerItems currentScreen={currentScreen} />
+            <DrawerItems currentScreen={currentScreen} navigation={props.navigation} />
           </View>
         </View>
       </DrawerContentScrollView>
