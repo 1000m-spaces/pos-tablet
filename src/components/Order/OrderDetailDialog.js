@@ -17,6 +17,7 @@ const OrderDetailDialog = ({
     printedLabels,
     onPrintTem,
     onPrintBill,
+    onStatusChange,
     loadingVisible,
     isOfflineOrder = false
 }) => {
@@ -84,6 +85,45 @@ const OrderDetailDialog = ({
         }
     };
 
+    // Offline order status management
+    const getOfflineOrderStatusColor = (status) => {
+        switch (status) {
+            case "WaitingForPayment": return "#FF5722";    // Deep Orange
+            case "Paymented": return "#2196F3";           // Blue
+            case "WaitingForServe": return "#FF9800";     // Orange
+            case "Completed": return "#4CAF50";           // Green
+            default: return "#9E9E9E";                    // Grey
+        }
+    };
+
+    const getOfflineOrderStatusColorBg = (status) => {
+        switch (status) {
+            case "WaitingForPayment": return "#FFCCBC";   // Light Deep Orange
+            case "Paymented": return "#E3F2FD";          // Light Blue
+            case "WaitingForServe": return "#FFF3E0";     // Light Orange
+            case "Completed": return "#E8F5E9";          // Light Green
+            default: return "#F5F5F5";                   // Light Grey
+        }
+    };
+
+    const getOfflineOrderStatusText = (status) => {
+        switch (status) {
+            case "WaitingForPayment": return "Chờ thanh toán";
+            case "Paymented": return "Đã thanh toán";
+            case "WaitingForServe": return "Chờ phục vụ";
+            case "Completed": return "Hoàn thành";
+            default: return "Mới tạo";
+        }
+    };
+
+    const handleOfflineStatusChange = (newStatus) => {
+        if (onStatusChange && selectedOrder) {
+            onStatusChange(selectedOrder, newStatus);
+            // Close modal after status change
+            onClose();
+        }
+    };
+
     if (!selectedOrder) return null;
 
     return (
@@ -136,10 +176,21 @@ const OrderDetailDialog = ({
                             </>
                         )}
                         {isOfflineOrder && (
-                            <View style={styles.detailRow}>
-                                <Text style={styles.label}>Bàn/Khách:</Text>
-                                <Text style={styles.value}>{selectedOrder.shopTableName || 'N/A'}</Text>
-                            </View>
+                            <>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>Bàn/Khách:</Text>
+                                    <Text style={styles.value}>{selectedOrder.shopTableName || 'N/A'}</Text>
+                                </View>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>Trạng thái đơn:</Text>
+                                    <Badge
+                                        text={getOfflineOrderStatusText(selectedOrder.orderStatus || 'Paymented')}
+                                        colorText={getOfflineOrderStatusColor(selectedOrder.orderStatus || 'Paymented')}
+                                        colorBg={getOfflineOrderStatusColorBg(selectedOrder.orderStatus || 'Paymented')}
+                                        width="auto"
+                                    />
+                                </View>
+                            </>
                         )}
                         <View style={styles.detailRow}>
                             <Text style={styles.label}>Trạng thái in:</Text>
@@ -262,6 +313,37 @@ const OrderDetailDialog = ({
                             </Text>
                         </View>
                     </View>
+
+                    {/* Status Change Section for Offline Orders */}
+                    {isOfflineOrder && onStatusChange && (
+                        <View style={styles.statusChangeSection}>
+                            <Text style={styles.sectionTitle}>Thay đổi trạng thái</Text>
+                            <View style={styles.statusButtons}>
+                                {['Paymented', 'WaitingForServe', 'Completed'].map(status => (
+                                    <Pressable
+                                        key={status}
+                                        style={[
+                                            styles.statusChangeButton,
+                                            {
+                                                backgroundColor: getOfflineOrderStatusColorBg(status),
+                                                borderColor: getOfflineOrderStatusColor(status),
+                                            },
+                                            selectedOrder.orderStatus === status && styles.currentStatusButton
+                                        ]}
+                                        onPress={() => handleOfflineStatusChange(status)}
+                                        disabled={selectedOrder.orderStatus === status}
+                                    >
+                                        <Text style={[
+                                            styles.statusChangeButtonText,
+                                            { color: getOfflineOrderStatusColor(status) }
+                                        ]}>
+                                            {getOfflineOrderStatusText(status)}
+                                        </Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        </View>
+                    )}
 
                     <View style={styles.actionButtons}>
                         <Pressable style={[styles.actionButton, styles.printButton]} onPress={() => onPrintTem(selectedOrder)}>
@@ -447,6 +529,36 @@ const styles = StyleSheet.create({
         color: "#fff",
         fontWeight: "bold",
         textAlign: "center",
+    },
+    statusChangeSection: {
+        marginBottom: 20,
+        padding: 15,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 8,
+    },
+    statusButtons: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        marginTop: 10,
+    },
+    statusChangeButton: {
+        flex: 1,
+        minWidth: 120,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        borderWidth: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    currentStatusButton: {
+        opacity: 0.5,
+    },
+    statusChangeButtonText: {
+        fontWeight: '600',
+        fontSize: 14,
+        textAlign: 'center',
     },
 });
 

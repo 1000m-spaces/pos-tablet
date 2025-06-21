@@ -38,7 +38,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
     const [printerInfo, setPrinterInfo] = useState(null);
     const viewTemShotRef = useRef();
 
-    const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Tem", "Đồng bộ", "Thời gian"];
+    const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Đồng bộ", "Thời gian"];
     const numColumns = tableHead.length;
 
     const [tableWidth, setTableWidth] = useState([])
@@ -122,6 +122,61 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
             case "printed": return "Đã in";
             case "not_printed": return "Chưa in";
             default: return "Không xác định";
+        }
+    };
+
+    // Order Status Management
+    const getOrderStatusColor = (status) => {
+        switch (status) {
+            case "WaitingForPayment": return "#FF5722";    // Deep Orange
+            case "Paymented": return "#2196F3";           // Blue
+            case "WaitingForServe": return "#FF9800";     // Orange
+            case "Completed": return "#4CAF50";           // Green
+            default: return "#9E9E9E";                    // Grey
+        }
+    };
+
+    const getOrderStatusColorBg = (status) => {
+        switch (status) {
+            case "WaitingForPayment": return "#FFCCBC";   // Light Deep Orange
+            case "Paymented": return "#E3F2FD";          // Light Blue
+            case "WaitingForServe": return "#FFF3E0";     // Light Orange
+            case "Completed": return "#E8F5E9";          // Light Green
+            default: return "#F5F5F5";                   // Light Grey
+        }
+    };
+
+    const getOrderStatusText = (status) => {
+        switch (status) {
+            case "WaitingForPayment": return "Chờ thanh toán";
+            case "Paymented": return "Đã thanh toán";
+            case "WaitingForServe": return "Chờ phục vụ";
+            case "Completed": return "Hoàn thành";
+            default: return "Mới tạo";
+        }
+    };
+
+    const handleStatusChange = async (order, newStatus) => {
+        try {
+            await AsyncStorage.updateOrderStatus(order.session, newStatus);
+            Toast.show({
+                type: 'success',
+                text1: `Đã cập nhật trạng thái đơn ${order.session}`,
+                text2: getOrderStatusText(newStatus),
+                position: 'bottom',
+            });
+            // Refresh data after status update
+            if (onRefresh) {
+                onRefresh();
+            }
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi cập nhật trạng thái',
+                text2: error.message,
+                position: 'bottom',
+            });
         }
     };
 
@@ -287,11 +342,26 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
         return order.products.reduce((total, product) => total + (product.quanlity || 1), 0);
     };
 
+    const renderStatusSelector = (order) => {
+        const currentStatus = order.orderStatus || 'Paymented';
+
+        return (
+            <View style={styles.statusSelector}>
+                <View style={[styles.statusButton, { backgroundColor: getOrderStatusColorBg(currentStatus) }]}>
+                    <TextNormal style={[styles.statusText, { color: getOrderStatusColor(currentStatus) }]}>
+                        {getOrderStatusText(currentStatus)}
+                    </TextNormal>
+                </View>
+            </View>
+        );
+    };
+
     const tableData = orders.map((order, index) => [
         order.session || `OFF-${index + 1}`,
         order.shopTableName || 'N/A',
         formatCurrency(order.total_amount || 0),
         getItemCount(order).toString(),
+        renderStatusSelector(order),
         <TouchableOpacity
             key={`print-${order.session}`}
             onPress={() => printTem(order)}
@@ -375,6 +445,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                         text1: 'Chức năng in hóa đơn chưa hỗ trợ cho đơn offline'
                     });
                 }}
+                onStatusChange={handleStatusChange}
                 loadingVisible={loadingVisible}
                 isOfflineOrder={true}
             />
@@ -475,6 +546,26 @@ const styles = StyleSheet.create({
         marginTop: 10,
         fontSize: 16,
         color: Colors.textPrimary,
+    },
+    statusSelector: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 100,
+    },
+    statusButton: {
+        paddingHorizontal: 8,
+        paddingVertical: 6,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        minWidth: 90,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    statusText: {
+        fontSize: 10,
+        fontWeight: '600',
+        textAlign: 'center',
     },
 });
 

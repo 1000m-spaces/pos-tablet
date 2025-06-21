@@ -252,6 +252,117 @@ const removePendingOrder = async (orderId) => {
   }
 };
 
+// Order Status Management
+const updateOrderStatus = async (orderId, status) => {
+  try {
+    const existingOrders = await getPendingOrders();
+    const updatedOrders = existingOrders.map(order => {
+      if (order.session === orderId) {
+        return { ...order, orderStatus: status, updated_at: new Date().toISOString() };
+      }
+      return order;
+    });
+    await setPendingOrders(updatedOrders);
+
+    // Handle table blocking/unblocking
+    if (status === 'WaitingForServe') {
+      const order = existingOrders.find(o => o.session === orderId);
+      if (order && order.tableId) {
+        await blockTable(order.tableId, orderId);
+      }
+    } else if (status === 'Completed') {
+      const order = existingOrders.find(o => o.session === orderId);
+      if (order && order.tableId) {
+        await releaseTable(order.tableId);
+      }
+    }
+
+    return updatedOrders;
+  } catch (error) {
+    console.log('Error updating order status:', error);
+    return [];
+  }
+};
+
+const getOrdersByStatus = async (status) => {
+  try {
+    const orders = await getPendingOrders();
+    return orders.filter(order => order.orderStatus === status);
+  } catch (error) {
+    console.log('Error getting orders by status:', error);
+    return [];
+  }
+};
+
+// Table Blocking Management
+const setBlockedTables = async (blockedTables) => {
+  try {
+    await AsyncStorage.setItem('blockedTables', JSON.stringify(blockedTables));
+  } catch (error) {
+    console.log('Error saving blocked tables:', error);
+  }
+};
+
+const getBlockedTables = async () => {
+  try {
+    const value = await AsyncStorage.getItem('blockedTables');
+    if (value !== null) {
+      return JSON.parse(value);
+    }
+  } catch (error) {
+    console.log('Error getting blocked tables:', error);
+  }
+  return {};
+};
+
+const blockTable = async (tableId, orderId) => {
+  try {
+    const blockedTables = await getBlockedTables();
+    blockedTables[tableId] = {
+      orderId,
+      blockedAt: new Date().toISOString(),
+      status: 'occupied'
+    };
+    await setBlockedTables(blockedTables);
+    return blockedTables;
+  } catch (error) {
+    console.log('Error blocking table:', error);
+    return {};
+  }
+};
+
+const releaseTable = async (tableId) => {
+  try {
+    const blockedTables = await getBlockedTables();
+    delete blockedTables[tableId];
+    await setBlockedTables(blockedTables);
+    return blockedTables;
+  } catch (error) {
+    console.log('Error releasing table:', error);
+    return {};
+  }
+};
+
+const isTableBlocked = async (tableId) => {
+  try {
+    const blockedTables = await getBlockedTables();
+    return blockedTables.hasOwnProperty(tableId);
+  } catch (error) {
+    console.log('Error checking table status:', error);
+    return false;
+  }
+};
+
+const getTableStatus = async (tableId) => {
+  try {
+    const blockedTables = await getBlockedTables();
+    return blockedTables[tableId] || null;
+  } catch (error) {
+    console.log('Error getting table status:', error);
+    return null;
+  }
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -276,4 +387,12 @@ export default {
   getPendingOrders,
   addPendingOrder,
   removePendingOrder,
+  updateOrderStatus,
+  getOrdersByStatus,
+  setBlockedTables,
+  getBlockedTables,
+  blockTable,
+  releaseTable,
+  isTableBlocked,
+  getTableStatus,
 };

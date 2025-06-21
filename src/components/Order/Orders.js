@@ -284,55 +284,48 @@ const Orders = () => {
           <View style={styles.content}>
             {/* Header */}
             <View style={styles.header}>
-              <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
-                <FlatList
-                  data={orderFilters}
-                  keyExtractor={i => i.id}
-                  horizontal
-                  contentContainerStyle={{
-                    paddingVertical: 12,
-                    alignSelf: 'flex-start',
-                  }}
-                  showsHorizontalScrollIndicator={false}
-                  renderItem={renderFilter}
-                />
-                <View style={{ flexDirection: 'row' }}>
-                  <TouchableOpacity
-                    style={{
+              <View style={styles.headerContainer}>
+                <View style={styles.filtersContainer}>
+                  <FlatList
+                    data={orderFilters}
+                    keyExtractor={i => i.id}
+                    horizontal
+                    contentContainerStyle={{
                       paddingVertical: 12,
-                      marginRight: 20,
-                      opacity: isLoading ? 0.5 : 1
+                      alignSelf: 'flex-start',
                     }}
+                    showsHorizontalScrollIndicator={false}
+                    renderItem={renderFilter}
+                  />
+                </View>
+                <View style={styles.actionContainer}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, { opacity: isLoading ? 0.5 : 1 }]}
                     onPress={() => !isLoading && setStoreDialogVisible(true)}
                     disabled={isLoading}
                   >
-                    <TextNormal style={{ marginRight: 10 }}>
+                    <TextNormal style={styles.actionButtonText}>
                       {selectedStore ? selectedStore.name : 'Select Store'}
                     </TextNormal>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={{
-                      paddingVertical: 12,
-                      marginRight: 20,
-                      opacity: isLoading ? 0.5 : 1
-                    }}
+                    style={[styles.actionButton, { opacity: isLoading ? 0.5 : 1 }]}
                     onPress={() => !isLoading && setModalVisible(true)}
                     disabled={isLoading}
                   >
                     <Svg name={'printer'} size={40} color={'transparent'} />
                   </TouchableOpacity>
-
                 </View>
               </View>
               {orderType === 2 && (
-                <View style={{ flexDirection: 'row' }}>
+                <View style={styles.searchContainer}>
                   <TouchableOpacity
                     style={[styles.searchInput, isLoading && styles.disabledInput]}
                     onPress={() => !isLoading && setShowDatePicker(true)}
                     disabled={isLoading}
                   >
                     <Svg name={'clock'} size={20} color={'gray'} />
-                    <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                    <TextNormal style={styles.searchInputText}>
                       {selectedDate.toLocaleDateString('en-GB')}
                     </TextNormal>
                   </TouchableOpacity>
@@ -341,16 +334,16 @@ const Orders = () => {
                     disabled={isLoading}
                   >
                     <Svg name={'search'} size={20} color={'gray'} />
-                    <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                    <TextNormal style={styles.searchInputText}>
                       {'All'}
                     </TextNormal>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.searchInput, { flex: 1 }, isLoading && styles.disabledInput]}
+                    style={[styles.searchInput, { flex: 2 }, isLoading && styles.disabledInput]}
                     disabled={isLoading}
                   >
                     <Svg name={'search'} size={20} />
-                    <TextNormal style={{ marginLeft: 10, borderLeftWidth: 1, borderColor: 'gray', paddingLeft: 10 }}>
+                    <TextNormal style={styles.searchInputText}>
                       {' Tìm kiếm theo mã đơn hàng'}
                     </TextNormal>
                   </TouchableOpacity>
@@ -498,14 +491,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f4f4',
   },
   containerModal: {
-    width: heightDevice > widthDevice ? heightDevice * 0.5 : widthDevice * 0.5,
-    height:
-      heightDevice > widthDevice ? widthDevice * 0.45 : heightDevice * 0.45,
+    width: '90%',
+    maxWidth: 500,
     backgroundColor: 'white',
-    position: 'absolute',
     borderRadius: 16,
-    left: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
-    margin: 0,
+    alignSelf: 'center',
+    margin: 20,
   },
   wrapperOrderType: {
     paddingHorizontal: 12,
@@ -556,7 +547,8 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     marginRight: 10,
-    width: 200,
+    minWidth: 120,
+    flex: 1,
   },
   dialogInput: {
     borderRadius: 12,
@@ -567,7 +559,8 @@ const styles = StyleSheet.create({
     height: 50,
     alignItems: 'center',
     marginRight: 10,
-    width: 202,
+    minWidth: 120,
+    flex: 1,
   },
   table: {
     backgroundColor: '#fff',
@@ -606,8 +599,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContainer: {
-    width: '90%',
-    maxWidth: 400,
+    width: '95%',
+    maxWidth: 500,
     backgroundColor: Colors.whiteColor,
     borderRadius: 16,
     padding: 20,
@@ -727,6 +720,34 @@ const styles = StyleSheet.create({
   },
   disabledInput: {
     opacity: 0.5,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  filtersContainer: {
+    flex: 1,
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
+    padding: 10,
+  },
+  actionButtonText: {
+    marginRight: 10,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchInputText: {
+    marginLeft: 10,
+    borderLeftWidth: 1,
+    borderColor: 'gray',
+    paddingLeft: 10,
   },
 });
 

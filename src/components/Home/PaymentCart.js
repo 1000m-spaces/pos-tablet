@@ -18,7 +18,7 @@ import {
 import Colors from 'theme/Colors';
 import Modal from 'react-native-modal';
 import { getVoucherAction, setOrderAction, getPaymentChannelsAction } from 'store/actions';
-import AsyncStorageService from 'store/async_storage';
+import AsyncStorage from 'store/async_storage';
 import NoteModal from './NoteModal';
 import VoucherModal from './VoucherModal';
 import PaymentMethodModal from './PaymentMethodModal';
@@ -188,12 +188,15 @@ const PaymentCart = () => {
         userid: user?.id || "1752", // Default user ID
         roleid: user?.role_id || "4", // Default role ID
         timestamp: new Date().toISOString(),
-        status: "pending"
+        status: "pending",
+        orderStatus: "Paymented", // Default to Paymented for cash orders
+        tableId: selectedTable ? selectedTable.id : null, // Store tableId for blocking
+        created_at: new Date().toISOString()
       };
 
       // Save to local storage as last order and add to pending orders queue
-      await AsyncStorageService.setLastOrder(orderData);
-      await AsyncStorageService.addPendingOrder(orderData);
+      await AsyncStorage.setLastOrder(orderData);
+      await AsyncStorage.addPendingOrder(orderData);
 
       console.log('Order saved to local storage:', orderData);
 

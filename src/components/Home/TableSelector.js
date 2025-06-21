@@ -1,17 +1,29 @@
 import { heightDevice, widthDevice } from 'assets/constans';
 import { TextNormal } from 'common/Text/TextFont';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View, ScrollView } from 'react-native';
 import Modal from 'react-native-modal';
 import { useDispatch, useSelector } from 'react-redux';
 import { setOrderAction } from 'store/actions';
 import { getTablesSelector } from 'store/tables/tableSelector';
+import AsyncStorage from 'store/async_storage/index';
 import Colors from 'theme/Colors';
 
 const TableSelector = ({ isVisible, close, currentOrder }) => {
   const dispatch = useDispatch();
   const tables = useSelector((state) => getTablesSelector(state));
+  const [blockedTables, setBlockedTables] = useState({});
   console.log('tables::', tables)
+
+  useEffect(() => {
+    const loadBlockedTables = async () => {
+      if (isVisible) {
+        const blocked = await AsyncStorage.getBlockedTables();
+        setBlockedTables(blocked);
+      }
+    };
+    loadBlockedTables();
+  }, [isVisible]);
 
   const onSelectTable = (table) => {
     close();
@@ -36,14 +48,18 @@ const TableSelector = ({ isVisible, close, currentOrder }) => {
           contentContainerStyle={styles.wrapperTable}
           showsVerticalScrollIndicator={true}>
           {tables?.map((table, index) => {
-            const isOccupied = table.state === "true" || table.orderId !== "0";
+            const isOccupiedBySystem = table.state === "true" || table.orderId !== "0";
+            const isBlockedByOfflineOrder = blockedTables.hasOwnProperty(table.shoptableid);
+            const isOccupied = isOccupiedBySystem || isBlockedByOfflineOrder;
+
             return (
               <TouchableOpacity
                 key={table.shoptableid}
                 onPress={() => onSelectTable(table)}
                 style={[
                   styles.tableBtn,
-                  isOccupied && styles.tableBtnOccupied
+                  isOccupied && styles.tableBtnOccupied,
+                  isBlockedByOfflineOrder && styles.tableBtnOfflineOccupied
                 ]}
                 disabled={isOccupied}>
                 <TextNormal style={[
@@ -51,6 +67,9 @@ const TableSelector = ({ isVisible, close, currentOrder }) => {
                   isOccupied && styles.tableBtnTextOccupied
                 ]}>
                   {table.shoptablename}
+                  {isBlockedByOfflineOrder && (
+                    <TextNormal style={styles.offlineIndicator}> (Offline)</TextNormal>
+                  )}
                 </TextNormal>
               </TouchableOpacity>
             );
@@ -96,6 +115,15 @@ const styles = StyleSheet.create({
   },
   tableBtnTextOccupied: {
     color: '#888',
+  },
+  tableBtnOfflineOccupied: {
+    backgroundColor: '#FF9800', // Orange for offline occupied tables
+    borderColor: '#F57C00',
+  },
+  offlineIndicator: {
+    fontSize: 10,
+    fontStyle: 'italic',
+    color: Colors.whiteColor,
   },
   title: {
     fontSize: 20,
