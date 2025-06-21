@@ -1,12 +1,13 @@
 import Status from 'common/Status/Status';
-import {NEOCAFE} from 'store/actionsTypes';
+import { NEOCAFE } from 'store/actionsTypes';
 
 const initializeState = {
   currentOrder: {
     take_away: false,
     products: [],
     applied_products: [],
-    table: 0,
+    table: '',
+    tableId: '',
     note: '',
     delivery: null,
   },
@@ -19,7 +20,7 @@ const initializeState = {
   order: null,
 };
 
-export default (state = initializeState, {type, payload}) => {
+export default (state = initializeState, { type, payload }) => {
   switch (type) {
     // GET ONLINE ORDER
     case NEOCAFE.GET_ONLINE_ORDER_REQUEST:

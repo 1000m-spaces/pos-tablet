@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform, ActivityIndicator, PixelRatio } from "react-native";
+import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform, ActivityIndicator, PixelRatio, Image } from "react-native";
 import { Table, Row } from "react-native-table-component";
 import ViewShot from "react-native-view-shot";
 import PrintTemplate from "./TemTemplate";
@@ -10,6 +10,7 @@ import { netConnect, closeConnection, tsplPrintBitmap } from 'rn-xprinter';
 import OrderDetailDialog from './OrderDetailDialog';
 import Colors from 'theme/Colors';
 import { TextNormal } from 'common/Text/TextFont';
+import RNFS from 'react-native-fs';
 
 const { width, height } = Dimensions.get("window");
 
@@ -235,6 +236,8 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                             ...order,
                             // Convert offline order format to print template format
                             displayID: order.session, // Use session as display ID for offline orders
+                            serviceType: 'offline', // Mark as offline order
+                            tableName: order.shopTableName, // Include table name
                             itemInfo: {
                                 items: [{
                                     name: product.name,
@@ -262,24 +265,19 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                         };
 
                         setPrintingOrder(tempOrder);
-                        await new Promise(resolve => setTimeout(resolve, 100000));
-
                         // Wait for state update to complete
-                        await new Promise(resolve => setTimeout(resolve, 100));
+                        await new Promise(resolve => setTimeout(resolve, 200));
 
                         const uri = await viewTemShotRef.current.capture();
-
-                        await new Promise(resolve => setTimeout(resolve, 50));
-
+                        const imageInfo = await Image.getSize(uri);
+                        const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
                         await tsplPrintBitmap(
-                            mmToPixels(printerInfo.sWidth),
-                            mmToPixels(printerInfo.sHeight),
-                            uri,
-                            1,
-                            0,
-                            0
+                            Number(printerInfo.sWidth),
+                            Number(printerInfo.sHeight),
+                            base64,
+                            imageInfo.width
                         );
-
+                        await new Promise(resolve => setTimeout(resolve, 500));
                         currentLabelIndex++;
                     }
                 }
@@ -423,8 +421,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                 options={{ format: "jpg", quality: 1.0 }}
                 style={{
                     position: 'absolute',
-                    // left: printerInfo ? -mmToPixels(Number(printerInfo.sWidth)) : -mmToPixels(50),
-                    left: 0,
+                    left: printerInfo ? -mmToPixels(Number(printerInfo.sWidth)) : -mmToPixels(50),
                     bottom: 0,
                     width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
                     backgroundColor: 'white',

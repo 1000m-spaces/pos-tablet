@@ -157,6 +157,11 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             fontSize: config.fontSize.note,
             color: '#000',
         },
+        tableInfo: {
+            fontSize: config.fontSize.modifier,
+            color: '#000',
+            marginLeft: config.margin * 2,
+        },
     });
 
     return (
@@ -165,11 +170,14 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                 <View key={index} style={styles.card}>
                     <View style={styles.header}>
                         <Text style={styles.orderInfo}>
-                            <Text style={styles.orderLabel}>GRAB</Text>
+                            <Text style={styles.orderLabel}>{orderPrint.serviceType === 'offline' ? 'Tại quán' : 'GRAB'}</Text>
                             <Text style={styles.orderLabel}>#</Text>
                             <Text style={styles.orderNumber}>{orderPrint.displayID}</Text>
                             <Text style={styles.pageNumber}>({orderPrint.itemInfo?.itemIdx + 1}/{orderPrint.itemInfo?.totalItems})</Text>
                         </Text>
+                        {orderPrint.serviceType === 'offline' && orderPrint.tableName && (
+                            <Text style={styles.tableInfo}>Bàn: {orderPrint.tableName}</Text>
+                        )}
                     </View>
                     <View style={styles.itemContainer}>
                         <View style={styles.itemRow}>

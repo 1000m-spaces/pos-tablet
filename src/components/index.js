@@ -10,4 +10,5 @@ import Login from './Login/Login';
 import VerifyCode from './VerifyCode/VerifyCode';
 import Orders from './Order/Orders';
 import Invoice from './Order/Invoice';
-export { Splash, Main, Home, Login, VerifyCode, Orders, Invoice };
+import Profile from './Profile/Profile';
+export { Splash, Main, Home, Login, VerifyCode, Orders, Invoice, Profile };

@@ -1,5 +1,5 @@
-import React, {useEffect, useRef, useState} from 'react';
-import {Platform, View, SafeAreaView, Text} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Platform, View, SafeAreaView, Text } from 'react-native';
 import {
   NAVIGATION_ACCESS_LOCATION,
   NAVIGATION_LOGIN,
@@ -8,12 +8,12 @@ import {
 } from 'navigation/routes';
 // import {userInfo} from 'store/selectors';
 import styles from './styles';
-import {asyncStorage} from 'store/index';
+import { asyncStorage } from 'store/index';
 import Orientation from 'react-native-orientation-locker';
 
 // import {useDispatch, useSelector} from 'react-redux';
 
-const Splash = ({navigation}) => {
+const Splash = ({ navigation }) => {
   // const dispatch = useDispatch();
   // const userInfoInternal = useSelector(state => userInfo(state));
   // const [user, setUser] = useState(null);
@@ -22,9 +22,11 @@ const Splash = ({navigation}) => {
     Orientation.lockToLandscape();
     const initUser = async () => {
       let userData = await asyncStorage.getUser();
+      // If user data exists, navigate to Main (user is logged in)
+      // If no user data, navigate to Login (user needs to log in)
       navigation.reset({
         index: 0,
-        routes: [{name: !userData ? NAVIGATION_MAIN : NAVIGATION_LOGIN}],
+        routes: [{ name: userData ? NAVIGATION_MAIN : NAVIGATION_LOGIN }],
       });
     };
     initUser();
@@ -32,7 +34,7 @@ const Splash = ({navigation}) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={{backgroundColor: 'white', flex: 1}} />
+      <View style={{ backgroundColor: 'white', flex: 1 }} />
     </SafeAreaView>
   );
 };

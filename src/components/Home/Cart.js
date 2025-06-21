@@ -121,8 +121,8 @@ const Cart = ({ showTable }) => {
               orderType === item.id ? Colors.whiteColor : Colors.inactiveText,
           }}>
           {item.id === "1" || item.id === 1
-            ? currentOrder.table > 0
-              ? `Thẻ ${currentOrder.table}`
+            ? currentOrder.table && currentOrder.table !== ''
+              ? `Bàn ${currentOrder.table}`
               : item.name_vn
             : item.name_vn}
         </TextNormal>
@@ -150,10 +150,10 @@ const Cart = ({ showTable }) => {
           renderItem={renderOrderType}
         />
       </View>
-      {currentOrder && currentOrder?.tableId > 0 && (
+      {currentOrder && currentOrder?.table && currentOrder?.table !== '' && (
         <View style={styles.tableNumberContainer}>
-          <Text style={styles.tableLabel}>Số thẻ:</Text>
-          <Text style={styles.tableNumber}>{currentOrder?.tableId}</Text>
+          <Text style={styles.tableLabel}>Bàn:</Text>
+          <Text style={styles.tableNumber}>{currentOrder?.table}</Text>
         </View>
       )}
       <FlatList

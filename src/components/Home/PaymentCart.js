@@ -108,7 +108,7 @@ const PaymentCart = () => {
       }
 
       // Get selected table info
-      const selectedTable = currentOrder.table || (tables && tables.length > 0 ? tables[0] : null);
+      const selectedTableName = currentOrder.table && currentOrder.table !== '' ? currentOrder.table : "Mang về";
 
       // Transform products to API format
       const transformedProducts = validProducts.map(product => {
@@ -202,8 +202,8 @@ const PaymentCart = () => {
         subPrice: subPrice,
         svFee: "0",
         svFee_amount: 0,
-        shopTableid: selectedTable ? selectedTable.id : "0",
-        shopTableName: selectedTable ? selectedTable.name : "Mang về",
+        shopTableid: currentOrder.tableId || "0",
+        shopTableName: selectedTableName,
         orderNote: currentOrder.note || "",
         products: transformedProducts,
         cust_id: 0,
@@ -221,7 +221,7 @@ const PaymentCart = () => {
         timestamp: new Date().toISOString(),
         status: "pending",
         orderStatus: "Paymented", // Default to Paymented for cash orders
-        tableId: selectedTable ? selectedTable.id : null, // Store tableId for blocking
+        tableId: currentOrder.tableId || null, // Store tableId for blocking
         created_at: new Date().toISOString()
       };
 

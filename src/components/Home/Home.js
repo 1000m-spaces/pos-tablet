@@ -22,13 +22,13 @@ const Home = ({ navigation }) => {
     const initData = async () => {
       let user = await asyncStorage.getUser();
       const body = {
-        roleid: user?.roleid || '4',
-        userid: user?.userid || '1752',
-        restid: user?.shifts.rest_id || '246',
+        roleid: user?.roleid,
+        userid: user?.userid,
+        restid: user?.shifts.rest_id,
       };
       dispatch(getMenuAction(body));
       dispatch(getShopTablesAction({
-        rest_id: user?.shifts.rest_id || '246',
+        rest_id: user?.shifts.rest_id,
       }));
     };
     initData();

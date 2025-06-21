@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_INVOICE } from 'navigation/routes';
+import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_INVOICE, NAVIGATION_PROFILE } from 'navigation/routes';
 import { StyleSheet } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import * as Screens from 'components';
@@ -90,6 +90,13 @@ const Main = () => {
           component={Screens.Invoice}
           options={{
             drawerLabel: 'Hóa Đơn'
+          }}
+        />
+        <Drawer.Screen
+          name={NAVIGATION_PROFILE}
+          component={Screens.Profile}
+          options={{
+            drawerLabel: 'Tài khoản'
           }}
         />
       </Drawer.Navigator>

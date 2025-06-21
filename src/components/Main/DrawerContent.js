@@ -11,17 +11,16 @@ import { TextNormal } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
 import Icons from 'common/Icons/Icons';
 import Colors from 'theme/Colors';
-import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_INVOICE } from 'navigation/routes';
+import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_INVOICE, NAVIGATION_PROFILE } from 'navigation/routes';
 import { useDispatch, useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
-import { setScreenAction } from 'store/actions';
+import { setScreenAction, logout } from 'store/actions';
+import { NAVIGATION_LOGIN } from 'navigation/routes';
 const DrawerList = [
   { icon: 'menu_pos', label: 'Menu', navigateTo: NAVIGATION_HOME },
   { icon: 'order_pos', label: 'Đơn online', navigateTo: NAVIGATION_ORDER },
   { icon: 'invoice_pos', label: 'Hóa Đơn', navigateTo: NAVIGATION_INVOICE },
-  // Temporarily comment out invalid routes until they are properly implemented
-  // { icon: 'history_pos', label: 'Lich sử', navigateTo: 'History' },
-  // { icon: 'account_pos', label: 'Tài khoản', navigateTo: 'Account' },
+  { icon: 'account_pos', label: 'Tài khoản', navigateTo: NAVIGATION_PROFILE },
 ];
 const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation }) => {
   const dispatch = useDispatch();
@@ -107,11 +106,21 @@ const DrawerItems = ({ currentScreen, navigation }) => {
 };
 
 const DrawerContent = props => {
+  const dispatch = useDispatch();
   const currentScreen = useSelector(state => screenSelector(state));
 
   console.log('DrawerContent: Rendering with props:', props);
   console.log('DrawerContent: Current screen from selector:', currentScreen);
   console.log('DrawerContent: Props navigation:', props.navigation);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    // Navigate to login screen
+    props.navigation.reset({
+      index: 0,
+      routes: [{ name: NAVIGATION_LOGIN }],
+    });
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#001f3f', width: 108 }}>
@@ -136,6 +145,7 @@ const DrawerContent = props => {
             />
           )}
           label="Sign Out"
+          onPress={handleLogout}
         />
       </View>
     </View>
