@@ -5,6 +5,7 @@ const BASE_PATH_CASE_DEV = 'https://dev-api-php.1000m.vn/api1.0.php/';
 const BASE_PATH_MENU = 'https://dev-api-php.1000m.vn/api1.0.php/'
 
 const BASE_PATH_1000M = 'https://api.1000m.vn/'
+const BASE_PATH_POS = 'https://dev-pos.1000m.vn/'
 // const BASE_PATH_1000M = 'https://dev-api.1000m.vn/'
 
 export const UrlApi = {
@@ -59,7 +60,7 @@ export const UrlApi = {
   getUserInfo: BASE_PATH_MENU + 'userinfo',
   getVersion: BASE_PATH_CAFE + 'version',
   sendPhone: BASE_PATH_MENU + 'phone',
-  loginInternal: BASE_PATH_MENU + 'loginInternal',
+  loginInternal: BASE_PATH_POS + 'login',
   internalMenuShop: BASE_PATH_MENU + 'getInternalMenuShop',
   orderInternal: BASE_PATH_MENU + 'orderInternal',
   confirmPhone: BASE_PATH_MENU + 'phone',

@@ -7,7 +7,9 @@ import {
   View,
   ImageBackground,
   Dimensions,
+  Alert,
 } from 'react-native';
+import CryptoJS from 'crypto-js';
 
 const heightDevice = Dimensions.get('window').height;
 const widthDevice = Dimensions.get('window').width;
@@ -36,26 +38,30 @@ const Login = props => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showError, setShowError] = useState(false);
 
   const statusLogin = useSelector(state => isStatusSendPhone(state));
+  const errorMessage = useSelector(state => isErrorSendOtp(state));
 
   const submitLogin = () => {
-    props.navigation.navigate(NAVIGATION_MAIN);
     if (username === '' || password === '') {
+      Alert.alert('Thông báo', 'Vui lòng nhập đầy đủ tài khoản và mật khẩu');
       return;
     }
-    dispatch(loginInternal({ username: username, password: password }));
+
+    // Hash password using MD5
+    const hashedPassword = CryptoJS.MD5(password).toString();
+
+    dispatch(loginInternal({
+      username: username.trim(),
+      password: hashedPassword
+    }));
   };
 
   useEffect(() => {
     if (statusLogin === Status.SUCCESS) {
       dispatch(setScreenAction(NAVIGATION_HOME));
       props.navigation.navigate(NAVIGATION_MAIN, {});
-    } else if (statusLogin === Status.ERROR) {
-      setShowError(true);
     }
-    // console.log(widthDevice, heightDevice);
   }, [statusLogin]);
 
   return (
@@ -79,20 +85,21 @@ const Login = props => {
           placeholder="Tài khoản"
           placeholderTextColor={Colors.secondary}
           style={styles.styleTextInput}
+          value={username}
           onChangeText={setUsername}
         />
         <TouchableOpacity>
           <TextInput
-            ref={refInput}
             placeholder="Mật khẩu"
             placeholderTextColor={Colors.secondary}
             style={styles.styleTextInput}
             secureTextEntry={!showPassword}
+            value={password}
             onChangeText={setPassword}
           />
           {password && password.length > 0 && (
             <TouchableOpacity
-              onPress={() => setShowPassword(prev => (prev = !prev))}
+              onPress={() => setShowPassword(prev => !prev)}
               style={styles.hideText}>
               <TextNormal style={{ color: Colors.gray }}>
                 {showPassword ? 'ẨN' : 'HIỂN THỊ'}
@@ -102,7 +109,7 @@ const Login = props => {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={submitLogin}
-          // disabled={statusLogin === Status.LOADING || !username || !password}
+          disabled={statusLogin === Status.LOADING || !username || !password}
           style={[
             styles.buttonSubmitPhone,
             username && password && { backgroundColor: Colors.primary },
@@ -112,12 +119,12 @@ const Login = props => {
               styles.textConfirm,
               username && password && { color: Colors.whiteColor },
             ]}>
-            {'Đăng nhập'}
+            {statusLogin === Status.LOADING ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </TextHighLightBold>
         </TouchableOpacity>
-        {showError === true && (
+        {statusLogin === Status.ERROR && errorMessage && (
           <TextNormal style={styles.textError}>
-            {'Tài khoản hoặc mật khẩu không đúng'}
+            {errorMessage}
           </TextNormal>
         )}
       </View>

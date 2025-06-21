@@ -505,6 +505,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                 style={{
                     position: 'absolute',
                     left: printerInfo ? -mmToPixels(Number(printerInfo.sWidth)) : -mmToPixels(50),
+                    left: 0,
                     bottom: 0,
                     width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
                     backgroundColor: 'white',

@@ -1,14 +1,14 @@
-import {takeLatest, call, put, select} from 'redux-saga/effects';
-import {NEOCAFE} from 'store/actionsTypes';
+import { takeLatest, call, put, select } from 'redux-saga/effects';
+import { NEOCAFE } from 'store/actionsTypes';
 import authController from './authController';
-import {isTokenConfirm} from './authSelector';
-import {confirmOtpReset, loginPhoneReset, sendPhoneReset} from './authAction';
-import {asyncStorage} from 'store/index';
+import { isTokenConfirm } from './authSelector';
+import { confirmOtpReset, loginPhoneReset, sendPhoneReset } from './authAction';
+import { asyncStorage } from 'store/index';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {resetGetListShop, resetOrder} from 'store/actions';
+import { resetGetListShop, resetOrder } from 'store/actions';
 import strings from 'localization/Localization';
 
-function* sendPhoneSaga({payload}) {
+function* sendPhoneSaga({ payload }) {
   try {
     const result = yield call(
       authController.sendPhoneController,
@@ -16,7 +16,7 @@ function* sendPhoneSaga({payload}) {
     );
     console.log('RESULT SAGA::: ', result);
     if (result.success === true && result?.data && result?.data?.status) {
-      const {data} = result.data;
+      const { data } = result.data;
       console.log('result success sendPhone:', data);
       yield put({
         type: NEOCAFE.SEND_PHONE_SUCCESS,
@@ -29,12 +29,12 @@ function* sendPhoneSaga({payload}) {
       console.log('result errorr sendPhone:', result);
       yield put({
         type: NEOCAFE.SEND_PHONE_ERROR,
-        payload: {errorMsg: result?.data?.error},
+        payload: { errorMsg: result?.data?.error },
       });
     } else {
       yield put({
         type: NEOCAFE.SEND_PHONE_ERROR,
-        payload: {errorMsg: 'Xảy ra lỗi trong quá trình nhận OTP'},
+        payload: { errorMsg: 'Xảy ra lỗi trong quá trình nhận OTP' },
       });
     }
   } catch (e) {
@@ -48,44 +48,63 @@ function* sendPhoneSaga({payload}) {
   }
 }
 
-function* loginInternalSaga({payload}) {
+function* loginInternalSaga({ payload }) {
   try {
     const result = yield call(authController.loginInternalController, payload);
+    console.log('loginInternalSaga result:', result);
+
     if (result.success === true && result?.data && result?.data?.status) {
-      const {data} = result.data;
+      const { data } = result.data;
       console.log('login data:::', data);
-      yield asyncStorage.setUser(data);
+
+      // Store complete user data from the new API response
+      const userData = {
+        userid: data.userid,
+        username: data.username,
+        sessionkey: data.sessionkey,
+        roleid: data.roleid,
+        shopid: data.shopid,
+        shopownerid: data.shopownerid,
+        partnerid: data.partnerid,
+        cash_in_tk2: data.cash_in_tk2,
+        is_cash_in_other: data.is_cash_in_other,
+        vnpay_terminal_id: data.vnpay_terminal_id,
+        vnpay_terminal_name: data.vnpay_terminal_name,
+        shops: data.shops,
+        shifts: data.shifts
+      };
+
+      yield asyncStorage.setUser(userData);
       yield put({
         type: NEOCAFE.LOGIN_SUCCESS,
         payload: {
-          userInfo: data,
+          userInfo: userData,
         },
       });
-      // yield put(sendPhoneReset());
     } else if (result.success === true && result?.data?.status === false) {
-      console.log('result errorr loginInternal:', result);
+      console.log('result error loginInternal:', result);
       yield put({
         type: NEOCAFE.SEND_PHONE_ERROR,
-        payload: {errorMsg: result?.data?.error},
+        payload: { errorMsg: result?.data?.error || 'Đăng nhập thất bại' },
       });
     } else {
       yield put({
         type: NEOCAFE.SEND_PHONE_ERROR,
-        payload: {errorMsg: 'Xảy ra lỗi trong quá trình đăng nhập'},
+        payload: { errorMsg: 'Xảy ra lỗi trong quá trình đăng nhập' },
       });
     }
   } catch (e) {
+    console.log('loginInternalSaga error:', e);
     yield put({
       type: NEOCAFE.SEND_PHONE_ERROR,
       payload: {
-        errorMsg:
-          'Xảy ra lỗi trong quá trình nhật OTP, vui lòng liên hệ nhân viên chăm sóc khách hàng',
+        errorMsg: 'Tài khoản hoặc mật khẩu không đúng',
       },
     });
   }
 }
 
-function* confirmOtp({payload}) {
+function* confirmOtp({ payload }) {
   const tokenConfirm = yield select(state => isTokenConfirm(state));
   console.log('tokenConfirm', tokenConfirm);
   const query = {
@@ -124,7 +143,7 @@ function* confirmOtp({payload}) {
   }
 }
 
-function* loginPhone({payload}) {
+function* loginPhone({ payload }) {
   try {
     const result = yield call(
       authController.loginPhoneController,
@@ -141,13 +160,13 @@ function* loginPhone({payload}) {
       console.log('storeeeeee:', asyncStorage);
     }
     yield put(loginPhoneReset());
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function* logout() {
   try {
     yield put(resetOrder());
-    yield put(resetGetListShop({isLogout: true}));
+    yield put(resetGetListShop({ isLogout: true }));
     // yield put(resetGetListProduct());
     asyncStorage.clearStorage();
     asyncStorage.setTheFirstLogin('false');
@@ -156,7 +175,7 @@ function* logout() {
   }
 }
 
-function* getVersions({payload}) {
+function* getVersions({ payload }) {
   try {
     const result = yield call(
       authController.getVersion,
@@ -176,7 +195,7 @@ function* getVersions({payload}) {
   } catch (error) {
     yield put({
       type: NEOCAFE.GET_VERSION_ERROR,
-      payload: {errorMsg: error},
+      payload: { errorMsg: error },
     });
   }
 }

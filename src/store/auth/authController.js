@@ -1,29 +1,31 @@
 import HttpClient from 'http/HttpClient';
-import {UrlApi} from 'http/UrlApi';
+import { UrlApi } from 'http/UrlApi';
 
 class AuthController {
   sendPhoneController = async phone => {
     try {
       console.log(phone);
-      const {data} = await HttpClient.post(UrlApi.sendPhone, {
+      const { data } = await HttpClient.post(UrlApi.sendPhone, {
         phone,
       });
-      return {success: true, data: data};
+      return { success: true, data: data };
     } catch (error) {
-      return {success: false, error: error.message};
+      return { success: false, error: error.message };
     }
   };
 
   loginInternalController = async payload => {
     try {
-      const {data} = await HttpClient.post(UrlApi.loginInternal, {
+      const { data } = await HttpClient.post(UrlApi.loginInternal, {
         username: payload.username,
         password: payload.password,
+        version: 'web'
       });
       console.log('login::', data)
-      return {success: true, data: data};
+      return { success: true, data: data };
     } catch (error) {
-      return {success: false, error: error.message};
+      console.log('login error::', error)
+      return { success: false, error: error.message };
     }
   };
   confirmOtpController = async query => {

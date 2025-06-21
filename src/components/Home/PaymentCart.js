@@ -164,8 +164,38 @@ const PaymentCart = () => {
       // Calculate totals
       const subPrice = transformedProducts.reduce((sum, product) => sum + product.amount, 0);
 
-      // Generate session ID
-      const session = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Generate 6-character sorted order ID for offline orders
+      const generateOfflineOrderId = () => {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+
+        // Create base from time: HHMMSS
+        const timeBase = hours + minutes + seconds;
+
+        // Alternative: Use date + sequence for better sorting
+        const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+        const dayStr = String(dayOfYear).padStart(3, '0'); // Day of year (001-366)
+        const hourMinute = String(now.getHours() * 60 + now.getMinutes()).padStart(4, '0'); // Minutes since midnight
+
+        // Option 1: Time-based 6 chars (HHMMSS)
+        const timeOrderId = timeBase;
+
+        // Option 2: Day + time-based 6 chars (DDDHHH where DDD=day of year, HHH=hour*10+minute/6)
+        const dayTimeOrderId = dayStr.slice(-3) + String(Math.floor((now.getHours() * 60 + now.getMinutes()) / 100)).padStart(3, '0');
+
+        // Option 3: Sequential with date prefix (use last 2 digits of day + 4 digit sequence)
+        const datePrefix = String(now.getDate()).padStart(2, '0');
+        const timeSequence = String(now.getHours() * 100 + now.getMinutes()).slice(-4);
+        const sequentialOrderId = datePrefix + timeSequence;
+
+        // Return time-based ID for better chronological sorting
+        return timeOrderId;
+      };
+
+      const offlineOrderId = generateOfflineOrderId();
+      const session = `OFF-${offlineOrderId}`;
 
       // Create order object
       const orderData = {
@@ -184,6 +214,7 @@ const PaymentCart = () => {
         fix_discount: 0,
         perDiscount: 0,
         session: session,
+        offlineOrderId: offlineOrderId, // 6-character sorted order ID
         shopid: user?.shop_id || "246", // Default shop ID
         userid: user?.id || "1752", // Default user ID
         roleid: user?.role_id || "4", // Default role ID

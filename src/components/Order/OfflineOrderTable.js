@@ -262,6 +262,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                         };
 
                         setPrintingOrder(tempOrder);
+                        await new Promise(resolve => setTimeout(resolve, 100000));
 
                         // Wait for state update to complete
                         await new Promise(resolve => setTimeout(resolve, 100));
@@ -385,7 +386,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
     ]);
 
     return (
-        <View style={styles.container}>
+        <>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View>
                     <Table borderStyle={{ borderWidth: 1, borderColor: Colors.borderColor }}>
@@ -459,7 +460,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                     </View>
                 </View>
             )}
-        </View>
+        </>
     );
 };
 

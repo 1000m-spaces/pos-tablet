@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // import { API_URL } from 'react-native-dotenv';
 /*
   Base client config for your application.
@@ -12,14 +13,29 @@ export const setDefaultLanguage = language => {
 console.log('default language:::', defaultLanguage);
 const HttpClient = axios.create({
   timeout: 12000,
-  headers: {'content-type': 'application/json'},
+  headers: { 'content-type': 'application/json' },
 });
 
 // Custom middleware for requests (this one just logs the error).
 HttpClient.interceptors.request.use(
-  config => {
+  async config => {
     config.headers['X-CUPIFY-APP'] = 'TRA1000M';
     config.headers['Accept-Language'] = defaultLanguage;
+
+    // Add sessionkey to headers if user is logged in
+    try {
+      const userDataString = await AsyncStorage.getItem('user');
+      if (userDataString) {
+        const userData = JSON.parse(userDataString);
+        if (userData.sessionkey) {
+          config.headers['Authorization'] = `Bearer ${userData.sessionkey}`;
+          config.headers['X-Session-Key'] = userData.sessionkey;
+        }
+      }
+    } catch (error) {
+      console.log('Error getting session key:', error);
+    }
+
     // console.log('REQUEST API:', config);
     return config;
   },
