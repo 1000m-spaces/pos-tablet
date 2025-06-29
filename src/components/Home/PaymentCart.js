@@ -13,7 +13,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   currentOrderSelector,
   getTablesSelector,
-  userInfo
+  userInfo,
+  getPaymentChannelsSelector,
+  getPaymentChannelsLoadingSelector
 } from 'store/selectors';
 import Colors from 'theme/Colors';
 import Modal from 'react-native-modal';
@@ -28,8 +30,10 @@ const PaymentCart = () => {
   const currentOrder = useSelector(state => currentOrderSelector(state));
   const tables = useSelector(state => getTablesSelector(state));
   const user = useSelector(state => userInfo(state));
+  const paymentChannels = useSelector(state => getPaymentChannelsSelector(state));
+  const paymentChannelsLoading = useSelector(state => getPaymentChannelsLoadingSelector(state));
   const [payment, setPayment] = useState(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState({ id: 'cash', name: 'Tiền mặt', icon: 'cash' });
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
 
   const [modal, setModal] = useState(false);
 
@@ -54,6 +58,16 @@ const PaymentCart = () => {
     // Fetch payment channels when component mounts
     dispatch(getPaymentChannelsAction());
   }, [dispatch]);
+
+  useEffect(() => {
+    // Set default payment method when payment channels are loaded
+    if (paymentChannels && paymentChannels.length > 0 && !selectedPaymentMethod) {
+      // Try to find cash payment method (trans_name === '41') as default
+      const cashMethod = paymentChannels.find(method => method.trans_name === '41');
+      const defaultMethod = cashMethod || paymentChannels[0];
+      setSelectedPaymentMethod(defaultMethod);
+    }
+  }, [paymentChannels, selectedPaymentMethod]);
 
   const fetchVoucher = () => {
     const items = Array.from(currentOrder.products, val => {
@@ -198,6 +212,8 @@ const PaymentCart = () => {
       const session = `OFF-${offlineOrderId}`;
 
       // Create order object
+      console.log('Selected payment method for order:', selectedPaymentMethod);
+
       const orderData = {
         subPrice: subPrice,
         svFee: "0",
@@ -207,7 +223,7 @@ const PaymentCart = () => {
         orderNote: currentOrder.note || "",
         products: transformedProducts,
         cust_id: 0,
-        transType: selectedPaymentMethod ? selectedPaymentMethod.id : "41", // Default to cash
+        transType: selectedPaymentMethod ? selectedPaymentMethod.trans_name : "41", // Use trans_name as transaction type
         chanel_type_id: selectedPaymentMethod ? selectedPaymentMethod.chanel_type_id : "1",
         phuthu: 0,
         total_amount: subPrice,
@@ -354,8 +370,8 @@ const PaymentCart = () => {
         )}
         {modal === 3 && (
           <PaymentMethodModal
-            paymentMethods={[{ id: 'cash', name: 'Tiền mặt', icon: 'cash' }]}
-            loading={false}
+            paymentMethods={paymentChannels}
+            loading={paymentChannelsLoading}
             onCloseModal={onCloseModal}
             onSelectPayment={onSelectPaymentMethod}
           />

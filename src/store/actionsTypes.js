@@ -53,6 +53,8 @@ export const NEOCAFE = createRequestTypes(
     'GET_SHOP_TABLES',
     // PAYMENT CHANNELS
     'GET_PAYMENT_CHANNELS',
+    // ORDER CHANNELS 
+    'GET_ORDER_CHANNELS',
     // SYNC
     'SYNC_ORDERS',
     'SYNC_PENDING_ORDERS',

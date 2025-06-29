@@ -90,8 +90,11 @@ export const UrlApi = {
   // ----------------------- TABLES ----------------------------
   getListShopTable: BASE_PATH_CASE_DEV + 'getListShopTable',
 
-  // ----------------------- PAYMENT CHANNELS ------------------
-  getListChanelType: BASE_PATH_CASE_DEV + 'getListChanelType',
+  // ----------------------- PAYMENT & ORDER CHANNELS ------------------
+  getTransType: BASE_PATH_CASE_DEV + 'getTransType', // Payment methods (cash, card, etc.)
+
+  getListChanelType: BASE_PATH_CASE_DEV + 'getListChanelType', // Order channel types (dine-in, takeaway, etc.)
+
 
   // ----------------------- SYNC ORDERS -----------------------
   syncOrders: BASE_PATH_CASE_DEV + 'syncOrders',

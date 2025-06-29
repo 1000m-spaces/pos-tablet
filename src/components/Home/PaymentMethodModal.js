@@ -4,22 +4,18 @@ import {
     TouchableOpacity,
     View,
     FlatList,
+    ActivityIndicator,
 } from 'react-native';
 import { TextNormal } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
 import Colors from 'theme/Colors';
 import { heightDevice, widthDevice } from 'assets/constans';
 
-const PaymentMethodModal = ({ paymentMethods, onCloseModal, onSelectPayment }) => {
+const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onSelectPayment }) => {
     const [selectedMethod, setSelectedMethod] = useState(null);
 
-    // Default payment method if none available
-    const defaultMethod = { id: 'cash', name: 'Tiền mặt', icon: 'cash' };
-
-    // Use payment methods or default if empty
-    const methods = paymentMethods && paymentMethods.length > 0
-        ? paymentMethods
-        : [defaultMethod];
+    // Use payment methods if available
+    const methods = paymentMethods || [];
 
     const handleSelectMethod = (method) => {
         setSelectedMethod(method);
@@ -59,28 +55,39 @@ const PaymentMethodModal = ({ paymentMethods, onCloseModal, onSelectPayment }) =
             </View>
 
             <View style={styles.content}>
-                <FlatList
-                    data={methods}
-                    renderItem={renderPaymentMethod}
-                    keyExtractor={(item) => item.id?.toString() || item.name}
-                    showsVerticalScrollIndicator={false}
-                />
+                {loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={Colors.primary} />
+                        <TextNormal style={styles.loadingText}>Đang tải phương thức thanh toán...</TextNormal>
+                    </View>
+                ) : methods.length === 0 ? (
+                    <View style={styles.loadingContainer}>
+                        <TextNormal style={styles.loadingText}>Không có phương thức thanh toán nào khả dụng</TextNormal>
+                    </View>
+                ) : (
+                    <FlatList
+                        data={methods}
+                        renderItem={renderPaymentMethod}
+                        keyExtractor={(item) => item.id?.toString() || item.name}
+                        showsVerticalScrollIndicator={false}
+                    />
+                )}
             </View>
 
             <View style={styles.footer}>
                 <TouchableOpacity
                     style={[
                         styles.confirmButton,
-                        !selectedMethod && styles.disabledButton
+                        (!selectedMethod || loading || methods.length === 0) && styles.disabledButton
                     ]}
                     onPress={handleConfirm}
-                    disabled={!selectedMethod}
+                    disabled={!selectedMethod || loading || methods.length === 0}
                 >
                     <TextNormal style={[
                         styles.confirmButtonText,
-                        !selectedMethod && styles.disabledButtonText
+                        (!selectedMethod || loading || methods.length === 0) && styles.disabledButtonText
                     ]}>
-                        Xác nhận
+                        {loading ? 'Đang tải...' : methods.length === 0 ? 'Không có phương thức' : 'Xác nhận'}
                     </TextNormal>
                 </TouchableOpacity>
             </View>
@@ -114,6 +121,18 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
         paddingHorizontal: 20,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+        color: Colors.placeholder,
+        textAlign: 'center',
     },
     methodItem: {
         flexDirection: 'row',

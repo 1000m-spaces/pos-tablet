@@ -4,6 +4,7 @@ import {
   heightDevice,
   IMAGE_URL,
   widthDevice,
+  orderTypes,
 } from 'assets/constans';
 import Svg from 'common/Svg/Svg';
 import { TextNormal } from 'common/Text/TextFont';
@@ -11,8 +12,8 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { currentOrderSelector } from 'store/selectors';
-import { getPaymentChannelsSelector } from 'store/payment/paymentSelector';
-import { getPaymentChannelsAction } from 'store/payment/paymentAction';
+import { getOrderChannelsSelector } from 'store/payment/paymentSelector';
+import { getOrderChannelsAction } from 'store/payment/paymentAction';
 import Colors from 'theme/Colors';
 import PaymentCart from './PaymentCart';
 import FastImage from 'react-native-fast-image';
@@ -20,12 +21,16 @@ import { setOrderAction } from 'store/actions';
 const Cart = ({ showTable }) => {
   const dispatch = useDispatch();
   const currentOrder = useSelector(state => currentOrderSelector(state));
-  const paymentChannels = useSelector(state => getPaymentChannelsSelector(state));
-  console.log('paymentChannels::', paymentChannels)
+  const orderChannels = useSelector(state => getOrderChannelsSelector(state));
+  console.log('orderChannels::', orderChannels)
   const [orderType, setOrderType] = useState(1);
   console.log('currentOrder::', currentOrder)
+
+  // Use API data if available, otherwise fallback to static orderTypes
+  const availableOrderTypes = orderChannels && orderChannels.length > 0 ? orderChannels : orderTypes;
+
   useEffect(() => {
-    dispatch(getPaymentChannelsAction());
+    dispatch(getOrderChannelsAction());
   }, [dispatch]);
 
   const updateQuantity = (product, val) => {
@@ -103,6 +108,9 @@ const Cart = ({ showTable }) => {
     );
   };
   const renderOrderType = ({ item, index }) => {
+    // Handle both API data (name_vn) and static data (name)
+    const displayName = item.name_vn || item.name;
+
     return (
       <TouchableOpacity
         key={item.id}
@@ -123,8 +131,8 @@ const Cart = ({ showTable }) => {
           {item.id === "1" || item.id === 1
             ? currentOrder.table && currentOrder.table !== ''
               ? `Bàn ${currentOrder.table}`
-              : item.name_vn
-            : item.name_vn}
+              : displayName
+            : displayName}
         </TextNormal>
       </TouchableOpacity>
     );
@@ -138,7 +146,7 @@ const Cart = ({ showTable }) => {
           borderStyle: 'dashed',
         }}>
         <FlatList
-          data={paymentChannels}
+          data={availableOrderTypes}
           keyExtractor={i => i.id}
           horizontal
           contentContainerStyle={{
