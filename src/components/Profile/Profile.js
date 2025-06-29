@@ -76,7 +76,7 @@ const Profile = ({ navigation }) => {
                 setOrderStats({
                     pendingOrders: pendingOrders.filter(order =>
                         order.orderStatus !== 'Completed' &&
-                        order.orderStatus !== 'Cancelled'
+                        order.orderStatus !== 'Canceled'
                     ).length,
                     completedToday,
                     totalRevenue,

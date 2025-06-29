@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import Modal from 'react-native-modal';
 import Toast from 'react-native-toast-message';
@@ -21,6 +21,8 @@ const OrderDetailDialog = ({
     loadingVisible,
     isOfflineOrder = false
 }) => {
+    const [showStatusOptions, setShowStatusOptions] = useState(false);
+
     const getStatusColor = (status) => {
         switch (status) {
             case "ORDER_CREATED": return "#2196F3";      // Blue
@@ -92,6 +94,7 @@ const OrderDetailDialog = ({
             case "Paymented": return "#2196F3";           // Blue
             case "WaitingForServe": return "#FF9800";     // Orange
             case "Completed": return "#4CAF50";           // Green
+            case "Canceled": return "#F44336";            // Red
             default: return "#9E9E9E";                    // Grey
         }
     };
@@ -102,6 +105,7 @@ const OrderDetailDialog = ({
             case "Paymented": return "#E3F2FD";          // Light Blue
             case "WaitingForServe": return "#FFF3E0";     // Light Orange
             case "Completed": return "#E8F5E9";          // Light Green
+            case "Canceled": return "#FFEBEE";           // Light Red
             default: return "#F5F5F5";                   // Light Grey
         }
     };
@@ -112,6 +116,7 @@ const OrderDetailDialog = ({
             case "Paymented": return "Đã thanh toán";
             case "WaitingForServe": return "Chờ phục vụ";
             case "Completed": return "Hoàn thành";
+            case "Canceled": return "Hủy";
             default: return "Mới tạo";
         }
     };
@@ -119,9 +124,15 @@ const OrderDetailDialog = ({
     const handleOfflineStatusChange = (newStatus) => {
         if (onStatusChange && selectedOrder) {
             onStatusChange(selectedOrder, newStatus);
-            // Close modal after status change
+            setShowStatusOptions(false);
             onClose();
         }
+    };
+
+    const getNextStatus = (currentStatus) => {
+        const statusFlow = ['WaitingForPayment', 'Paymented', 'WaitingForServe', 'Completed'];
+        const currentIndex = statusFlow.indexOf(currentStatus);
+        return currentIndex < statusFlow.length - 1 ? statusFlow[currentIndex + 1] : null;
     };
 
     if (!selectedOrder) return null;
@@ -140,223 +151,251 @@ const OrderDetailDialog = ({
                 visible={loadingVisible}
                 textContent={''} />
             <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
+                    <Badge
+                        text={isOfflineOrder ? "Đơn offline" : getStatusText(selectedOrder.state)}
+                        colorText={isOfflineOrder ? "#FF9800" : getStatusColor(selectedOrder.state)}
+                        colorBg={isOfflineOrder ? "#FFF3E0" : getStatusColorBg(selectedOrder.state)}
+                        width="auto"
+                    />
+                </View>
+
                 <ScrollView
                     showsVerticalScrollIndicator={true}
                     contentContainerStyle={styles.modalScrollContent}
+                    style={styles.scrollView}
                 >
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Chi tiết đơn hàng</Text>
-                        <Badge
-                            text={isOfflineOrder ? "Đơn offline" : getStatusText(selectedOrder.state)}
-                            colorText={isOfflineOrder ? "#FF9800" : getStatusColor(selectedOrder.state)}
-                            colorBg={isOfflineOrder ? "#FFF3E0" : getStatusColorBg(selectedOrder.state)}
-                            width="auto"
-                        />
-                    </View>
-
                     <View style={styles.orderInfoSection}>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.label}>Mã đơn hàng:</Text>
-                            <Text style={styles.value}>{isOfflineOrder ? selectedOrder.session : selectedOrder.displayID}</Text>
-                        </View>
-                        {!isOfflineOrder && (
-                            <>
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.label}>Trạng thái đơn:</Text>
-                                    <Text style={styles.value}>{getStatusText(selectedOrder.state)}</Text>
-                                </View>
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.label}>Trạng thái chuẩn bị:</Text>
-                                    <Text style={styles.value}>{getPreparationStatusText(selectedOrder.preparationTaskpoolStatus)}</Text>
-                                </View>
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.label}>Trạng thái giao hàng:</Text>
-                                    <Text style={styles.value}>{getDeliveryStatusText(selectedOrder.deliveryTaskpoolStatus)}</Text>
-                                </View>
-                            </>
-                        )}
-                        {isOfflineOrder && (
-                            <>
+                        <View style={styles.infoCard}>
+                            <Text style={styles.cardTitle}>Thông tin đơn hàng</Text>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.label}>Mã đơn:</Text>
+                                <Text style={styles.value}>{isOfflineOrder ? selectedOrder.session : selectedOrder.displayID}</Text>
+                            </View>
+                            {isOfflineOrder && (
                                 <View style={styles.detailRow}>
                                     <Text style={styles.label}>Bàn/Khách:</Text>
-                                    <Text style={styles.value}>{selectedOrder.shopTableName || 'N/A'}</Text>
+                                    <Text style={styles.value}>{selectedOrder.shopTableName || 'Mang về'}</Text>
                                 </View>
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.label}>Trạng thái đơn:</Text>
-                                    <Badge
-                                        text={getOfflineOrderStatusText(selectedOrder.orderStatus || 'Paymented')}
-                                        colorText={getOfflineOrderStatusColor(selectedOrder.orderStatus || 'Paymented')}
-                                        colorBg={getOfflineOrderStatusColorBg(selectedOrder.orderStatus || 'Paymented')}
-                                        width="auto"
-                                    />
-                                </View>
-                            </>
-                        )}
-                        <View style={styles.detailRow}>
-                            <Text style={styles.label}>Trạng thái in:</Text>
-                            <Badge
-                                text={printedLabels.includes(isOfflineOrder ? selectedOrder.session : selectedOrder.displayID) ? "Đã in" : "Chưa in"}
-                                colorText={printedLabels.includes(isOfflineOrder ? selectedOrder.session : selectedOrder.displayID) ? "#069C2E" : "#EF0000"}
-                                colorBg={printedLabels.includes(isOfflineOrder ? selectedOrder.session : selectedOrder.displayID) ? "#CDEED8" : "#FED9DA"}
-                                width="auto"
-                            />
+                            )}
+                            <View style={styles.detailRow}>
+                                <Text style={styles.label}>Trạng thái:</Text>
+                                <Badge
+                                    text={isOfflineOrder ? getOfflineOrderStatusText(selectedOrder.orderStatus || 'Paymented') : getStatusText(selectedOrder.state)}
+                                    colorText={isOfflineOrder ? getOfflineOrderStatusColor(selectedOrder.orderStatus || 'Paymented') : getStatusColor(selectedOrder.state)}
+                                    colorBg={isOfflineOrder ? getOfflineOrderStatusColorBg(selectedOrder.orderStatus || 'Paymented') : getStatusColorBg(selectedOrder.state)}
+                                    width="auto"
+                                />
+                            </View>
+                            <View style={styles.detailRow}>
+                                <Text style={styles.label}>Trạng thái in:</Text>
+                                <Badge
+                                    text={printedLabels.includes(isOfflineOrder ? selectedOrder.session : selectedOrder.displayID) ? "Đã in" : "Chưa in"}
+                                    colorText={printedLabels.includes(isOfflineOrder ? selectedOrder.session : selectedOrder.displayID) ? "#069C2E" : "#EF0000"}
+                                    colorBg={printedLabels.includes(isOfflineOrder ? selectedOrder.session : selectedOrder.displayID) ? "#CDEED8" : "#FED9DA"}
+                                    width="auto"
+                                />
+                            </View>
                         </View>
                     </View>
 
-                    {!isOfflineOrder && (
-                        <View style={styles.customerSection}>
-                            <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.label}>Tên khách hàng:</Text>
-                                <Text style={styles.value}>{selectedOrder.eater?.name || 'N/A'}</Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.label}>Số điện thoại:</Text>
-                                <Text style={styles.value}>{selectedOrder.eater?.mobileNumber || 'N/A'}</Text>
-                            </View>
-                            {selectedOrder.eater?.address && (
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.label}>Địa chỉ:</Text>
-                                    <Text style={styles.value}>{selectedOrder.eater.address.address}</Text>
-                                </View>
-                            )}
-                            {selectedOrder.eater?.comment && (
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.label}>Ghi chú:</Text>
-                                    <Text style={styles.value}>{selectedOrder.eater.comment}</Text>
-                                </View>
-                            )}
-                        </View>
-                    )}
+                    {/* Status Change Section for Offline Orders - Simplified */}
+                    {isOfflineOrder && onStatusChange && (
+                        <View style={styles.statusChangeSection}>
+                            <View style={styles.infoCard}>
+                                <Text style={styles.cardTitle}>Thay đổi trạng thái</Text>
+                                {(selectedOrder.orderStatus === 'Completed' || selectedOrder.orderStatus === 'Canceled') ? (
+                                    <View style={styles.finalStatusContainer}>
+                                        <Text style={styles.finalStatusText}>
+                                            Đơn hàng đã hoàn tất
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <View style={styles.statusControlContainer}>
+                                        <Pressable
+                                            style={styles.currentStatusButton}
+                                            onPress={() => setShowStatusOptions(!showStatusOptions)}
+                                        >
+                                            <Text style={styles.currentStatusText}>
+                                                {getOfflineOrderStatusText(selectedOrder.orderStatus || 'Paymented')}
+                                            </Text>
+                                            <Text style={styles.dropdownArrow}>{showStatusOptions ? '▲' : '▼'}</Text>
+                                        </Pressable>
 
-                    {!isOfflineOrder && selectedOrder.driver && (
-                        <View style={styles.driverSection}>
-                            <Text style={styles.sectionTitle}>Thông tin tài xế</Text>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.label}>Tên tài xế:</Text>
-                                <Text style={styles.value}>{selectedOrder.driver.name}</Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                                <Text style={styles.label}>Số điện thoại:</Text>
-                                <Text style={styles.value}>{selectedOrder.driver.mobileNumber}</Text>
+                                        {showStatusOptions && (
+                                            <View style={styles.statusOptions}>
+                                                {['WaitingForPayment', 'Paymented', 'WaitingForServe', 'Completed', 'Canceled'].map(status => (
+                                                    selectedOrder.orderStatus !== status && (
+                                                        <Pressable
+                                                            key={status}
+                                                            style={[styles.statusOption, { borderLeftColor: getOfflineOrderStatusColor(status) }]}
+                                                            onPress={() => handleOfflineStatusChange(status)}
+                                                        >
+                                                            <Text style={[styles.statusOptionText, { color: getOfflineOrderStatusColor(status) }]}>
+                                                                {getOfflineOrderStatusText(status)}
+                                                            </Text>
+                                                        </Pressable>
+                                                    )
+                                                ))}
+                                            </View>
+                                        )}
+
+                                        {/* Quick next status button */}
+                                        {getNextStatus(selectedOrder.orderStatus || 'Paymented') && (
+                                            <Pressable
+                                                style={[styles.quickStatusButton, { backgroundColor: getOfflineOrderStatusColorBg(getNextStatus(selectedOrder.orderStatus || 'Paymented')) }]}
+                                                onPress={() => handleOfflineStatusChange(getNextStatus(selectedOrder.orderStatus || 'Paymented'))}
+                                            >
+                                                <Text style={[styles.quickStatusButtonText, { color: getOfflineOrderStatusColor(getNextStatus(selectedOrder.orderStatus || 'Paymented')) }]}>
+                                                    ➤ {getOfflineOrderStatusText(getNextStatus(selectedOrder.orderStatus || 'Paymented'))}
+                                                </Text>
+                                            </Pressable>
+                                        )}
+                                    </View>
+                                )}
                             </View>
                         </View>
                     )}
 
                     <View style={styles.itemsSection}>
-                        <Text style={styles.sectionTitle}>Danh sách món</Text>
-                        {isOfflineOrder ? (
-                            // Handle offline order structure
-                            selectedOrder?.products?.map((product, idx) => (
-                                <View key={idx} style={styles.itemRow}>
-                                    <View style={styles.itemInfo}>
-                                        <Text style={styles.itemName}>{product.name}</Text>
-                                        {product.note && (
-                                            <Text style={styles.itemNote}>Ghi chú: {product.note}</Text>
-                                        )}
-                                        {product.extras?.map((extra, eIdx) => (
-                                            <View key={eIdx} style={styles.modifierGroup}>
-                                                <Text style={styles.modifierGroupName}>{extra.group_extra_name || 'Extras'}</Text>
-                                                <Text style={styles.modifierName}>
-                                                    • {extra.name} {extra.price ? `(+${extra.price.toLocaleString('vi-VN')}₫)` : ''}
-                                                </Text>
-                                            </View>
-                                        ))}
-                                    </View>
-                                    <View style={styles.itemQuantity}>
-                                        <Text style={styles.quantityText}>x{product.quanlity || 1}</Text>
-                                        <Text style={styles.itemPrice}>
-                                            {product.price ? `${product.price.toLocaleString('vi-VN')}₫` : 'N/A'}
-                                        </Text>
-                                    </View>
-                                </View>
-                            ))
-                        ) : (
-                            // Handle online order structure
-                            selectedOrder?.itemInfo?.items?.map((item, idx) => (
-                                <View key={idx} style={styles.itemRow}>
-                                    <View style={styles.itemInfo}>
-                                        <Text style={styles.itemName}>{item.name}</Text>
-                                        {item.comment && (
-                                            <Text style={styles.itemNote}>Ghi chú: {item.comment}</Text>
-                                        )}
-                                        {item.modifierGroups?.map((group, gIdx) => (
-                                            <View key={gIdx} style={styles.modifierGroup}>
-                                                <Text style={styles.modifierGroupName}>{group.modifierGroupName}</Text>
-                                                {group.modifiers?.map((modifier, mIdx) => (
-                                                    <Text key={mIdx} style={styles.modifierName}>
-                                                        • {modifier.modifierName}
+                        <View style={styles.infoCard}>
+                            <Text style={styles.cardTitle}>Danh sách món</Text>
+                            {isOfflineOrder ? (
+                                // Handle offline order structure
+                                selectedOrder?.products?.map((product, idx) => (
+                                    <View key={idx} style={styles.itemRow}>
+                                        <View style={styles.itemInfo}>
+                                            <Text style={styles.itemName}>{product.name}</Text>
+                                            {product.note && (
+                                                <Text style={styles.itemNote}>📝 {product.note}</Text>
+                                            )}
+                                            {product.extras?.map((extra, eIdx) => (
+                                                <View key={eIdx} style={styles.modifierGroup}>
+                                                    <Text style={styles.modifierName}>
+                                                        + {extra.name} {extra.price ? `(+${extra.price.toLocaleString('vi-VN')}₫)` : ''}
                                                     </Text>
-                                                ))}
-                                            </View>
-                                        ))}
+                                                </View>
+                                            ))}
+                                        </View>
+                                        <View style={styles.itemQuantity}>
+                                            <Text style={styles.quantityText}>x{product.quanlity || 1}</Text>
+                                            <Text style={styles.itemPrice}>
+                                                {product.price ? `${product.price.toLocaleString('vi-VN')}₫` : 'N/A'}
+                                            </Text>
+                                        </View>
                                     </View>
-                                    <View style={styles.itemQuantity}>
-                                        <Text style={styles.quantityText}>x{item.quantity}</Text>
-                                        <Text style={styles.itemPrice}>
-                                            {item.fare?.priceDisplay}{item.fare?.currencySymbol}
-                                        </Text>
+                                ))
+                            ) : (
+                                // Handle online order structure
+                                selectedOrder?.itemInfo?.items?.map((item, idx) => (
+                                    <View key={idx} style={styles.itemRow}>
+                                        <View style={styles.itemInfo}>
+                                            <Text style={styles.itemName}>{item.name}</Text>
+                                            {item.comment && (
+                                                <Text style={styles.itemNote}>📝 {item.comment}</Text>
+                                            )}
+                                            {item.modifierGroups?.map((group, gIdx) => (
+                                                <View key={gIdx} style={styles.modifierGroup}>
+                                                    {group.modifiers?.map((modifier, mIdx) => (
+                                                        <Text key={mIdx} style={styles.modifierName}>
+                                                            + {modifier.modifierName}
+                                                        </Text>
+                                                    ))}
+                                                </View>
+                                            ))}
+                                        </View>
+                                        <View style={styles.itemQuantity}>
+                                            <Text style={styles.quantityText}>x{item.quantity}</Text>
+                                            <Text style={styles.itemPrice}>
+                                                {item.fare?.priceDisplay}{item.fare?.currencySymbol}
+                                            </Text>
+                                        </View>
                                     </View>
-                                </View>
-                            ))
-                        )}
-                    </View>
+                                ))
+                            )}
 
-                    <View style={styles.summarySection}>
-                        <View style={styles.summaryRow}>
-                            <Text style={styles.summaryLabel}>Tổng cộng:</Text>
-                            <Text style={styles.summaryValue}>
-                                {isOfflineOrder ?
-                                    `${(selectedOrder.total_amount || 0).toLocaleString('vi-VN')}₫` :
-                                    `${selectedOrder.orderValue}₫`
-                                }
-                            </Text>
+                            <View style={styles.summaryRow}>
+                                <Text style={styles.summaryLabel}>TỔNG CỘNG:</Text>
+                                <Text style={styles.summaryValue}>
+                                    {isOfflineOrder ?
+                                        `${(selectedOrder.total_amount || 0).toLocaleString('vi-VN')}₫` :
+                                        `${selectedOrder.orderValue}₫`
+                                    }
+                                </Text>
+                            </View>
                         </View>
                     </View>
 
-                    {/* Status Change Section for Offline Orders */}
-                    {isOfflineOrder && onStatusChange && (
-                        <View style={styles.statusChangeSection}>
-                            <Text style={styles.sectionTitle}>Thay đổi trạng thái</Text>
-                            <View style={styles.statusButtons}>
-                                {['Paymented', 'WaitingForServe', 'Completed'].map(status => (
-                                    <Pressable
-                                        key={status}
-                                        style={[
-                                            styles.statusChangeButton,
-                                            {
-                                                backgroundColor: getOfflineOrderStatusColorBg(status),
-                                                borderColor: getOfflineOrderStatusColor(status),
-                                            },
-                                            selectedOrder.orderStatus === status && styles.currentStatusButton
-                                        ]}
-                                        onPress={() => handleOfflineStatusChange(status)}
-                                        disabled={selectedOrder.orderStatus === status}
-                                    >
-                                        <Text style={[
-                                            styles.statusChangeButtonText,
-                                            { color: getOfflineOrderStatusColor(status) }
-                                        ]}>
-                                            {getOfflineOrderStatusText(status)}
-                                        </Text>
-                                    </Pressable>
-                                ))}
+                    {!isOfflineOrder && (
+                        <View style={styles.customerSection}>
+                            <View style={styles.infoCard}>
+                                <Text style={styles.cardTitle}>Thông tin khách hàng</Text>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>Tên:</Text>
+                                    <Text style={styles.value}>{selectedOrder.eater?.name || 'N/A'}</Text>
+                                </View>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>SĐT:</Text>
+                                    <Text style={styles.value}>{selectedOrder.eater?.mobileNumber || 'N/A'}</Text>
+                                </View>
+                                {selectedOrder.eater?.address && (
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.label}>Địa chỉ:</Text>
+                                        <Text style={styles.value}>{selectedOrder.eater.address.address}</Text>
+                                    </View>
+                                )}
+                                {selectedOrder.eater?.comment && (
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.label}>Ghi chú:</Text>
+                                        <Text style={styles.value}>{selectedOrder.eater.comment}</Text>
+                                    </View>
+                                )}
                             </View>
                         </View>
                     )}
 
-                    <View style={styles.actionButtons}>
-                        <Pressable style={[styles.actionButton, styles.printButton]} onPress={() => onPrintTem(selectedOrder)}>
-                            <Text style={styles.actionButtonText}>In Tem</Text>
-                        </Pressable>
-                        <Pressable style={[styles.actionButton, styles.printButton]} onPress={() => onPrintBill(selectedOrder)}>
-                            <Text style={styles.actionButtonText}>In Hoá Đơn</Text>
-                        </Pressable>
-                        <Pressable style={[styles.actionButton, styles.closeButton]} onPress={onClose}>
-                            <Text style={styles.actionButtonText}>Đóng</Text>
-                        </Pressable>
-                    </View>
+                    {!isOfflineOrder && selectedOrder.driver && (
+                        <View style={styles.driverSection}>
+                            <View style={styles.infoCard}>
+                                <Text style={styles.cardTitle}>Thông tin tài xế</Text>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>Tên:</Text>
+                                    <Text style={styles.value}>{selectedOrder.driver.name}</Text>
+                                </View>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>SĐT:</Text>
+                                    <Text style={styles.value}>{selectedOrder.driver.mobileNumber}</Text>
+                                </View>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Add spacing for docked buttons */}
+                    <View style={styles.bottomSpacer} />
                 </ScrollView>
+
+                {/* Docked Action Buttons */}
+                <View style={styles.dockedActions}>
+                    <Pressable
+                        style={[styles.dockedButton, styles.printTemButton]}
+                        onPress={() => onPrintTem(selectedOrder)}
+                    >
+                        <Text style={styles.dockedButtonText}>🏷️ In Tem</Text>
+                    </Pressable>
+                    <Pressable
+                        style={[styles.dockedButton, styles.printBillButton]}
+                        onPress={() => onPrintBill(selectedOrder)}
+                    >
+                        <Text style={styles.dockedButtonText}>🧾 In HĐ</Text>
+                    </Pressable>
+                    <Pressable
+                        style={[styles.dockedButton, styles.closeButton]}
+                        onPress={onClose}
+                    >
+                        <Text style={styles.dockedButtonText}>✕ Đóng</Text>
+                    </Pressable>
+                </View>
             </View>
         </Modal>
     );
@@ -369,196 +408,282 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modalContent: {
-        width: "90%",
-        maxWidth: 500,
+        width: "95%",
+        maxWidth: 520,
+        height: "90%",
         backgroundColor: "#fff",
-        borderRadius: 10,
-        maxHeight: "90%",
-    },
-    modalScrollContent: {
-        padding: 20,
+        borderRadius: 12,
+        overflow: 'hidden',
     },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 20,
-        paddingBottom: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        padding: 16,
+        backgroundColor: '#8B4513',
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
     },
     modalTitle: {
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: "bold",
+        color: '#fff',
+    },
+    scrollView: {
+        flex: 1,
+    },
+    modalScrollContent: {
+        padding: 16,
+    },
+    bottomSpacer: {
+        height: 80, // Space for docked buttons
+    },
+    infoCard: {
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: '#8B4513',
+        marginBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F5F5F5',
+        paddingBottom: 8,
     },
     orderInfoSection: {
-        marginBottom: 20,
-        padding: 15,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
+        marginBottom: 12,
     },
     detailRow: {
         flexDirection: "row",
         justifyContent: "space-between",
+        alignItems: 'center',
         paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F8F8F8',
     },
     label: {
         fontWeight: "600",
         color: '#666',
+        fontSize: 14,
     },
     value: {
         fontWeight: "500",
+        color: '#333',
+        fontSize: 14,
+        textAlign: 'right',
+        flex: 1,
+        marginLeft: 16,
     },
     itemsSection: {
-        marginBottom: 20,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 10,
+        marginBottom: 12,
     },
     itemRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        paddingVertical: 10,
+        paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: '#F0F0F0',
     },
     itemInfo: {
         flex: 1,
+        paddingRight: 12,
     },
     itemName: {
-        fontSize: 16,
-        fontWeight: "500",
+        fontSize: 15,
+        fontWeight: "600",
+        color: '#333',
+        marginBottom: 4,
     },
     itemNote: {
-        fontSize: 14,
-        color: '#666',
+        fontSize: 13,
+        color: '#8B4513',
         fontStyle: 'italic',
         marginTop: 4,
+        backgroundColor: '#FFF8F0',
+        padding: 4,
+        borderRadius: 4,
     },
     itemQuantity: {
         alignItems: 'flex-end',
+        justifyContent: 'center',
+        minWidth: 80,
     },
     quantityText: {
         fontSize: 16,
         fontWeight: "bold",
-        color: '#666',
+        color: '#8B4513',
     },
     itemPrice: {
         fontSize: 14,
         color: '#666',
         marginTop: 4,
-    },
-    summarySection: {
-        marginTop: 20,
-        padding: 15,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
+        fontWeight: '600',
     },
     summaryRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        paddingVertical: 8,
+        paddingVertical: 12,
+        borderTopWidth: 2,
+        borderTopColor: '#8B4513',
+        marginTop: 12,
     },
     summaryLabel: {
-        fontWeight: "600",
-        color: '#666',
+        fontWeight: "bold",
+        color: '#8B4513',
+        fontSize: 16,
     },
     summaryValue: {
         fontWeight: "bold",
-    },
-    actionButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-        gap: 10,
-    },
-    actionButton: {
-        flex: 1,
-        padding: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    actionButtonText: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 16,
-    },
-    printButton: {
-        backgroundColor: "#FF9800",
-    },
-    closeButton: {
-        backgroundColor: "#2196F3",
+        color: '#8B4513',
+        fontSize: 18,
     },
     customerSection: {
-        marginBottom: 20,
-        padding: 15,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
+        marginBottom: 12,
     },
     driverSection: {
-        marginBottom: 20,
-        padding: 15,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
+        marginBottom: 12,
     },
     modifierGroup: {
-        marginTop: 8,
+        marginTop: 4,
         marginLeft: 8,
-    },
-    modifierGroupName: {
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '500',
-        marginBottom: 4,
     },
     modifierName: {
-        fontSize: 13,
-        color: '#666',
-        marginLeft: 8,
+        fontSize: 12,
+        color: '#8B4513',
         marginBottom: 2,
+        backgroundColor: '#FFF8F0',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 3,
+        alignSelf: 'flex-start',
     },
     badge: {
-        paddingVertical: 5,
-        paddingHorizontal: 10,
-        borderRadius: 10,
-        alignSelf: "center",
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 12,
+        alignSelf: "flex-start",
     },
     badgeText: {
-        color: "#fff",
+        fontSize: 12,
         fontWeight: "bold",
         textAlign: "center",
     },
     statusChangeSection: {
-        marginBottom: 20,
-        padding: 15,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
+        marginBottom: 12,
     },
-    statusButtons: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-        marginTop: 10,
-    },
-    statusChangeButton: {
-        flex: 1,
-        minWidth: 120,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        borderWidth: 2,
-        alignItems: 'center',
-        justifyContent: 'center',
+    statusControlContainer: {
+        marginTop: 8,
     },
     currentStatusButton: {
-        opacity: 0.5,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: '#F8F8F8',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
     },
-    statusChangeButtonText: {
-        fontWeight: '600',
+    currentStatusText: {
         fontSize: 14,
+        fontWeight: '600',
+        color: '#333',
+    },
+    dropdownArrow: {
+        fontSize: 12,
+        color: '#8B4513',
+    },
+    statusOptions: {
+        marginTop: 8,
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        overflow: 'hidden',
+    },
+    statusOption: {
+        padding: 12,
+        borderLeftWidth: 4,
+        backgroundColor: '#FAFAFA',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    statusOptionText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    quickStatusButton: {
+        marginTop: 8,
+        padding: 10,
+        borderRadius: 6,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+    },
+    quickStatusButtonText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    finalStatusContainer: {
+        padding: 12,
+        backgroundColor: '#F0F8F0',
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#4CAF50',
+        marginTop: 8,
+    },
+    finalStatusText: {
+        fontSize: 14,
+        color: '#2E7D32',
         textAlign: 'center',
+        fontWeight: '500',
+    },
+    dockedActions: {
+        flexDirection: 'row',
+        backgroundColor: '#F5F5F5',
+        borderTopWidth: 1,
+        borderTopColor: '#E0E0E0',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 8,
+    },
+    dockedButton: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+    },
+    dockedButtonText: {
+        color: "#fff",
+        fontWeight: "bold",
+        fontSize: 13,
+        textAlign: 'center',
+    },
+    printTemButton: {
+        backgroundColor: "#FF9800",
+    },
+    printBillButton: {
+        backgroundColor: "#4CAF50",
+    },
+    closeButton: {
+        backgroundColor: "#757575",
     },
 });
 

@@ -133,6 +133,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
             case "Paymented": return "#2196F3";           // Blue
             case "WaitingForServe": return "#FF9800";     // Orange
             case "Completed": return "#4CAF50";           // Green
+            case "Canceled": return "#F44336";            // Red
             default: return "#9E9E9E";                    // Grey
         }
     };
@@ -143,6 +144,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
             case "Paymented": return "#E3F2FD";          // Light Blue
             case "WaitingForServe": return "#FFF3E0";     // Light Orange
             case "Completed": return "#E8F5E9";          // Light Green
+            case "Canceled": return "#FFEBEE";           // Light Red
             default: return "#F5F5F5";                   // Light Grey
         }
     };
@@ -153,6 +155,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
             case "Paymented": return "Đã thanh toán";
             case "WaitingForServe": return "Chờ phục vụ";
             case "Completed": return "Hoàn thành";
+            case "Canceled": return "Hủy";
             default: return "Mới tạo";
         }
     };

@@ -850,11 +850,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgInput,
     borderRadius: 8,
     padding: 4,
+    maxWidth: 200,
   },
   tabButton: {
     flex: 1,
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     borderRadius: 6,
     alignItems: 'center',
   },

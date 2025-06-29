@@ -99,6 +99,7 @@ const Invoice = () => {
             case "Paymented": return "Đã thanh toán";
             case "WaitingForServe": return "Chờ phục vụ";
             case "Completed": return "Hoàn thành";
+            case "Canceled": return "Hủy";
             default: return "Không xác định";
         }
     };
@@ -150,7 +151,7 @@ const Invoice = () => {
                         {/* Status Filter Row */}
                         <View style={styles.filterRow}>
                             <View style={styles.statusFilters}>
-                                {['all', 'Paymented', 'WaitingForServe', 'Completed'].map(status => (
+                                {['all', 'WaitingForPayment', 'Paymented', 'WaitingForServe', 'Completed', 'Canceled'].map(status => (
                                     <TouchableOpacity
                                         key={status}
                                         style={[
