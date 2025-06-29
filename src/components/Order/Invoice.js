@@ -4,7 +4,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from 'store/async_storage/index';
 import OfflineOrderTable from './OfflineOrderTable';
-import StoreSelectionDialog from './StoreSelectionDialog';
 import Colors from 'theme/Colors';
 import { TextNormal } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
@@ -14,8 +13,7 @@ import { getPendingSyncLoadingSelector, getPendingSyncErrorSelector } from 'stor
 const Invoice = () => {
     const dispatch = useDispatch();
     const [data, setData] = useState([]);
-    const [storeDialogVisible, setStoreDialogVisible] = useState(false);
-    const [selectedStore, setSelectedStore] = useState(null);
+    const [userShop, setUserShop] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [printedLabels, setPrintedLabels] = useState([]);
     const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
@@ -70,28 +68,21 @@ const Invoice = () => {
         }
     }, [selectedStatusFilter]);
 
-    const loadSelectedStore = async () => {
-        const storeInfo = await AsyncStorage.getSelectedStore();
-        if (storeInfo) {
-            setSelectedStore(storeInfo);
-        } else {
-            setStoreDialogVisible(true);
+    const loadUserShop = async () => {
+        const user = await AsyncStorage.getUser();
+        if (user && user.shops) {
+            setUserShop(user.shops);
         }
     };
 
     useEffect(() => {
-        loadSelectedStore();
+        loadUserShop();
     }, []);
 
     useEffect(() => {
         // Initial fetch when component mounts
         fetchOfflineOrders();
     }, [fetchOfflineOrders]);
-
-    const handleStoreSelect = (store) => {
-        setSelectedStore(store);
-        setStoreDialogVisible(false);
-    };
 
     const handleSyncOfflineOrders = () => {
         dispatch(syncPendingOrdersAction());
@@ -138,15 +129,11 @@ const Invoice = () => {
                         <View style={styles.headerRow}>
                             <TextNormal style={styles.headerTitle}>Hóa Đơn Offline</TextNormal>
                             <View style={styles.headerActions}>
-                                <TouchableOpacity
-                                    style={[styles.actionButton, { opacity: isLoading ? 0.5 : 1 }]}
-                                    onPress={() => !isLoading && setStoreDialogVisible(true)}
-                                    disabled={isLoading}
-                                >
+                                <View style={styles.actionButton}>
                                     <TextNormal style={styles.actionText}>
-                                        {selectedStore ? selectedStore.name : 'Chọn cửa hàng'}
+                                        {userShop ? userShop.name_vn : 'Loading...'}
                                     </TextNormal>
-                                </TouchableOpacity>
+                                </View>
                                 <TouchableOpacity
                                     style={[styles.actionButton, { opacity: (isLoading || pendingSyncLoading) ? 0.5 : 1 }]}
                                     onPress={() => !(isLoading || pendingSyncLoading) && handleSyncOfflineOrders()}
@@ -202,12 +189,6 @@ const Invoice = () => {
                     )}
                 </View>
             </SafeAreaView>
-
-            <StoreSelectionDialog
-                visible={storeDialogVisible}
-                onClose={() => setStoreDialogVisible(false)}
-                onStoreSelect={handleStoreSelect}
-            />
             <Toast />
         </>
     );

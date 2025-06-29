@@ -17,7 +17,6 @@ import Colors from 'theme/Colors';
 import OrderTable from './OrderTable';
 import Modal from 'react-native-modal';
 import AsyncStorage from 'store/async_storage/index'
-import StoreSelectionDialog from './StoreSelectionDialog';
 
 const orderFilters = [
   { id: 1, name: 'Đơn mới' },
@@ -28,17 +27,24 @@ const Orders = () => {
   const [data, setData] = useState([]);
   const [orderType, setOrderType] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
-  const [storeDialogVisible, setStoreDialogVisible] = useState(false);
+
+  // Label printer settings
   const [ip, setIP] = useState("");
   const [sWidth, setSWidth] = useState(50);
   const [sHeight, setSHeight] = useState(30);
+  const [autoPrint, setAutoPrint] = useState(false);
+
+  // Bill printer settings
+  const [billIP, setBillIP] = useState("");
+  const [billWidth, setBillWidth] = useState(80);
+
   const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
-  const [autoPrint, setAutoPrint] = useState(false);
-  const [selectedStore, setSelectedStore] = useState(null);
+  const [userShop, setUserShop] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [printerType, setPrinterType] = useState('label'); // 'label' or 'bill'
 
   const formatDate = (date) => {
     return date.toLocaleDateString('en-GB', {
@@ -49,8 +55,8 @@ const Orders = () => {
   };
 
   const fetchOrders = useCallback(async () => {
-    if (!selectedStore) {
-      setStoreDialogVisible(true);
+    if (!userShop) {
+      console.log('No user shop data available');
       return;
     }
 
@@ -65,9 +71,9 @@ const Orders = () => {
     try {
       if (orderType === 1) {
         const res = await orderController.fetchOrder({
-          branch_id: selectedStore.branch_id,
-          brand_id: selectedStore.brand_id,
-          merchant_id: selectedStore.merchant_id,
+          branch_id: userShop.id,
+          brand_id: userShop.partnerid,
+          merchant_id: userShop.partnerid,
           service: "GRAB",
         });
 
@@ -83,9 +89,9 @@ const Orders = () => {
       } else {
         const formattedDate = formatDate(selectedDate);
         const res = await orderController.fetchOrderHistory({
-          branch_id: selectedStore.branch_id,
-          brand_id: selectedStore.brand_id,
-          merchant_id: selectedStore.merchant_id,
+          branch_id: userShop.id,
+          brand_id: userShop.partnerid,
+          merchant_id: userShop.partnerid,
           from_at: formattedDate,
           to_at: formattedDate,
           page: 1,
@@ -99,10 +105,10 @@ const Orders = () => {
             const orderDetailsPromises = statements.map(statement =>
               orderController.getOrderDetail({
                 order_id: statement.ID,
-                branch_id: selectedStore.branch_id,
-                brand_id: selectedStore.brand_id,
+                branch_id: userShop.id,
+                brand_id: userShop.partnerid,
                 service: "GRAB",
-                merchant_id: selectedStore.merchant_id,
+                merchant_id: userShop.partnerid,
               })
             );
             const orderDetailsResults = await Promise.all(orderDetailsPromises);
@@ -137,24 +143,24 @@ const Orders = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedStore, orderType, selectedDate, isLoading]);
+  }, [userShop, orderType, selectedDate, isLoading]);
 
-  const loadSelectedStore = async () => {
-    const storeInfo = await AsyncStorage.getSelectedStore();
-    if (storeInfo) {
-      setSelectedStore(storeInfo);
-      console.log('storeInfo', storeInfo);
+  const loadUserShop = async () => {
+    const user = await AsyncStorage.getUser();
+    if (user && user.shops) {
+      setUserShop(user.shops);
+      console.log('Orders: User shop loaded:', user.shops);
     } else {
-      setStoreDialogVisible(true);
+      console.log('Orders: No user shop data found');
     }
   };
 
   useEffect(() => {
-    loadSelectedStore();
+    loadUserShop();
   }, []);
 
   useEffect(() => {
-    if (selectedStore) {
+    if (userShop) {
       // Initial fetch
       fetchOrders();
       if (orderType !== 1) {
@@ -168,25 +174,24 @@ const Orders = () => {
       }, 30000);
       // Clean up interval on component unmount
       return () => clearInterval(intervalId);
-    } else {
-      loadSelectedStore();
     }
-  }, [selectedStore, orderType, selectedDate]);
+  }, [userShop, orderType, selectedDate]);
 
   useEffect(() => {
     AsyncStorage.getPrinterInfo().then((printerInfo) => {
       if (printerInfo) {
-        setIP(printerInfo.IP)
-        setSWidth(printerInfo.sWidth)
-        setSHeight(printerInfo.sHeight)
+        // Label printer settings
+        setIP(printerInfo.IP || "")
+        setSWidth(printerInfo.sWidth || 50)
+        setSHeight(printerInfo.sHeight || 30)
         setAutoPrint(printerInfo.autoPrint || false)
+
+        // Bill printer settings
+        setBillIP(printerInfo.billIP || printerInfo.IP || "")
+        setBillWidth(printerInfo.billWidth || 80)
       }
     })
   }, [])
-
-  const handleStoreSelect = (store) => {
-    setSelectedStore(store);
-  };
 
   const renderFilter = ({ item, index }) => {
     return (
@@ -218,17 +223,30 @@ const Orders = () => {
 
   const validateForm = () => {
     const newErrors = {};
+
+    // Validate label printer settings
     if (!ip) {
-      newErrors.ip = 'Vui lòng nhập địa chỉ IP';
+      newErrors.ip = 'Vui lòng nhập địa chỉ IP máy in tem';
     } else if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
       newErrors.ip = 'Định dạng địa chỉ IP không hợp lệ';
     }
     if (!sWidth || isNaN(sWidth) || sWidth <= 0) {
-      newErrors.sWidth = 'Chiều rộng phải là số dương';
+      newErrors.sWidth = 'Chiều rộng tem phải là số dương';
     }
     if (!sHeight || isNaN(sHeight) || sHeight <= 0) {
-      newErrors.sHeight = 'Chiều cao phải là số dương';
+      newErrors.sHeight = 'Chiều cao tem phải là số dương';
     }
+
+    // Validate bill printer settings
+    if (!billIP) {
+      newErrors.billIP = 'Vui lòng nhập địa chỉ IP máy in bill';
+    } else if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(billIP)) {
+      newErrors.billIP = 'Định dạng địa chỉ IP không hợp lệ';
+    }
+    if (!billWidth || isNaN(billWidth) || billWidth <= 0) {
+      newErrors.billWidth = 'Chiều rộng bill phải là số dương';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -239,14 +257,19 @@ const Orders = () => {
     setIsSaving(true);
     try {
       await AsyncStorage.setPrinterInfo({
+        // Label printer settings
         IP: ip,
         sWidth: parseInt(sWidth),
         sHeight: parseInt(sHeight),
-        autoPrint: autoPrint
+        autoPrint: autoPrint,
+
+        // Bill printer settings
+        billIP: billIP,
+        billWidth: parseInt(billWidth)
       });
       Toast.show({
         type: 'success',
-        text1: 'Lưu cài đặt thành công',
+        text1: 'Lưu cài đặt máy in thành công',
         position: 'bottom',
       });
       setModalVisible(false);
@@ -268,8 +291,6 @@ const Orders = () => {
       setSelectedDate(selectedDate);
     }
   };
-
-
 
   return (
     <>
@@ -299,21 +320,36 @@ const Orders = () => {
                   />
                 </View>
                 <View style={styles.actionContainer}>
-                  <TouchableOpacity
-                    style={[styles.actionButton, { opacity: isLoading ? 0.5 : 1 }]}
-                    onPress={() => !isLoading && setStoreDialogVisible(true)}
-                    disabled={isLoading}
-                  >
+                  <View style={styles.actionButton}>
                     <TextNormal style={styles.actionButtonText}>
-                      {selectedStore ? selectedStore.name : 'Select Store'}
+                      {userShop ? userShop.name_vn : 'Loading...'}
                     </TextNormal>
-                  </TouchableOpacity>
+                  </View>
                   <TouchableOpacity
                     style={[styles.actionButton, { opacity: isLoading ? 0.5 : 1 }]}
-                    onPress={() => !isLoading && setModalVisible(true)}
+                    onPress={() => {
+                      if (!isLoading) {
+                        setPrinterType('label');
+                        setModalVisible(true);
+                      }
+                    }}
                     disabled={isLoading}
                   >
                     <Svg name={'printer'} size={40} color={'transparent'} />
+                    <TextNormal style={styles.actionButtonText}>In tem</TextNormal>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionButton, { opacity: isLoading ? 0.5 : 1 }]}
+                    onPress={() => {
+                      if (!isLoading) {
+                        setPrinterType('bill');
+                        setModalVisible(true);
+                      }
+                    }}
+                    disabled={isLoading}
+                  >
+                    <Svg name={'printer'} size={40} color={'transparent'} />
+                    <TextNormal style={styles.actionButtonText}>In bill</TextNormal>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -370,77 +406,142 @@ const Orders = () => {
               <View style={styles.modalContainer}>
                 <View style={styles.modalHeader}>
                   <TextNormal style={styles.modalTitle}>{"Thiết lập máy in"}</TextNormal>
+                  <View style={styles.tabContainer}>
+                    <TouchableOpacity
+                      style={[styles.tabButton, printerType === 'label' && styles.activeTab]}
+                      onPress={() => setPrinterType('label')}
+                    >
+                      <TextNormal style={[styles.tabText, printerType === 'label' && styles.activeTabText]}>
+                        {"In tem"}
+                      </TextNormal>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.tabButton, printerType === 'bill' && styles.activeTab]}
+                      onPress={() => setPrinterType('bill')}
+                    >
+                      <TextNormal style={[styles.tabText, printerType === 'bill' && styles.activeTabText]}>
+                        {"In bill"}
+                      </TextNormal>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 <View style={styles.modalContent}>
-                  <View style={styles.inputGroup}>
-                    <TextNormal style={styles.label}>{"Địa chỉ IP máy in"}</TextNormal>
-                    <View style={[styles.inputContainer, errors.ip && styles.inputError]}>
-                      <TextInput
-                        placeholder="Ví dụ: 192.168.1.100"
-                        value={ip}
-                        onChangeText={(text) => {
-                          setIP(text);
-                          setErrors(prev => ({ ...prev, ip: null }));
-                        }}
-                        style={styles.input}
-                        keyboardType="numeric"
-                        placeholderTextColor={Colors.textSecondary}
-                      />
-                    </View>
-                    {errors.ip && <Text style={styles.errorText}>{errors.ip}</Text>}
-                  </View>
+                  {printerType === 'label' ? (
+                    // Label Printer Settings
+                    <>
+                      <View style={styles.inputGroup}>
+                        <TextNormal style={styles.label}>{"Địa chỉ IP máy in tem"}</TextNormal>
+                        <View style={[styles.inputContainer, errors.ip && styles.inputError]}>
+                          <TextInput
+                            placeholder="Ví dụ: 192.168.1.100"
+                            value={ip}
+                            onChangeText={(text) => {
+                              setIP(text);
+                              setErrors(prev => ({ ...prev, ip: null }));
+                            }}
+                            style={styles.input}
+                            keyboardType="numeric"
+                            placeholderTextColor={Colors.textSecondary}
+                          />
+                        </View>
+                        {errors.ip && <Text style={styles.errorText}>{errors.ip}</Text>}
+                      </View>
 
-                  <View style={styles.inputGroup}>
-                    <TextNormal style={styles.label}>{"Chiều rộng giấy (mm)"}</TextNormal>
-                    <View style={[styles.inputContainer, errors.sWidth && styles.inputError]}>
-                      <TextInput
-                        placeholder="Ví dụ: 50"
-                        value={sWidth.toString()}
-                        onChangeText={(text) => {
-                          setSWidth(text);
-                          setErrors(prev => ({ ...prev, sWidth: null }));
-                        }}
-                        style={styles.input}
-                        keyboardType="numeric"
-                        placeholderTextColor={Colors.textSecondary}
-                      />
-                    </View>
-                    {errors.sWidth && <Text style={styles.errorText}>{errors.sWidth}</Text>}
-                  </View>
-                  <View style={styles.inputGroup}>
-                    <TextNormal style={styles.label}>{"Chiều cao giấy (mm)"}</TextNormal>
-                    <View style={[styles.inputContainer, errors.sHeight && styles.inputError]}>
-                      <TextInput
-                        placeholder="Ví dụ: 30"
-                        value={sHeight.toString()}
-                        onChangeText={(text) => {
-                          setSHeight(text);
-                          setErrors(prev => ({ ...prev, sHeight: null }));
-                        }}
-                        style={styles.input}
-                        keyboardType="numeric"
-                        placeholderTextColor={Colors.textSecondary}
-                      />
-                    </View>
-                    {errors.sHeight && <Text style={styles.errorText}>{errors.sHeight}</Text>}
-                  </View>
+                      <View style={styles.inputGroup}>
+                        <TextNormal style={styles.label}>{"Chiều rộng tem (mm)"}</TextNormal>
+                        <View style={[styles.inputContainer, errors.sWidth && styles.inputError]}>
+                          <TextInput
+                            placeholder="Ví dụ: 50"
+                            value={sWidth.toString()}
+                            onChangeText={(text) => {
+                              setSWidth(text);
+                              setErrors(prev => ({ ...prev, sWidth: null }));
+                            }}
+                            style={styles.input}
+                            keyboardType="numeric"
+                            placeholderTextColor={Colors.textSecondary}
+                          />
+                        </View>
+                        {errors.sWidth && <Text style={styles.errorText}>{errors.sWidth}</Text>}
+                      </View>
 
-                  <View style={styles.toggleGroup}>
-                    <View style={styles.toggleLabelContainer}>
-                      <TextNormal style={styles.label}>{"Tự động in đơn mới"}</TextNormal>
-                      <Text style={styles.toggleDescription}>
-                        {"Tự động in hóa đơn khi có đơn hàng mới"}
-                      </Text>
-                    </View>
-                    <Switch
-                      value={autoPrint}
-                      onValueChange={setAutoPrint}
-                      trackColor={{ false: Colors.border, true: Colors.primary }}
-                      thumbColor={Colors.whiteColor}
-                      ios_backgroundColor={Colors.border}
-                    />
-                  </View>
+                      <View style={styles.inputGroup}>
+                        <TextNormal style={styles.label}>{"Chiều cao tem (mm)"}</TextNormal>
+                        <View style={[styles.inputContainer, errors.sHeight && styles.inputError]}>
+                          <TextInput
+                            placeholder="Ví dụ: 30"
+                            value={sHeight.toString()}
+                            onChangeText={(text) => {
+                              setSHeight(text);
+                              setErrors(prev => ({ ...prev, sHeight: null }));
+                            }}
+                            style={styles.input}
+                            keyboardType="numeric"
+                            placeholderTextColor={Colors.textSecondary}
+                          />
+                        </View>
+                        {errors.sHeight && <Text style={styles.errorText}>{errors.sHeight}</Text>}
+                      </View>
+
+                      <View style={styles.toggleGroup}>
+                        <View style={styles.toggleLabelContainer}>
+                          <TextNormal style={styles.label}>{"Tự động in tem"}</TextNormal>
+                          <Text style={styles.toggleDescription}>
+                            {"Tự động in tem khi có đơn hàng mới"}
+                          </Text>
+                        </View>
+                        <Switch
+                          value={autoPrint}
+                          onValueChange={setAutoPrint}
+                          trackColor={{ false: Colors.border, true: Colors.primary }}
+                          thumbColor={Colors.whiteColor}
+                          ios_backgroundColor={Colors.border}
+                        />
+                      </View>
+                    </>
+                  ) : (
+                    // Bill Printer Settings
+                    <>
+                      <View style={styles.inputGroup}>
+                        <TextNormal style={styles.label}>{"Địa chỉ IP máy in bill"}</TextNormal>
+                        <View style={[styles.inputContainer, errors.billIP && styles.inputError]}>
+                          <TextInput
+                            placeholder="Ví dụ: 192.168.1.101"
+                            value={billIP}
+                            onChangeText={(text) => {
+                              setBillIP(text);
+                              setErrors(prev => ({ ...prev, billIP: null }));
+                            }}
+                            style={styles.input}
+                            keyboardType="numeric"
+                            placeholderTextColor={Colors.textSecondary}
+                          />
+                        </View>
+                        {errors.billIP && <Text style={styles.errorText}>{errors.billIP}</Text>}
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <TextNormal style={styles.label}>{"Chiều rộng bill (mm)"}</TextNormal>
+                        <View style={[styles.inputContainer, errors.billWidth && styles.inputError]}>
+                          <TextInput
+                            placeholder="Ví dụ: 80"
+                            value={billWidth.toString()}
+                            onChangeText={(text) => {
+                              setBillWidth(text);
+                              setErrors(prev => ({ ...prev, billWidth: null }));
+                            }}
+                            style={styles.input}
+                            keyboardType="numeric"
+                            placeholderTextColor={Colors.textSecondary}
+                          />
+                        </View>
+                        {errors.billWidth && <Text style={styles.errorText}>{errors.billWidth}</Text>}
+                      </View>
+
+
+                    </>
+                  )}
                 </View>
 
                 <View style={styles.modalFooter}>
@@ -474,11 +575,6 @@ const Orders = () => {
           </View>
         </View>
       </SafeAreaView>
-      <StoreSelectionDialog
-        visible={storeDialogVisible}
-        onClose={() => setStoreDialogVisible(false)}
-        onStoreSelect={handleStoreSelect}
-      />
       <Toast />
     </>
   );
@@ -748,6 +844,38 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderColor: 'gray',
     paddingLeft: 10,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: Colors.bgInput,
+    borderRadius: 8,
+    padding: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: Colors.whiteColor,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+  },
+  activeTabText: {
+    color: Colors.textPrimary,
   },
 });
 

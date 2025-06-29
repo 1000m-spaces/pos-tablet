@@ -10,47 +10,32 @@ import AsyncStorage from 'store/async_storage/index';
 import DrawerContent from './DrawerContent';
 import { useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
-import StoreSelectionDialog from '../Order/StoreSelectionDialog';
 
 const Main = () => {
   const currentScreen = useSelector(state => screenSelector(state));
-  const [showStoreDialog, setShowStoreDialog] = useState(false);
-  const [selectedStore, setSelectedStore] = useState(null);
+  const [userShop, setUserShop] = useState(null);
 
   console.log('Main: Current screen from selector:', currentScreen);
 
   useEffect(() => {
-    const checkStoreSelection = async () => {
-      const storeInfo = await AsyncStorage.getSelectedStore();
-      console.log('Main: Store info:', storeInfo);
-      if (!storeInfo) {
-        setShowStoreDialog(true);
-      } else {
-        setSelectedStore(storeInfo);
+    const loadUserShop = async () => {
+      const user = await AsyncStorage.getUser();
+      console.log('Main: User data:', user);
+      if (user && user.shops) {
+        setUserShop(user.shops);
+        console.log('Main: User shop loaded:', user.shops);
       }
     };
-    checkStoreSelection();
+    loadUserShop();
   }, []);
 
-  const handleStoreSelect = async (store) => {
-    console.log('Main: Store selected:', store);
-    setSelectedStore(store);
-    await AsyncStorage.setSelectedStore(store);
-    setShowStoreDialog(false);
-  };
-
-  if (!selectedStore) {
-    console.log('Main: No store selected, showing store dialog');
-    return (
-      <StoreSelectionDialog
-        visible={showStoreDialog}
-        onClose={() => { }} // Prevent closing without selection
-        onStoreSelect={handleStoreSelect}
-      />
-    );
+  // Don't render anything until we have user shop data
+  if (!userShop) {
+    console.log('Main: No user shop data, waiting...');
+    return null;
   }
 
-  console.log('Main: Rendering drawer navigator with selected store:', selectedStore?.name);
+  console.log('Main: Rendering drawer navigator with user shop:', userShop?.name_vn);
 
   return (
     <>

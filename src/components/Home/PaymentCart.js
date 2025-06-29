@@ -71,9 +71,9 @@ const PaymentCart = () => {
       items,
       items_limit: 2,
       order_limit: 99000,
-      shopowner_id: 124,
-      partner_id: 110,
-      rest_id: 248,
+      shopowner_id: user?.shopownerid || "130",
+      partner_id: user?.partnerid || "110",
+      rest_id: user?.shops?.id || user?.shifts?.rest_id || "246",
       used_for: 2,
     };
     console.log('body voucher::', body);
@@ -215,9 +215,9 @@ const PaymentCart = () => {
         perDiscount: 0,
         session: session,
         offlineOrderId: offlineOrderId, // 6-character sorted order ID
-        shopid: user?.shop_id || "246", // Default shop ID
-        userid: user?.id || "1752", // Default user ID
-        roleid: user?.role_id || "4", // Default role ID
+        shopid: user?.shops?.id || user?.shopid || "246",
+        userid: user?.userid || "1752",
+        roleid: user?.roleid || "4",
         timestamp: new Date().toISOString(),
         status: "pending",
         orderStatus: "Paymented", // Default to Paymented for cash orders

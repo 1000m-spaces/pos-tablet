@@ -8,27 +8,19 @@ import {
 import Colors from 'theme/Colors';
 import Svg from 'common/Svg/Svg';
 import AsyncStorage from 'store/async_storage/index';
-import StoreSelectionDialog from '../Order/StoreSelectionDialog';
 
 const Header = ({ navigation, productMenu, currentCate, setCurrentCate }) => {
-  const [selectedStore, setSelectedStore] = useState(null);
-  const [showStoreDialog, setShowStoreDialog] = useState(false);
+  const [userShop, setUserShop] = useState(null);
 
   useEffect(() => {
-    const loadSelectedStore = async () => {
-      const storeInfo = await AsyncStorage.getSelectedStore();
-      if (storeInfo) {
-        setSelectedStore(storeInfo);
+    const loadUserShop = async () => {
+      const user = await AsyncStorage.getUser();
+      if (user && user.shops) {
+        setUserShop(user.shops);
       }
     };
-    loadSelectedStore();
+    loadUserShop();
   }, []);
-
-  const handleStoreSelect = async (store) => {
-    setSelectedStore(store);
-    await AsyncStorage.setSelectedStore(store);
-    setShowStoreDialog(false);
-  };
 
   const renderTabCate = ({ item, index }) => {
     return (
@@ -57,14 +49,14 @@ const Header = ({ navigation, productMenu, currentCate, setCurrentCate }) => {
   return (
     <View style={styles.containerHeader}>
       <View style={styles.wrapperHeader}>
-        <TouchableOpacity onPress={() => setShowStoreDialog(true)}>
+        <View>
           <TextSemiBold style={styles.storeText}>
-            {selectedStore ? selectedStore.name : 'Select Store'}
+            {userShop ? userShop.name_vn : 'Loading...'}
           </TextSemiBold>
           <TextNormal style={styles.timeText}>
             {new Date().toLocaleDateString('vi-VN')}
           </TextNormal>
-        </TouchableOpacity>
+        </View>
         <TouchableOpacity style={styles.searchHeader}>
           <Svg name={'search'} size={20} />
           <TextNormal style={{ color: Colors.secondary }}>
@@ -82,11 +74,6 @@ const Header = ({ navigation, productMenu, currentCate, setCurrentCate }) => {
           paddingTop: 18,
         }}
         showsVerticalScrollIndicator={false}
-      />
-      <StoreSelectionDialog
-        visible={showStoreDialog}
-        onClose={() => setShowStoreDialog(false)}
-        onStoreSelect={handleStoreSelect}
       />
     </View>
   );

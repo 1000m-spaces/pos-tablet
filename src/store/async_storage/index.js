@@ -188,25 +188,7 @@ const getPrintedLabels = async () => {
   }
 };
 
-const setSelectedStore = async (store) => {
-  try {
-    await AsyncStorage.setItem('selectedStore', JSON.stringify(store));
-  } catch (error) {
-    console.log('Error saving selected store:', error);
-  }
-};
 
-const getSelectedStore = async () => {
-  try {
-    const value = await AsyncStorage.getItem('selectedStore');
-    if (value !== null) {
-      return JSON.parse(value);
-    }
-  } catch (error) {
-    console.log('Error getting selected store:', error);
-  }
-  return null;
-};
 
 const setPendingOrders = async (orders) => {
   try {
@@ -363,6 +345,47 @@ const getTableStatus = async (tableId) => {
   }
 };
 
+// Helper functions for specific printer settings
+const getLabelPrinterInfo = async () => {
+  try {
+    const printerInfo = await getPrinterInfo();
+    if (printerInfo) {
+      return {
+        IP: printerInfo.IP || "",
+        sWidth: printerInfo.sWidth || 50,
+        sHeight: printerInfo.sHeight || 30,
+        autoPrint: printerInfo.autoPrint || false
+      };
+    }
+  } catch (error) {
+    console.log('Error getting label printer info:', error);
+  }
+  return {
+    IP: "",
+    sWidth: 50,
+    sHeight: 30,
+    autoPrint: false
+  };
+};
+
+const getBillPrinterInfo = async () => {
+  try {
+    const printerInfo = await getPrinterInfo();
+    if (printerInfo) {
+      return {
+        billIP: printerInfo.billIP || printerInfo.IP || "",
+        billWidth: printerInfo.billWidth || 80
+      };
+    }
+  } catch (error) {
+    console.log('Error getting bill printer info:', error);
+  }
+  return {
+    billIP: "",
+    billWidth: 80
+  };
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -379,10 +402,10 @@ export default {
   clearStorage,
   setPrinterInfo,
   getPrinterInfo,
+  getLabelPrinterInfo,
+  getBillPrinterInfo,
   setPrintedLabels,
   getPrintedLabels,
-  setSelectedStore,
-  getSelectedStore,
   setPendingOrders,
   getPendingOrders,
   addPendingOrder,
