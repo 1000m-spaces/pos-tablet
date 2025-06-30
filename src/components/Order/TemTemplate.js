@@ -195,6 +195,12 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                                 </View>
                             )}
 
+                        {orderPrint.orderNote?.trim() !== '' && (
+                            <View style={styles.noteContainer}>
+                                <Text style={styles.noteText} numberOfLines={2}>{orderPrint.orderNote}</Text>
+                            </View>
+                        )}
+
                         {item.comment?.trim() !== '' && (
                             <View style={styles.noteContainer}>
                                 <Text style={styles.noteText} numberOfLines={2}>{item.comment}</Text>

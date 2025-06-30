@@ -189,6 +189,14 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.whiteColor,
     flex: 0.6,
+    paddingTop: 14, // Add top padding to align with header
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.btnDisabled,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     // height: heightDevice,
   },
   image: {

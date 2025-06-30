@@ -37,6 +37,7 @@ const Header = ({ navigation, productMenu, currentCate, setCurrentCate }) => {
           style={{
             fontWeight: currentCate === index ? '500' : '400',
             textTransform: 'capitalize',
+            fontSize: 14,
             color:
               currentCate === index ? Colors.whiteColor : Colors.inactiveText,
           }}>
@@ -58,8 +59,8 @@ const Header = ({ navigation, productMenu, currentCate, setCurrentCate }) => {
           </TextNormal>
         </View>
         <TouchableOpacity style={styles.searchHeader}>
-          <Svg name={'search'} size={20} />
-          <TextNormal style={{ color: Colors.secondary }}>
+          <Svg name={'search'} size={18} />
+          <TextNormal style={{ color: Colors.secondary, fontSize: 14 }}>
             {' Tìm kiếm món'}
           </TextNormal>
         </TouchableOpacity>
@@ -71,7 +72,7 @@ const Header = ({ navigation, productMenu, currentCate, setCurrentCate }) => {
         horizontal={true}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{
-          paddingTop: 18,
+          paddingTop: 12,
         }}
         showsVerticalScrollIndicator={false}
       />

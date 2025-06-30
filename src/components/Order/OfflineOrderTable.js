@@ -241,6 +241,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                             displayID: order.session, // Use session as display ID for offline orders
                             serviceType: 'offline', // Mark as offline order
                             tableName: order.shopTableName, // Include table name
+                            orderNote: order.orderNote || '', // Include order note for printing
                             itemInfo: {
                                 items: [{
                                     name: product.name,

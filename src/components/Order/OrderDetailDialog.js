@@ -179,6 +179,12 @@ const OrderDetailDialog = ({
                                     <Text style={styles.value}>{selectedOrder.shopTableName || 'Mang về'}</Text>
                                 </View>
                             )}
+                            {isOfflineOrder && selectedOrder.orderNote && selectedOrder.orderNote.trim() !== '' && (
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.label}>Ghi chú đơn:</Text>
+                                    <Text style={[styles.value]}>{selectedOrder.orderNote}</Text>
+                                </View>
+                            )}
                             <View style={styles.detailRow}>
                                 <Text style={styles.label}>Trạng thái:</Text>
                                 <Badge
@@ -483,6 +489,14 @@ const styles = StyleSheet.create({
         textAlign: 'right',
         flex: 1,
         marginLeft: 16,
+    },
+    orderNoteText: {
+        fontStyle: 'italic',
+        color: '#8B4513',
+        backgroundColor: '#FFF8F0',
+        padding: 8,
+        borderRadius: 4,
+        textAlign: 'left',
     },
     itemsSection: {
         marginBottom: 12,
