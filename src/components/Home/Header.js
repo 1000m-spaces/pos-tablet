@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { FlatList, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { FlatList, TouchableOpacity, View, TextInput } from 'react-native';
 import styles from './styles';
 import {
   TextNormal,
@@ -9,8 +9,9 @@ import Colors from 'theme/Colors';
 import Svg from 'common/Svg/Svg';
 import AsyncStorage from 'store/async_storage/index';
 
-const Header = ({ navigation, productMenu, currentCate, setCurrentCate }) => {
+const Header = ({ navigation, productMenu, currentCate, setCurrentCate, onSearchResults }) => {
   const [userShop, setUserShop] = useState(null);
+  const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
     const loadUserShop = async () => {
@@ -21,6 +22,40 @@ const Header = ({ navigation, productMenu, currentCate, setCurrentCate }) => {
     };
     loadUserShop();
   }, []);
+
+  // Filter products based on search text
+  const filteredProductMenu = useMemo(() => {
+    if (!searchText.trim()) {
+      return productMenu;
+    }
+
+    const searchLower = searchText.toLowerCase();
+
+    // Filter products across all categories
+    const filteredCategories = productMenu?.map(category => {
+      const filteredProducts = category.products?.filter(product =>
+        product.prodname?.toLowerCase().includes(searchLower)
+      ) || [];
+
+      return {
+        ...category,
+        products: filteredProducts
+      };
+    }).filter(category => category.products.length > 0);
+
+    return filteredCategories || [];
+  }, [productMenu, searchText]);
+
+  // Pass filtered results to parent component
+  useEffect(() => {
+    if (onSearchResults) {
+      onSearchResults(filteredProductMenu, searchText.trim() !== '');
+    }
+  }, [filteredProductMenu, searchText, onSearchResults]);
+
+  const handleSearchChange = (text) => {
+    setSearchText(text);
+  };
 
   const renderTabCate = ({ item, index }) => {
     return (
@@ -58,15 +93,29 @@ const Header = ({ navigation, productMenu, currentCate, setCurrentCate }) => {
             {new Date().toLocaleDateString('vi-VN')}
           </TextNormal>
         </View>
-        <TouchableOpacity style={styles.searchHeader}>
+        <View style={styles.searchHeader}>
           <Svg name={'search'} size={18} />
-          <TextNormal style={{ color: Colors.secondary, fontSize: 14 }}>
-            {' Tìm kiếm món'}
-          </TextNormal>
-        </TouchableOpacity>
+          <TextInput
+            style={{
+              color: Colors.secondary,
+              fontSize: 14,
+              flex: 1,
+              marginLeft: 8,
+              paddingVertical: 0,
+              paddingHorizontal: 4,
+              height: '100%'
+            }}
+            placeholder="Tìm kiếm món"
+            placeholderTextColor={Colors.secondary}
+            value={searchText}
+            onChangeText={handleSearchChange}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+        </View>
       </View>
       <FlatList
-        data={productMenu || []}
+        data={filteredProductMenu || []}
         keyExtractor={(_, idx) => idx}
         renderItem={renderTabCate}
         horizontal={true}

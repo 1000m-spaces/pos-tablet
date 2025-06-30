@@ -11,12 +11,16 @@ import Header from './Header';
 import DetailProduct from './DetailProduct';
 import Cart from './Cart';
 import TableSelector from './TableSelector';
+
 const Home = ({ navigation }) => {
   const dispatch = useDispatch();
   const productMenu = useSelector(state => productMenuSelector(state));
   const [showModal, setShowModal] = useState(-1);
   const [currentCate, setCurrentCate] = useState(0);
+  const [filteredProductMenu, setFilteredProductMenu] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const currentOrder = useSelector(state => currentOrderSelector(state));
+
   useEffect(() => {
     // Orientation.lockToLandscape();
     const initData = async () => {
@@ -36,19 +40,45 @@ const Home = ({ navigation }) => {
 
   console.log('productMenu', productMenu)
 
+  // Handle search results from Header component
+  const handleSearchResults = (filteredResults, searching) => {
+    setFilteredProductMenu(filteredResults);
+    setIsSearching(searching);
+  };
+
+  // Get products to display based on search state
+  const getProductsToDisplay = () => {
+    if (isSearching) {
+      // When searching, flatten all products from all categories
+      const allProducts = [];
+      filteredProductMenu.forEach(category => {
+        if (category.products) {
+          allProducts.push(...category.products);
+        }
+      });
+      return allProducts;
+    } else {
+      // Normal view - show products from current category
+      return productMenu[currentCate]?.products || [];
+    }
+  };
+
   const renderProductItems = ({ item, _ }) => {
     return (
       <ProductItemMenu product={item} onPressDetail={handlePressProduct} />
     );
   };
+
   const handlePressProduct = async item => {
     console.log(item);
     dispatch(setProductAction(item));
     item && setShowModal(1);
   };
+
   const onClose = () => {
     setShowModal(-1);
   };
+
   const onShowTable = () => setShowModal(2);
 
   return (
@@ -63,12 +93,13 @@ const Home = ({ navigation }) => {
           currentCate={currentCate}
           productMenu={productMenu}
           setCurrentCate={setCurrentCate}
+          onSearchResults={handleSearchResults}
         />
 
         <FlatList
-          data={productMenu[currentCate]?.products || []}
+          data={getProductsToDisplay()}
           keyExtractor={(cate, _) => `${cate.prodname}`}
-          extraData={currentCate}
+          extraData={[currentCate, isSearching, filteredProductMenu]}
           renderItem={renderProductItems}
           numColumns={3}
           contentContainerStyle={{
