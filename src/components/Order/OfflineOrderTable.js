@@ -6,8 +6,9 @@ import PrintTemplate from "./TemTemplate";
 import { useRef } from "react";
 import AsyncStorage from 'store/async_storage/index'
 import Toast from 'react-native-toast-message'
-import { netConnect, closeConnection, tsplPrintBitmap } from 'rn-xprinter';
+import { netConnect, closeConnection, tsplPrintBitmap, printBitmap } from 'rn-xprinter';
 import OrderDetailDialog from './OrderDetailDialog';
+import BillTemplate from "./BillTemplate";
 import Colors from 'theme/Colors';
 import { TextNormal } from 'common/Text/TextFont';
 import RNFS from 'react-native-fs';
@@ -38,6 +39,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
     const [printedLabels, setPrintedLabels] = useState([]);
     const [printerInfo, setPrinterInfo] = useState(null);
     const viewTemShotRef = useRef();
+    const viewBillShotRef = useRef();
 
     const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Đồng bộ", "Thời gian"];
     const numColumns = tableHead.length;
@@ -63,7 +65,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
 
     useEffect(() => {
         const loadPrinterInfo = async () => {
-            const info = await AsyncStorage.getPrinterInfo();
+            const info = await AsyncStorage.getLabelPrinterInfo();
             setPrinterInfo(info);
         };
         loadPrinterInfo();
@@ -200,14 +202,14 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
 
         setLoadingVisible(true);
         try {
-            const printerInfo = await AsyncStorage.getPrinterInfo();
-            if (!printerInfo || !printerInfo.IP || !printerInfo.sWidth || !printerInfo.sHeight) {
+            const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
+            if (!labelPrinterInfo || !labelPrinterInfo.IP || !labelPrinterInfo.sWidth || !labelPrinterInfo.sHeight) {
                 throw new Error('Printer settings not configured');
             }
 
             // Attempt to connect to printer before printing
             try {
-                await netConnect(printerInfo.IP);
+                await netConnect(labelPrinterInfo.IP);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');
@@ -276,8 +278,8 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                         const imageInfo = await Image.getSize(uri);
                         const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
                         await tsplPrintBitmap(
-                            Number(printerInfo.sWidth),
-                            Number(printerInfo.sHeight),
+                            Number(labelPrinterInfo.sWidth),
+                            Number(labelPrinterInfo.sHeight),
                             base64,
                             imageInfo.width
                         );
@@ -310,6 +312,88 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
             });
         } finally {
             setLoadingVisible(false);
+            await closeConnection();
+        }
+    };
+
+    const printBill = async (order = selectedOrder) => {
+        if (Platform.OS !== "android") {
+            Toast.show({
+                type: 'error',
+                text1: 'Chức năng chỉ hỗ trợ trên hệ điều hành android'
+            });
+            return;
+        }
+
+        setLoadingVisible(true);
+        try {
+            const billPrinterInfo = await AsyncStorage.getBillPrinterInfo();
+            if (!billPrinterInfo || !billPrinterInfo.billIP) {
+                throw new Error('Printer settings not configured');
+            }
+
+            // Convert offline order to format compatible with BillTemplate
+            const billOrder = {
+                ...order,
+                displayID: order.session,
+                orderValue: order.total_amount,
+                itemInfo: {
+                    items: order.products ? order.products.map(product => ({
+                        name: product.name,
+                        quantity: product.quanlity || 1,
+                        fare: {
+                            priceDisplay: product.price ? product.price.toLocaleString('vi-VN') : '0',
+                            currencySymbol: '₫'
+                        },
+                        comment: product.note || '',
+                        modifierGroups: product.extras ? product.extras.map(extra => ({
+                            modifierGroupName: extra.group_extra_name || 'Extras',
+                            modifiers: [{
+                                modifierName: extra.name,
+                                price: extra.price || 0
+                            }]
+                        })) : [],
+                    })) : []
+                },
+                customerInfo: {
+                    name: order.shopTableName || 'Khách hàng',
+                },
+                serviceType: 'offline',
+                tableName: order.shopTableName,
+            };
+
+            // Set the order for printing
+            setPrintingOrder(billOrder);
+
+            // Wait for the ViewShot to be ready
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Attempt to connect to printer before printing
+            try {
+                await netConnect(billPrinterInfo.billIP);
+            } catch (connectError) {
+                console.error('Printer connection error:', connectError);
+                throw new Error('Printer settings not configured');
+            }
+
+            const imageData = await viewBillShotRef.current.capture();
+            await printBitmap(imageData, 1, 554, 0);
+
+            Toast.show({
+                type: 'success',
+                text1: 'In hoá đơn thành công'
+            });
+        } catch (error) {
+            console.error('Print error:', error);
+            Toast.show({
+                type: 'error',
+                text1: error.message === 'Printer settings not configured' ?
+                    'Vui lòng thiết lập máy in' :
+                    'Lỗi in hoá đơn: ' + error.message
+            });
+        } finally {
+            setLoadingVisible(false);
+            setPrintingOrder(null);
             await closeConnection();
         }
     };
@@ -431,6 +515,22 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                     backgroundColor: 'white',
                 }}>{printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}</ViewShot>
 
+            <ViewShot
+                ref={viewBillShotRef}
+                options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
+                style={{
+                    position: 'absolute',
+                    left: -400,
+                    bottom: 0,
+                    width: 400,
+                    backgroundColor: 'white',
+                }}
+            >
+                {printingOrder && (
+                    <BillTemplate selectedOrder={printingOrder} />
+                )}
+            </ViewShot>
+
             <OrderDetailDialog
                 visible={modalVisible}
                 selectedOrder={selectedOrder}
@@ -440,13 +540,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                     setSelectedOrder(null);
                 }}
                 onPrintTem={() => printTem(selectedOrder)}
-                onPrintBill={() => {
-                    // For offline orders, we might not have bill printing functionality
-                    Toast.show({
-                        type: 'info',
-                        text1: 'Chức năng in hóa đơn chưa hỗ trợ cho đơn offline'
-                    });
-                }}
+                onPrintBill={() => printBill(selectedOrder)}
                 onStatusChange={handleStatusChange}
                 loadingVisible={loadingVisible}
                 isOfflineOrder={true}

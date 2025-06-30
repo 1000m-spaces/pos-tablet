@@ -140,14 +140,14 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
 
         setLoadingVisible(true);
         try {
-            const printerInfo = await AsyncStorage.getPrinterInfo();
-            if (!printerInfo || !printerInfo.IP || !printerInfo.sWidth || !printerInfo.sHeight) {
+            const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
+            if (!labelPrinterInfo || !labelPrinterInfo.IP || !labelPrinterInfo.sWidth || !labelPrinterInfo.sHeight) {
                 throw new Error('Printer settings not configured');
             }
 
             // Attempt to connect to printer before printing
             try {
-                await netConnect(printerInfo.IP);
+                await netConnect(labelPrinterInfo.IP);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');
@@ -207,8 +207,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                         const imageInfo = await Image.getSize(uri);
                         const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
                         await tsplPrintBitmap(
-                            Number(printerInfo.sWidth),
-                            Number(printerInfo.sHeight),
+                            Number(labelPrinterInfo.sWidth),
+                            Number(labelPrinterInfo.sHeight),
                             base64,
                             imageInfo.width
                         );
@@ -244,8 +244,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                     const imageInfo = await Image.getSize(uri);
                     const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
                     await tsplPrintBitmap(
-                        Number(printerInfo.sWidth),
-                        Number(printerInfo.sHeight),
+                        Number(labelPrinterInfo.sWidth),
+                        Number(labelPrinterInfo.sHeight),
                         base64,
                         imageInfo.width
                     );
@@ -295,8 +295,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
 
         setLoadingVisible(true);
         try {
-            const printerInfo = await AsyncStorage.getPrinterInfo();
-            if (!printerInfo || !printerInfo.IP) {
+            const billPrinterInfo = await AsyncStorage.getBillPrinterInfo();
+            if (!billPrinterInfo || !billPrinterInfo.billIP) {
                 throw new Error('Printer settings not configured');
             }
 
@@ -308,7 +308,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
 
             // Attempt to connect to printer before printing
             try {
-                await netConnect(printerInfo.IP);
+                await netConnect(billPrinterInfo.billIP);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');
@@ -344,8 +344,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
         }
 
         try {
-            const printerInfo = await AsyncStorage.getPrinterInfo();
-            if (!printerInfo || !printerInfo.IP || !printerInfo.sWidth || !printerInfo.sHeight) {
+            const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
+            if (!labelPrinterInfo || !labelPrinterInfo.IP || !labelPrinterInfo.sWidth || !labelPrinterInfo.sHeight) {
                 throw new Error('Printer settings not configured');
             }
 
@@ -354,7 +354,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
             setPrintingOrder(originalOrder);
 
             // Connect to printer
-            await netConnect(printerInfo.IP);
+            await netConnect(labelPrinterInfo.IP);
 
             // Print each item separately
             for (let i = 0; i < originalOrder.itemInfo.items.length; i++) {
@@ -380,8 +380,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                 const imageInfo = await Image.getSize(uri);
                 const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
                 await tsplPrintBitmap(
-                    Number(printerInfo.sWidth),
-                    Number(printerInfo.sHeight),
+                    Number(labelPrinterInfo.sWidth),
+                    Number(labelPrinterInfo.sHeight),
                     base64,
                     imageInfo.width
                 );
@@ -420,8 +420,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                 return;
             }
             // Check if auto-print is enabled in printer settings
-            const printerInfo = await AsyncStorage.getPrinterInfo();
-            if (!printerInfo?.autoPrint) return;
+            const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
+            if (!labelPrinterInfo?.autoPrint) return;
 
             setIsAutoPrinting(true);
             try {
@@ -443,7 +443,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
     // Update printerInfo when it changes
     useEffect(() => {
         const loadPrinterInfo = async () => {
-            const info = await AsyncStorage.getPrinterInfo();
+            const info = await AsyncStorage.getLabelPrinterInfo();
             setPrinterInfo(info);
         };
         loadPrinterInfo();
@@ -505,7 +505,6 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                 style={{
                     position: 'absolute',
                     left: printerInfo ? -mmToPixels(Number(printerInfo.sWidth)) : -mmToPixels(50),
-                    left: 0,
                     bottom: 0,
                     width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
                     backgroundColor: 'white',
