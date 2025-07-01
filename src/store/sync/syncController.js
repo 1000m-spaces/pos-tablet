@@ -4,15 +4,23 @@ import { UrlApi } from 'http/UrlApi';
 class SyncController {
     syncOrders = async body => {
         try {
-            const { data } = await HttpClient.post(UrlApi.syncOrders, body);
+            const response = await HttpClient.post(UrlApi.syncOrders, body);
+            const { data, status } = response;
+
+            if (status !== 200) {
+                console.log('sync orders error: non-200 status:', status);
+                return { success: false, status, result: null };
+            }
+
             console.log('sync orders data:::', data);
             return {
-                success: data ? true : false,
-                result: data ? data : null,
+                success: true,
+                result: data,
             };
         } catch (error) {
             console.log('sync orders error::', error);
-            return { success: false, status: 400, result: null };
+            const status = error.response?.status || 500;
+            return { success: false, status, result: null };
         }
     };
 }

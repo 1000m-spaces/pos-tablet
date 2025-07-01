@@ -30,7 +30,10 @@ function* syncPendingOrdersSaga() {
         // Get pending orders from local storage
         const pendingOrders = yield call(AsyncStorageService.getPendingOrders);
 
-        if (pendingOrders.length === 0) {
+        // Filter out already synced orders
+        const ordersToSync = pendingOrders.filter(order => !order.syncStatus || order.syncStatus === 'pending');
+
+        if (ordersToSync.length === 0) {
             yield put({
                 type: NEOCAFE.SYNC_PENDING_ORDERS_SUCCESS,
                 payload: { success: true, message: 'No pending orders to sync' },
@@ -39,22 +42,35 @@ function* syncPendingOrdersSaga() {
         }
 
         // Prepare orders for sync in the format expected by the API
-        const ordersToSync = {
-            orders: pendingOrders
+        const syncPayload = {
+            orders: ordersToSync
         };
 
         // Call the sync API
-        const response = yield call(syncController.syncOrders, ordersToSync);
+        const response = yield call(syncController.syncOrders, syncPayload);
 
         if (response.success) {
-            // If sync successful, clear pending orders from local storage
-            yield call(AsyncStorageService.setPendingOrders, []);
+            // Update sync status for successfully synced orders
+            const updatedOrders = pendingOrders.map(order => {
+                if (ordersToSync.some(syncOrder => syncOrder.session === order.session)) {
+                    return {
+                        ...order,
+                        syncStatus: 'synced',
+                        synced_at: new Date().toISOString()
+                    };
+                }
+                return order;
+            });
+            console.log('updatedOrders::', updatedOrders);
+
+            // Update orders in local storage with sync status
+            yield call(AsyncStorageService.setPendingOrders, updatedOrders);
 
             yield put({
                 type: NEOCAFE.SYNC_PENDING_ORDERS_SUCCESS,
                 payload: {
                     ...response,
-                    syncedOrdersCount: pendingOrders.length
+                    syncedOrdersCount: ordersToSync.length
                 },
             });
         } else {

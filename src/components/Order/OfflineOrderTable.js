@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform, ActivityIndicator, PixelRatio, Image } from "react-native";
 import { Table, Row } from "react-native-table-component";
 import ViewShot from "react-native-view-shot";
@@ -12,6 +12,9 @@ import BillTemplate from "./BillTemplate";
 import Colors from 'theme/Colors';
 import { TextNormal } from 'common/Text/TextFont';
 import RNFS from 'react-native-fs';
+import { useDispatch } from 'react-redux';
+import { syncPendingOrdersAction } from 'store/sync/syncAction';
+import FilterRow from './FilterRow';
 
 const { width, height } = Dimensions.get("window");
 
@@ -31,7 +34,7 @@ const Badge = ({ text, colorText, colorBg, width }) => (
     </View>
 );
 
-const OfflineOrderTable = ({ orders, onRefresh }) => {
+const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -40,12 +43,44 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
     const [printerInfo, setPrinterInfo] = useState(null);
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
+    const dispatch = useDispatch();
 
     const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Đồng bộ", "Thời gian"];
     const numColumns = tableHead.length;
 
     const [tableWidth, setTableWidth] = useState([])
     const [widthArr, setWidthArr] = useState([]);
+
+    const filteredOrders = useMemo(() => {
+        if (!orders || orders.length === 0) return [];
+        return orders.filter(order => {
+            try {
+                const createdAt = new Date(order.created_at);
+                return (
+                    createdAt.getFullYear() === selectedDate.getFullYear() &&
+                    createdAt.getMonth() === selectedDate.getMonth() &&
+                    createdAt.getDate() === selectedDate.getDate()
+                );
+            } catch (e) {
+                // If parsing fails, include the order to avoid accidental exclusion
+                return true;
+            }
+        });
+    }, [orders, selectedDate]);
+
+    useEffect(() => {
+        // Background job: sync offline orders every 1 minute
+        const intervalId = setInterval(() => {
+            dispatch(syncPendingOrdersAction());
+            // Optionally refresh local data after dispatching sync action
+            if (onRefresh) {
+                onRefresh();
+            }
+        }, 60000); // 60,000 ms = 1 minute
+
+        // Cleanup interval on unmount
+        return () => clearInterval(intervalId);
+    }, [dispatch, onRefresh]);
 
     useEffect(() => {
         const { width, height } = Dimensions.get("window");
@@ -99,8 +134,8 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
         switch (status) {
             case "pending": return "Chờ đồng bộ";
             case "synced": return "Đã đồng bộ";
-            case "failed": return "Thất bại";
-            default: return "Không xác định";
+            case "failed": return "Lỗi đồng bộ";
+            default: return "Chưa đồng bộ";
         }
     };
 
@@ -443,7 +478,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
         );
     };
 
-    const tableData = orders.map((order, index) => [
+    const tableData = filteredOrders.map((order, index) => [
         order.session || `OFF-${index + 1}`,
         order.shopTableName || 'N/A',
         formatCurrency(order.total_amount || 0),
@@ -488,7 +523,7 @@ const OfflineOrderTable = ({ orders, onRefresh }) => {
                             {tableData.map((rowData, index) => (
                                 <TouchableOpacity
                                     key={index}
-                                    onPress={() => handleRowPress(orders[index])}
+                                    onPress={() => handleRowPress(filteredOrders[index])}
                                     style={[styles.row, index % 2 === 1 && styles.alternateRow]}
                                 >
                                     <Row
@@ -662,7 +697,7 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '600',
         textAlign: 'center',
-    },
+    }
 });
 
 export default OfflineOrderTable; 

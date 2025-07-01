@@ -9,6 +9,8 @@ import { TextNormal } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
 import { syncPendingOrdersAction } from 'store/sync/syncAction';
 import { getPendingSyncLoadingSelector, getPendingSyncErrorSelector } from 'store/sync/syncSelector';
+import { useIsFocused } from '@react-navigation/native';
+import FilterRow from './FilterRow';
 
 const Invoice = () => {
     const dispatch = useDispatch();
@@ -18,6 +20,8 @@ const Invoice = () => {
     const [printedLabels, setPrintedLabels] = useState([]);
     const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
     const [blockedTables, setBlockedTables] = useState({});
+    const isFocused = useIsFocused();
+    const [selectedDate, setSelectedDate] = useState(new Date());
 
     // Redux selectors
     const pendingSyncLoading = useSelector(getPendingSyncLoadingSelector);
@@ -36,7 +40,7 @@ const Invoice = () => {
             // Enhance orders with sync, print, and order status
             const enhancedOrders = pendingOrders.map(order => ({
                 ...order,
-                syncStatus: 'pending', // All offline orders are pending by default
+                syncStatus: order.syncStatus || 'pending', // All offline orders are pending by default
                 printStatus: printedLabelsData.includes(order.session) ? 'printed' : 'not_printed',
                 orderStatus: order.orderStatus || 'Paymented', // Default order status for cash payments
                 created_at: order.created_at || new Date().toISOString(),
@@ -49,10 +53,17 @@ const Invoice = () => {
                 tableId: order.tableId || null,
             }));
 
+            // Sort orders by created_at descending (newest first)
+            const sortedOrders = [...enhancedOrders].sort((a, b) => {
+                const dateA = new Date(a.created_at).getTime() || 0;
+                const dateB = new Date(b.created_at).getTime() || 0;
+                return dateB - dateA;
+            });
+
             // Filter by status if a filter is selected
-            let filteredOrders = enhancedOrders;
+            let filteredOrders = sortedOrders;
             if (selectedStatusFilter !== 'all') {
-                filteredOrders = enhancedOrders.filter(order => order.orderStatus === selectedStatusFilter);
+                filteredOrders = sortedOrders.filter(order => order.orderStatus === selectedStatusFilter);
             }
 
             setData(filteredOrders);
@@ -79,10 +90,12 @@ const Invoice = () => {
         loadUserShop();
     }, []);
 
+    // Fetch orders when the screen mounts and whenever it gains focus
     useEffect(() => {
-        // Initial fetch when component mounts
-        fetchOfflineOrders();
-    }, [fetchOfflineOrders]);
+        if (isFocused) {
+            fetchOfflineOrders();
+        }
+    }, [isFocused, fetchOfflineOrders]);
 
     const handleSyncOfflineOrders = () => {
         dispatch(syncPendingOrdersAction());
@@ -171,6 +184,12 @@ const Invoice = () => {
                             </View>
 
                             {/* Blocked Tables Info */}
+
+                            <FilterRow
+                                selectedDate={selectedDate}
+                                onDateChange={setSelectedDate}
+                            />
+
                             <View style={styles.tableInfo}>
                                 <TextNormal style={styles.tableInfoText}>
                                     Bàn đang phục vụ: {Object.keys(blockedTables).length}

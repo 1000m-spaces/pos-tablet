@@ -238,7 +238,8 @@ const PaymentCart = () => {
         status: "pending",
         orderStatus: "Paymented", // Default to Paymented for cash orders
         tableId: currentOrder.tableId || null, // Store tableId for blocking
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        syncStatus: 'pending' // Add sync status field
       };
 
       // Save to local storage as last order and add to pending orders queue
