@@ -261,9 +261,11 @@ const PaymentCart = () => {
                 take_away: false,
                 products: [],
                 applied_products: [],
-                table: currentOrder.table,
+                table: '',
+                tableId: '',
                 note: '',
                 delivery: null,
+                orderType: null,
               }));
             }
           }
