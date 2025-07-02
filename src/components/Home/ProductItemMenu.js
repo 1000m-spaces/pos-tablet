@@ -4,17 +4,40 @@ import React, { memo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { formatMoney } from 'assets/constans';
 import FastImage from 'react-native-fast-image';
+import { useSelector } from 'react-redux';
+import { currentOrderSelector } from 'store/selectors';
+import Toast from 'react-native-toast-message';
 
 import { StyleSheet } from 'react-native';
 import Colors from 'theme/Colors';
 const ProductItemMenu = ({ onPressDetail, product }) => {
+  const currentOrder = useSelector(state => currentOrderSelector(state));
+
   if (!product) {
     console.log('product is undefined');
     return;
   }
+
+  const handleProductPress = () => {
+    // Check if order type is selected
+    if (!currentOrder.orderType) {
+      Toast.show({
+        type: 'error',
+        text1: 'Vui lòng chọn loại đơn hàng',
+        text2: 'Bạn cần chọn loại đơn hàng trước khi thêm sản phẩm',
+        position: 'top',
+        visibilityTime: 3000,
+      });
+      return;
+    }
+
+    // If order type is selected, proceed with product detail
+    onPressDetail(product);
+  };
+
   return (
     <TouchableOpacity
-      onPress={() => onPressDetail(product)}
+      onPress={handleProductPress}
       style={[styles.container]}>
       <View style={styles.content}>
         <FastImage

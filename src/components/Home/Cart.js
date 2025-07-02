@@ -8,7 +8,7 @@ import {
 } from 'assets/constans';
 import Svg from 'common/Svg/Svg';
 import { TextNormal } from 'common/Text/TextFont';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { FlatList, StyleSheet, TouchableOpacity, View, Text } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { currentOrderSelector } from 'store/selectors';
@@ -23,7 +23,8 @@ const Cart = ({ showTable }) => {
   const currentOrder = useSelector(state => currentOrderSelector(state));
   const orderChannels = useSelector(state => getOrderChannelsSelector(state));
   console.log('orderChannels::', orderChannels)
-  const [orderType, setOrderType] = useState(1);
+  // Use Redux state for orderType instead of local state
+  const orderType = currentOrder.orderType || null;
   console.log('currentOrder::', currentOrder)
 
   // Use API data if available, otherwise fallback to static orderTypes
@@ -59,7 +60,11 @@ const Cart = ({ showTable }) => {
     );
   };
   const onSelectOrderType = i => {
-    setOrderType(i.id);
+    // Update Redux state instead of local state
+    dispatch(setOrderAction({
+      ...currentOrder,
+      orderType: i.id,
+    }));
     if (i.id === 1 || i.id === "1") {
       showTable();
     }

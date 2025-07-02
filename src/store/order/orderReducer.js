@@ -10,6 +10,7 @@ const initializeState = {
     tableId: '',
     note: '',
     delivery: null,
+    orderType: null,
   },
   statusAddProductCart: Status.DEFAULT,
   onlineOrders: [],
