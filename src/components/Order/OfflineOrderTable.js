@@ -28,6 +28,19 @@ const mmToPixels = (mm) => {
     return Math.round((mm * actualDpi) / 25.4); // 25.4mm = 1 inch
 };
 
+// Calculate thermal printer width based on paper size
+const getThermalPrinterWidth = (paperSize) => {
+    // Standard thermal printer widths at 203 DPI
+    switch (paperSize) {
+        case '58mm':
+            return 384; // 58mm ≈ 384 pixels at 203 DPI
+        case '80mm':
+            return 576; // 80mm ≈ 576 pixels at 203 DPI
+        default:
+            return 576; // Default to 80mm if not specified
+    }
+};
+
 const Badge = ({ text, colorText, colorBg, width }) => (
     <View style={[styles.badge, { backgroundColor: colorBg, width: width }]}>
         <Text style={[styles.badgeText, { color: colorText }]}>{text}</Text>
@@ -412,7 +425,9 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
             }
 
             const imageData = await viewBillShotRef.current.capture();
-            await printBitmap(imageData, 1, 554, 0);
+            console.log('imageData', imageData);
+            const printerWidth = getThermalPrinterWidth(billPrinterInfo.billPaperSize);
+            await printBitmap(imageData, 1, printerWidth, 0);
 
             Toast.show({
                 type: 'success',

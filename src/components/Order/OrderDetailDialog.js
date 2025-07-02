@@ -75,18 +75,6 @@ const OrderDetailDialog = ({
             default: return "Không xác định";
         }
     };
-
-    const getDeliveryStatusText = (status) => {
-        switch (status) {
-            case "DRIVER_AT_STORE": return "Tài xế đã đến cửa hàng";
-            case "DRIVER_PICKED_UP": return "Tài xế đã nhận hàng";
-            case "DRIVER_DELIVERING": return "Đang giao hàng";
-            case "DRIVER_DELIVERED": return "Đã giao hàng";
-            case "DRIVER_CANCELLED": return "Đã hủy giao hàng";
-            default: return "Không xác định";
-        }
-    };
-
     // Offline order status management
     const getOfflineOrderStatusColor = (status) => {
         switch (status) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, PixelRatio } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from 'store/async_storage/index'
 
 // Convert mm to pixels using device's actual DPI, optimized for tablets
 const mmToPixels = (mm) => {
