@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, SafeAreaView, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from 'store/async_storage/index';
@@ -11,6 +11,7 @@ import { syncPendingOrdersAction } from 'store/sync/syncAction';
 import { getPendingSyncLoadingSelector, getPendingSyncErrorSelector } from 'store/sync/syncSelector';
 import { useIsFocused } from '@react-navigation/native';
 import FilterRow from './FilterRow';
+import PrinterSettingsModal from 'common/PrinterSettingsModal';
 
 const Invoice = () => {
     const dispatch = useDispatch();
@@ -23,9 +24,19 @@ const Invoice = () => {
     const isFocused = useIsFocused();
     const [selectedDate, setSelectedDate] = useState(new Date());
 
+    // Printer settings state
+    const [printerModalVisible, setPrinterModalVisible] = useState(false);
+    const [printerType, setPrinterType] = useState('label'); // 'label' or 'bill'
+
     // Redux selectors
     const pendingSyncLoading = useSelector(getPendingSyncLoadingSelector);
     const pendingSyncError = useSelector(getPendingSyncErrorSelector);
+
+    // Handle printer settings saved
+    const handlePrinterSettingsSaved = (printerSettings) => {
+        // Optional: Handle any additional logic when printer settings are saved
+        console.log('Printer settings saved:', printerSettings);
+    };
 
     const fetchOfflineOrders = useCallback(async () => {
         setIsLoading(true);
@@ -150,6 +161,36 @@ const Invoice = () => {
                                 </View>
                                 <TouchableOpacity
                                     style={[styles.actionButton, { opacity: (isLoading || pendingSyncLoading) ? 0.5 : 1 }]}
+                                    onPress={() => {
+                                        if (!(isLoading || pendingSyncLoading)) {
+                                            setPrinterType('label');
+                                            setPrinterModalVisible(true);
+                                        }
+                                    }}
+                                    disabled={isLoading || pendingSyncLoading}
+                                >
+                                    <Svg name={'printer'} size={24} color={Colors.primary} />
+                                    <TextNormal style={[styles.actionText, { color: Colors.primary, fontWeight: '600' }]}>
+                                        In tem
+                                    </TextNormal>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.actionButton, { opacity: (isLoading || pendingSyncLoading) ? 0.5 : 1 }]}
+                                    onPress={() => {
+                                        if (!(isLoading || pendingSyncLoading)) {
+                                            setPrinterType('bill');
+                                            setPrinterModalVisible(true);
+                                        }
+                                    }}
+                                    disabled={isLoading || pendingSyncLoading}
+                                >
+                                    <Svg name={'printer'} size={24} color={Colors.primary} />
+                                    <TextNormal style={[styles.actionText, { color: Colors.primary, fontWeight: '600' }]}>
+                                        In bill
+                                    </TextNormal>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.actionButton, { opacity: (isLoading || pendingSyncLoading) ? 0.5 : 1 }]}
                                     onPress={() => !(isLoading || pendingSyncLoading) && handleSyncOfflineOrders()}
                                     disabled={isLoading || pendingSyncLoading}
                                 >
@@ -209,6 +250,15 @@ const Invoice = () => {
                     )}
                 </View>
             </SafeAreaView>
+
+            {/* Printer Settings Modal */}
+            <PrinterSettingsModal
+                visible={printerModalVisible}
+                onClose={() => setPrinterModalVisible(false)}
+                initialPrinterType={printerType}
+                onSettingsSaved={handlePrinterSettingsSaved}
+            />
+
             <Toast />
         </>
     );
@@ -335,6 +385,7 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
         fontWeight: '500',
     },
+
 });
 
 export default Invoice; 

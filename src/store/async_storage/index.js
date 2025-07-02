@@ -373,8 +373,9 @@ const getBillPrinterInfo = async () => {
     const printerInfo = await getPrinterInfo();
     if (printerInfo) {
       return {
-        billIP: printerInfo.billIP || printerInfo.IP || "",
-        billWidth: printerInfo.billWidth || 80
+        billIP: printerInfo.billIP || "",
+        billPort: printerInfo.billPort || 9100,
+        billPaperSize: printerInfo.billPaperSize || '80mm'
       };
     }
   } catch (error) {
@@ -382,7 +383,8 @@ const getBillPrinterInfo = async () => {
   }
   return {
     billIP: "",
-    billWidth: 80
+    billPort: 9100,
+    billPaperSize: '80mm'
   };
 };
 

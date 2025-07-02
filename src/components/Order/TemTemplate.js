@@ -52,7 +52,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
     useEffect(() => {
         const loadPrinterSettings = async () => {
             try {
-                const printerInfo = await AsyncStorage.getPrinterInfo();
+                const printerInfo = await AsyncStorage.getLabelPrinterInfo();
                 if (printerInfo && printerInfo.sWidth && printerInfo.sHeight) {
                     setPrinterSettings({
                         width: mmToPixels(Number(printerInfo.sWidth)),

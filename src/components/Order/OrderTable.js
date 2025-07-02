@@ -70,7 +70,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
 
     useEffect(() => {
         const loadPrinterInfo = async () => {
-            const info = await AsyncStorage.getPrinterInfo();
+            const info = await AsyncStorage.getLabelPrinterInfo();
             setPrinterInfo(info);
         };
         loadPrinterInfo();
