@@ -142,6 +142,50 @@ const Cart = ({ showTable }) => {
       </TouchableOpacity>
     );
   };
+
+  // Render order type selection in middle when no order type is selected
+  const renderOrderTypeSelection = ({ item, index }) => {
+    const displayName = item.name_vn || item.name;
+    const isLastItem = index === availableOrderTypes.length - 1;
+    const isOddTotal = availableOrderTypes.length % 2 === 1;
+    const shouldCenterSingle = isLastItem && isOddTotal;
+
+    return (
+      <TouchableOpacity
+        key={item.id}
+        onPress={() => onSelectOrderType(item)}
+        style={[
+          styles.centerOrderTypeButton,
+          shouldCenterSingle && styles.singleItemCentered
+        ]}>
+        <TextNormal style={styles.centerOrderTypeText}>
+          {displayName}
+        </TextNormal>
+      </TouchableOpacity>
+    );
+  };
+
+  // If no order type is selected, show order type selection in the middle
+  if (!orderType) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.orderTypeSelectionContainer}>
+          <FlatList
+            key="order-type-selection"
+            data={availableOrderTypes}
+            keyExtractor={i => i.id.toString()}
+            renderItem={({ item, index }) => renderOrderTypeSelection({ item, index })}
+            contentContainerStyle={styles.centerOrderTypeList}
+            showsVerticalScrollIndicator={false}
+            numColumns={2}
+            columnWrapperStyle={styles.row}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  // Normal layout when order type is selected
   return (
     <View style={styles.container}>
       <View
@@ -256,5 +300,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 22.4,
+  },
+  orderTypeSelectionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  centerOrderTypeList: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  row: {
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  centerOrderTypeButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    width: '45%',
+    minHeight: 60,
+    justifyContent: 'center',
+  },
+  centerOrderTypeText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: Colors.whiteColor,
+    textAlign: 'center',
+    flexWrap: 'wrap',
+  },
+  singleItemCentered: {
+    marginLeft: '27.5%',
   },
 });
