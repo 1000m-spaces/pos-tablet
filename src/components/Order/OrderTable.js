@@ -7,7 +7,7 @@ import { useRef } from "react";
 import AsyncStorage from 'store/async_storage/index'
 import BillTemplate from "./BillTemplate";
 import Toast from 'react-native-toast-message'
-import { netConnect, printBitmap, closeConnection, tsplPrintBitmap } from 'rn-xprinter';
+import XPrinter from 'rn-xprinter';
 import RNFS from 'react-native-fs';
 import OrderDetailDialog from './OrderDetailDialog';
 
@@ -59,6 +59,28 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
 
+    // Create printer instances
+    const labelPrinterRef = useRef(null);
+    const billPrinterRef = useRef(null);
+
+    // Initialize printer instances
+    useEffect(() => {
+        labelPrinterRef.current = new XPrinter();
+        billPrinterRef.current = new XPrinter();
+
+        return () => {
+            // Cleanup printer instances
+            if (labelPrinterRef.current) {
+                labelPrinterRef.current.dispose();
+                labelPrinterRef.current = null;
+            }
+            if (billPrinterRef.current) {
+                billPrinterRef.current.dispose();
+                billPrinterRef.current = null;
+            }
+        };
+    }, []);
+
     const tableHead = ["Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
 
@@ -89,11 +111,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
         loadPrinterInfo();
     }, []);
 
-    useEffect(() => {
-        return () => {
-            closeConnection();
-        }
-    }, []);
+
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -160,7 +178,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
 
             // Attempt to connect to printer before printing
             try {
-                await netConnect(labelPrinterInfo.IP);
+                await labelPrinterRef.current.netConnect(labelPrinterInfo.IP);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');
@@ -219,7 +237,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                         const uri = await viewTemShotRef.current.capture();
                         const imageInfo = await Image.getSize(uri);
                         const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                        await tsplPrintBitmap(
+                        await labelPrinterRef.current.tsplPrintBitmap(
                             Number(labelPrinterInfo.sWidth),
                             Number(labelPrinterInfo.sHeight),
                             base64,
@@ -256,7 +274,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                     const uri = await viewTemShotRef.current.capture();
                     const imageInfo = await Image.getSize(uri);
                     const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                    await tsplPrintBitmap(
+                    await labelPrinterRef.current.tsplPrintBitmap(
                         Number(labelPrinterInfo.sWidth),
                         Number(labelPrinterInfo.sHeight),
                         base64,
@@ -321,7 +339,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
 
             // Attempt to connect to printer before printing
             try {
-                await netConnect(billPrinterInfo.billIP);
+                await billPrinterRef.current.netConnect(billPrinterInfo.billIP);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');
@@ -329,7 +347,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
 
             const imageData = await viewBillShotRef.current.capture();
             const printerWidth = getThermalPrinterWidth(billPrinterInfo.billPaperSize);
-            await printBitmap(imageData, 1, printerWidth, 0);
+            await billPrinterRef.current.printBitmap(imageData, 1, printerWidth, 0);
 
             Toast.show({
                 type: 'success',
@@ -368,7 +386,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
             setPrintingOrder(originalOrder);
 
             // Connect to printer
-            await netConnect(labelPrinterInfo.IP);
+            await labelPrinterRef.current.netConnect(labelPrinterInfo.IP);
 
             // Print each item separately
             for (let i = 0; i < originalOrder.itemInfo.items.length; i++) {
@@ -393,7 +411,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                 const uri = await viewTemShotRef.current.capture();
                 const imageInfo = await Image.getSize(uri);
                 const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                await tsplPrintBitmap(
+                await labelPrinterRef.current.tsplPrintBitmap(
                     Number(labelPrinterInfo.sWidth),
                     Number(labelPrinterInfo.sHeight),
                     base64,
@@ -422,6 +440,10 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
             }
         } finally {
             setPrintingOrder(null);
+            // Close printer connection after auto printing
+            if (labelPrinterRef.current) {
+                labelPrinterRef.current.closeConnection();
+            }
         }
     };
 

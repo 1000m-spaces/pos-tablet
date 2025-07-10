@@ -6886,10 +6886,10 @@ rimraf@^3.0.2:
   dependencies:
     glob "^7.1.3"
 
-rn-xprinter@^1.0.7:
-  version "1.0.7"
-  resolved "https://registry.yarnpkg.com/rn-xprinter/-/rn-xprinter-1.0.7.tgz#e1b09f4adc3d18d82102821ae0aa101658c34012"
-  integrity sha512-aVcTogZsvCsDZk4kKUCSmlmwewVbG00dhJb0SWvgK/M2tIpr8RfNcPGqwd5qpaT2yDzMPiiBFkzz3RfAdNHXJQ==
+rn-xprinter@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/rn-xprinter/-/rn-xprinter-2.0.1.tgz#6ef7069536230d44237503c3ed54fd5cd72af6be"
+  integrity sha512-H9AIuTDcYYkE70WQG0sXcLp5Q95b16m+M+npEJ6HJ1QFc77RWIL2EZlNk05rzPv8aut7OjvCNIytYPfx9g739g==
 
 run-parallel@^1.1.9:
   version "1.2.0"

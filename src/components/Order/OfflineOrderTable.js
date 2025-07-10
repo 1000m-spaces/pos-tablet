@@ -6,7 +6,7 @@ import PrintTemplate from "./TemTemplate";
 import { useRef } from "react";
 import AsyncStorage from 'store/async_storage/index'
 import Toast from 'react-native-toast-message'
-import { netConnect, closeConnection, tsplPrintBitmap, printBitmap } from 'rn-xprinter';
+import XPrinter from 'rn-xprinter';
 import OrderDetailDialog from './OrderDetailDialog';
 import BillTemplate from "./BillTemplate";
 import Colors from 'theme/Colors';
@@ -14,7 +14,6 @@ import { TextNormal } from 'common/Text/TextFont';
 import RNFS from 'react-native-fs';
 import { useDispatch } from 'react-redux';
 import { syncPendingOrdersAction } from 'store/sync/syncAction';
-import FilterRow from './FilterRow';
 
 const { width, height } = Dimensions.get("window");
 
@@ -57,6 +56,28 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
     const dispatch = useDispatch();
+
+    // Create printer instances
+    const labelPrinterRef = useRef(null);
+    const billPrinterRef = useRef(null);
+
+    // Initialize printer instances
+    useEffect(() => {
+        labelPrinterRef.current = new XPrinter();
+        billPrinterRef.current = new XPrinter();
+
+        return () => {
+            // Cleanup printer instances
+            if (labelPrinterRef.current) {
+                labelPrinterRef.current.dispose();
+                labelPrinterRef.current = null;
+            }
+            if (billPrinterRef.current) {
+                billPrinterRef.current.dispose();
+                billPrinterRef.current = null;
+            }
+        };
+    }, []);
 
     const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Đồng bộ", "Thời gian"];
     const numColumns = tableHead.length;
@@ -119,11 +140,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
         loadPrinterInfo();
     }, []);
 
-    useEffect(() => {
-        return () => {
-            closeConnection();
-        }
-    }, []);
+
 
     const getSyncStatusColor = (status) => {
         switch (status) {
@@ -257,7 +274,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
 
             // Attempt to connect to printer before printing
             try {
-                await netConnect(labelPrinterInfo.IP);
+                await labelPrinterRef.current.netConnect(labelPrinterInfo.IP);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');
@@ -325,7 +342,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
                         const uri = await viewTemShotRef.current.capture();
                         const imageInfo = await Image.getSize(uri);
                         const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                        await tsplPrintBitmap(
+                        await labelPrinterRef.current.tsplPrintBitmap(
                             Number(labelPrinterInfo.sWidth),
                             Number(labelPrinterInfo.sHeight),
                             base64,
@@ -360,7 +377,9 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
             });
         } finally {
             setLoadingVisible(false);
-            await closeConnection();
+            if (labelPrinterRef.current) {
+                labelPrinterRef.current.closeConnection();
+            }
         }
     };
 
@@ -418,7 +437,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
 
             // Attempt to connect to printer before printing
             try {
-                await netConnect(billPrinterInfo.billIP);
+                await billPrinterRef.current.netConnect(billPrinterInfo.billIP);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');
@@ -427,7 +446,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
             const imageData = await viewBillShotRef.current.capture();
             console.log('imageData', imageData);
             const printerWidth = getThermalPrinterWidth(billPrinterInfo.billPaperSize);
-            await printBitmap(imageData, 1, printerWidth, 0);
+            await billPrinterRef.current.printBitmap(imageData, 1, printerWidth, 0);
 
             Toast.show({
                 type: 'success',
@@ -444,7 +463,9 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
         } finally {
             setLoadingVisible(false);
             setPrintingOrder(null);
-            await closeConnection();
+            if (billPrinterRef.current) {
+                billPrinterRef.current.closeConnection();
+            }
         }
     };
 
