@@ -140,6 +140,37 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
         loadPrinterInfo();
     }, []);
 
+    // Helper function to connect to printer based on connection type
+    const connectToPrinter = async (printerInstance, printerConfig) => {
+        try {
+            switch (printerConfig.connectionType) {
+                case 'network':
+                    if (!printerConfig.IP) {
+                        throw new Error('IP address not configured');
+                    }
+                    return await printerInstance.netConnect(printerConfig.IP);
+
+                case 'usb':
+                    if (!printerConfig.usbDevice) {
+                        throw new Error('USB device not selected');
+                    }
+                    return await printerInstance.usbConnect(printerConfig.usbDevice);
+
+                case 'serial':
+                    if (!printerConfig.serialPort) {
+                        throw new Error('Serial port not selected');
+                    }
+                    return await printerInstance.serialConnect(printerConfig.serialPort);
+
+                default:
+                    throw new Error('Unknown connection type');
+            }
+        } catch (error) {
+            console.error('Printer connection error:', error);
+            throw error;
+        }
+    };
+
 
 
     const getSyncStatusColor = (status) => {
@@ -268,13 +299,23 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
         setLoadingVisible(true);
         try {
             const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
-            if (!labelPrinterInfo || !labelPrinterInfo.IP || !labelPrinterInfo.sWidth || !labelPrinterInfo.sHeight) {
+
+            // Validate printer configuration based on connection type
+            if (!labelPrinterInfo || !labelPrinterInfo.sWidth || !labelPrinterInfo.sHeight) {
+                throw new Error('Printer settings not configured');
+            }
+
+            if (labelPrinterInfo.connectionType === 'network' && !labelPrinterInfo.IP) {
+                throw new Error('Printer settings not configured');
+            } else if (labelPrinterInfo.connectionType === 'usb' && !labelPrinterInfo.usbDevice) {
+                throw new Error('Printer settings not configured');
+            } else if (labelPrinterInfo.connectionType === 'serial' && !labelPrinterInfo.serialPort) {
                 throw new Error('Printer settings not configured');
             }
 
             // Attempt to connect to printer before printing
             try {
-                await labelPrinterRef.current.netConnect(labelPrinterInfo.IP);
+                await connectToPrinter(labelPrinterRef.current, labelPrinterInfo);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');
@@ -395,7 +436,17 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
         setLoadingVisible(true);
         try {
             const billPrinterInfo = await AsyncStorage.getBillPrinterInfo();
-            if (!billPrinterInfo || !billPrinterInfo.billIP) {
+
+            // Validate bill printer configuration based on connection type
+            if (!billPrinterInfo) {
+                throw new Error('Printer settings not configured');
+            }
+
+            if (billPrinterInfo.billConnectionType === 'network' && !billPrinterInfo.billIP) {
+                throw new Error('Printer settings not configured');
+            } else if (billPrinterInfo.billConnectionType === 'usb' && !billPrinterInfo.billUsbDevice) {
+                throw new Error('Printer settings not configured');
+            } else if (billPrinterInfo.billConnectionType === 'serial' && !billPrinterInfo.billSerialPort) {
                 throw new Error('Printer settings not configured');
             }
 
@@ -437,7 +488,13 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
 
             // Attempt to connect to printer before printing
             try {
-                await billPrinterRef.current.netConnect(billPrinterInfo.billIP);
+                const billConfig = {
+                    connectionType: billPrinterInfo.billConnectionType || 'network',
+                    IP: billPrinterInfo.billIP,
+                    usbDevice: billPrinterInfo.billUsbDevice,
+                    serialPort: billPrinterInfo.billSerialPort
+                };
+                await connectToPrinter(billPrinterRef.current, billConfig);
             } catch (connectError) {
                 console.error('Printer connection error:', connectError);
                 throw new Error('Printer settings not configured');

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput, Text, Switch, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, TextInput, Text, Switch, TouchableOpacity, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import Modal from 'react-native-modal';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from 'store/async_storage/index';
 import Colors from 'theme/Colors';
 import { TextNormal } from 'common/Text/TextFont';
+import { getUsbDevices, getSerialDevices } from 'rn-xprinter';
 
 const PrinterSettingsModal = ({
     visible,
@@ -12,16 +13,28 @@ const PrinterSettingsModal = ({
     initialPrinterType = 'label',
     onSettingsSaved
 }) => {
-    // Printer settings state
+    // Label printer settings state
     const [ip, setIP] = useState("");
     const [sWidth, setSWidth] = useState(50);
     const [sHeight, setSHeight] = useState(30);
     const [autoPrint, setAutoPrint] = useState(false);
+    const [labelConnectionType, setLabelConnectionType] = useState('network'); // 'network', 'usb', 'serial'
+    const [labelUsbDevice, setLabelUsbDevice] = useState('');
+    const [labelSerialPort, setLabelSerialPort] = useState('');
 
     // Bill printer settings
     const [billIP, setBillIP] = useState("");
     const [billPort, setBillPort] = useState(9100);
     const [billPaperSize, setBillPaperSize] = useState('80mm'); // 58mm, 80mm
+    const [billConnectionType, setBillConnectionType] = useState('network'); // 'network', 'usb', 'serial'
+    const [billUsbDevice, setBillUsbDevice] = useState('');
+    const [billSerialPort, setBillSerialPort] = useState('');
+
+    // Device lists and loading states
+    const [usbDevices, setUsbDevices] = useState([]);
+    const [serialPorts, setSerialPorts] = useState([]);
+    const [isLoadingUsb, setIsLoadingUsb] = useState(false);
+    const [isLoadingSerial, setIsLoadingSerial] = useState(false);
 
     const [errors, setErrors] = useState({});
     const [isSaving, setIsSaving] = useState(false);
@@ -31,6 +44,11 @@ const PrinterSettingsModal = ({
     useEffect(() => {
         if (visible) {
             loadPrinterSettings();
+            // Load device lists when modal opens
+            if (Platform.OS === 'android') {
+                scanUsbDevices();
+                scanSerialPorts();
+            }
         }
     }, [visible]);
 
@@ -48,6 +66,9 @@ const PrinterSettingsModal = ({
                 setSWidth(labelPrinterInfo.sWidth || 50);
                 setSHeight(labelPrinterInfo.sHeight || 30);
                 setAutoPrint(labelPrinterInfo.autoPrint || false);
+                setLabelConnectionType(labelPrinterInfo.connectionType || 'network');
+                setLabelUsbDevice(labelPrinterInfo.usbDevice || '');
+                setLabelSerialPort(labelPrinterInfo.serialPort || '');
             }
 
             // Load bill printer settings
@@ -56,9 +77,74 @@ const PrinterSettingsModal = ({
                 setBillIP(billPrinterInfo.billIP || "");
                 setBillPort(billPrinterInfo.billPort || 9100);
                 setBillPaperSize(billPrinterInfo.billPaperSize || '80mm');
+                setBillConnectionType(billPrinterInfo.billConnectionType || 'network');
+                setBillUsbDevice(billPrinterInfo.billUsbDevice || '');
+                setBillSerialPort(billPrinterInfo.billSerialPort || '');
             }
         } catch (error) {
             console.error('Error loading printer settings:', error);
+        }
+    };
+
+    const scanUsbDevices = async () => {
+        if (Platform.OS !== 'android') {
+            Toast.show({
+                type: 'error',
+                text1: 'USB scanning chỉ hỗ trợ trên Android'
+            });
+            return;
+        }
+
+        setIsLoadingUsb(true);
+        try {
+            const devices = await getUsbDevices();
+            setUsbDevices(Array.isArray(devices) ? devices : []);
+            Toast.show({
+                type: 'success',
+                text1: `Tìm thấy ${Array.isArray(devices) ? devices.length : 0} thiết bị USB`
+            });
+        } catch (error) {
+            console.error('Error scanning USB devices:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi quét thiết bị USB',
+                text2: error.message
+            });
+            setUsbDevices([]);
+        } finally {
+            setIsLoadingUsb(false);
+        }
+    };
+
+    const scanSerialPorts = async () => {
+        if (Platform.OS !== 'android') {
+            Toast.show({
+                type: 'error',
+                text1: 'Serial port scanning chỉ hỗ trợ trên Android'
+            });
+            return;
+        }
+
+        setIsLoadingSerial(true);
+        try {
+            const ports = await getSerialDevices();
+            // Parse the string response (assuming comma-separated)
+            const portList = typeof ports === 'string' ? ports.split(',').filter(port => port.trim()) : [];
+            setSerialPorts(portList);
+            Toast.show({
+                type: 'success',
+                text1: `Tìm thấy ${portList.length} cổng serial`
+            });
+        } catch (error) {
+            console.error('Error scanning serial ports:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi quét cổng serial',
+                text2: error.message
+            });
+            setSerialPorts([]);
+        } finally {
+            setIsLoadingSerial(false);
         }
     };
 
@@ -68,11 +154,22 @@ const PrinterSettingsModal = ({
 
         if (printerType === 'label') {
             // Validate label printer settings only
-            if (!ip) {
-                newErrors.ip = 'Vui lòng nhập địa chỉ IP máy in tem';
-            } else if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
-                newErrors.ip = 'Định dạng địa chỉ IP không hợp lệ';
+            if (labelConnectionType === 'network') {
+                if (!ip) {
+                    newErrors.ip = 'Vui lòng nhập địa chỉ IP máy in tem';
+                } else if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+                    newErrors.ip = 'Định dạng địa chỉ IP không hợp lệ';
+                }
+            } else if (labelConnectionType === 'usb') {
+                if (!labelUsbDevice) {
+                    newErrors.labelUsbDevice = 'Vui lòng chọn thiết bị USB';
+                }
+            } else if (labelConnectionType === 'serial') {
+                if (!labelSerialPort) {
+                    newErrors.labelSerialPort = 'Vui lòng chọn cổng serial';
+                }
             }
+
             if (!sWidth || isNaN(sWidth) || sWidth <= 0) {
                 newErrors.sWidth = 'Chiều rộng tem phải là số dương';
             }
@@ -81,13 +178,23 @@ const PrinterSettingsModal = ({
             }
         } else if (printerType === 'bill') {
             // Validate bill printer settings only
-            if (!billIP) {
-                newErrors.billIP = 'Vui lòng nhập địa chỉ IP máy in bill';
-            } else if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(billIP)) {
-                newErrors.billIP = 'Định dạng địa chỉ IP không hợp lệ';
-            }
-            if (!billPort || isNaN(billPort) || billPort <= 0 || billPort > 65535) {
-                newErrors.billPort = 'Port phải là số từ 1-65535';
+            if (billConnectionType === 'network') {
+                if (!billIP) {
+                    newErrors.billIP = 'Vui lòng nhập địa chỉ IP máy in bill';
+                } else if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(billIP)) {
+                    newErrors.billIP = 'Định dạng địa chỉ IP không hợp lệ';
+                }
+                if (!billPort || isNaN(billPort) || billPort <= 0 || billPort > 65535) {
+                    newErrors.billPort = 'Port phải là số từ 1-65535';
+                }
+            } else if (billConnectionType === 'usb') {
+                if (!billUsbDevice) {
+                    newErrors.billUsbDevice = 'Vui lòng chọn thiết bị USB';
+                }
+            } else if (billConnectionType === 'serial') {
+                if (!billSerialPort) {
+                    newErrors.billSerialPort = 'Vui lòng chọn cổng serial';
+                }
             }
         }
 
@@ -108,11 +215,17 @@ const PrinterSettingsModal = ({
                 sWidth: parseInt(sWidth),
                 sHeight: parseInt(sHeight),
                 autoPrint: autoPrint,
+                connectionType: labelConnectionType,
+                usbDevice: labelUsbDevice,
+                serialPort: labelSerialPort,
 
                 // Bill printer settings
                 billIP: billIP,
                 billPort: parseInt(billPort),
-                billPaperSize: billPaperSize
+                billPaperSize: billPaperSize,
+                billConnectionType: billConnectionType,
+                billUsbDevice: billUsbDevice,
+                billSerialPort: billSerialPort
             };
 
             await AsyncStorage.setPrinterInfo(printerSettings);
@@ -145,6 +258,107 @@ const PrinterSettingsModal = ({
         setErrors({});
         onClose();
     };
+
+    const renderConnectionTypeSelector = (connectionType, setConnectionType, printerTypePrefix = '') => (
+        <View style={styles.inputGroup}>
+            <TextNormal style={styles.label}>{"Loại kết nối"}</TextNormal>
+            <View style={styles.connectionTypeContainer}>
+                <TouchableOpacity
+                    style={[
+                        styles.connectionTypeButton,
+                        connectionType === 'network' && styles.connectionTypeButtonActive
+                    ]}
+                    onPress={() => setConnectionType('network')}
+                >
+                    <TextNormal style={[
+                        styles.connectionTypeText,
+                        connectionType === 'network' && styles.connectionTypeTextActive
+                    ]}>
+                        Mạng
+                    </TextNormal>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[
+                        styles.connectionTypeButton,
+                        connectionType === 'usb' && styles.connectionTypeButtonActive
+                    ]}
+                    onPress={() => setConnectionType('usb')}
+                >
+                    <TextNormal style={[
+                        styles.connectionTypeText,
+                        connectionType === 'usb' && styles.connectionTypeTextActive
+                    ]}>
+                        USB
+                    </TextNormal>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[
+                        styles.connectionTypeButton,
+                        connectionType === 'serial' && styles.connectionTypeButtonActive
+                    ]}
+                    onPress={() => setConnectionType('serial')}
+                >
+                    <TextNormal style={[
+                        styles.connectionTypeText,
+                        connectionType === 'serial' && styles.connectionTypeTextActive
+                    ]}>
+                        Serial
+                    </TextNormal>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    const renderDeviceSelector = (devices, selectedDevice, setSelectedDevice, isLoading, onScan, label, errorKey) => (
+        <View style={styles.inputGroup}>
+            <View style={styles.deviceSelectorHeader}>
+                <TextNormal style={styles.label}>{label}</TextNormal>
+                <TouchableOpacity
+                    style={[styles.scanButton, isLoading && styles.scanButtonDisabled]}
+                    onPress={onScan}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator size="small" color={Colors.whiteColor} />
+                    ) : (
+                        <TextNormal style={styles.scanButtonText}>Quét</TextNormal>
+                    )}
+                </TouchableOpacity>
+            </View>
+            <View style={[styles.deviceDropdown, errors[errorKey] && styles.inputError]}>
+                {devices.length === 0 ? (
+                    <TextNormal style={styles.noDeviceText}>
+                        {isLoading ? 'Đang quét...' : 'Không tìm thấy thiết bị'}
+                    </TextNormal>
+                ) : (
+                    <ScrollView style={styles.deviceList} showsVerticalScrollIndicator={false}>
+                        {devices.map((device, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                style={[
+                                    styles.deviceItem,
+                                    selectedDevice === (typeof device === 'string' ? device : device.name || device.deviceName) && styles.deviceItemSelected
+                                ]}
+                                onPress={() => {
+                                    const deviceName = typeof device === 'string' ? device : device.name || device.deviceName || device.toString();
+                                    setSelectedDevice(deviceName);
+                                    setErrors(prev => ({ ...prev, [errorKey]: null }));
+                                }}
+                            >
+                                <TextNormal style={[
+                                    styles.deviceItemText,
+                                    selectedDevice === (typeof device === 'string' ? device : device.name || device.deviceName) && styles.deviceItemTextSelected
+                                ]}>
+                                    {typeof device === 'string' ? device : device.name || device.deviceName || device.toString()}
+                                </TextNormal>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                )}
+            </View>
+            {errors[errorKey] && <Text style={styles.errorText}>{errors[errorKey]}</Text>}
+        </View>
+    );
 
     return (
         <Modal
@@ -181,23 +395,32 @@ const PrinterSettingsModal = ({
                     {printerType === 'label' ? (
                         // Label Printer Settings
                         <>
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Địa chỉ IP máy in tem"}</TextNormal>
-                                <View style={[styles.inputContainer, errors.ip && styles.inputError]}>
-                                    <TextInput
-                                        placeholder="Ví dụ: 192.168.1.100"
-                                        value={ip}
-                                        onChangeText={(text) => {
-                                            setIP(text);
-                                            setErrors(prev => ({ ...prev, ip: null }));
-                                        }}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
+                            {renderConnectionTypeSelector(labelConnectionType, setLabelConnectionType, 'label')}
+                            {labelConnectionType === 'network' && (
+                                <View style={styles.inputGroup}>
+                                    <TextNormal style={styles.label}>{"Địa chỉ IP máy in tem"}</TextNormal>
+                                    <View style={[styles.inputContainer, errors.ip && styles.inputError]}>
+                                        <TextInput
+                                            placeholder="Ví dụ: 192.168.1.100"
+                                            value={ip}
+                                            onChangeText={(text) => {
+                                                setIP(text);
+                                                setErrors(prev => ({ ...prev, ip: null }));
+                                            }}
+                                            style={styles.input}
+                                            keyboardType="numeric"
+                                            placeholderTextColor={Colors.textSecondary}
+                                        />
+                                    </View>
+                                    {errors.ip && <Text style={styles.errorText}>{errors.ip}</Text>}
                                 </View>
-                                {errors.ip && <Text style={styles.errorText}>{errors.ip}</Text>}
-                            </View>
+                            )}
+                            {labelConnectionType === 'usb' && (
+                                renderDeviceSelector(usbDevices, labelUsbDevice, setLabelUsbDevice, isLoadingUsb, scanUsbDevices, "Thiết bị USB", "labelUsbDevice")
+                            )}
+                            {labelConnectionType === 'serial' && (
+                                renderDeviceSelector(serialPorts, labelSerialPort, setLabelSerialPort, isLoadingSerial, scanSerialPorts, "Cổng Serial", "labelSerialPort")
+                            )}
 
                             <View style={styles.inputGroup}>
                                 <TextNormal style={styles.label}>{"Chiều rộng tem (mm)"}</TextNormal>
@@ -254,41 +477,51 @@ const PrinterSettingsModal = ({
                     ) : (
                         // Bill Printer Settings
                         <>
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Địa chỉ IP máy in bill"}</TextNormal>
-                                <View style={[styles.inputContainer, errors.billIP && styles.inputError]}>
-                                    <TextInput
-                                        placeholder="Ví dụ: 192.168.1.101"
-                                        value={billIP}
-                                        onChangeText={(text) => {
-                                            setBillIP(text);
-                                            setErrors(prev => ({ ...prev, billIP: null }));
-                                        }}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
-                                </View>
-                                {errors.billIP && <Text style={styles.errorText}>{errors.billIP}</Text>}
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Port"}</TextNormal>
-                                <View style={[styles.inputContainer, errors.billPort && styles.inputError]}>
-                                    <TextInput
-                                        placeholder="Ví dụ: 9100"
-                                        value={billPort.toString()}
-                                        onChangeText={(text) => {
-                                            setBillPort(text);
-                                            setErrors(prev => ({ ...prev, billPort: null }));
-                                        }}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
-                                </View>
-                                {errors.billPort && <Text style={styles.errorText}>{errors.billPort}</Text>}
-                            </View>
+                            {renderConnectionTypeSelector(billConnectionType, setBillConnectionType, 'bill')}
+                            {billConnectionType === 'network' && (
+                                <>
+                                    <View style={styles.inputGroup}>
+                                        <TextNormal style={styles.label}>{"Địa chỉ IP máy in bill"}</TextNormal>
+                                        <View style={[styles.inputContainer, errors.billIP && styles.inputError]}>
+                                            <TextInput
+                                                placeholder="Ví dụ: 192.168.1.101"
+                                                value={billIP}
+                                                onChangeText={(text) => {
+                                                    setBillIP(text);
+                                                    setErrors(prev => ({ ...prev, billIP: null }));
+                                                }}
+                                                style={styles.input}
+                                                keyboardType="numeric"
+                                                placeholderTextColor={Colors.textSecondary}
+                                            />
+                                        </View>
+                                        {errors.billIP && <Text style={styles.errorText}>{errors.billIP}</Text>}
+                                    </View>
+                                    <View style={styles.inputGroup}>
+                                        <TextNormal style={styles.label}>{"Port"}</TextNormal>
+                                        <View style={[styles.inputContainer, errors.billPort && styles.inputError]}>
+                                            <TextInput
+                                                placeholder="Ví dụ: 9100"
+                                                value={billPort.toString()}
+                                                onChangeText={(text) => {
+                                                    setBillPort(text);
+                                                    setErrors(prev => ({ ...prev, billPort: null }));
+                                                }}
+                                                style={styles.input}
+                                                keyboardType="numeric"
+                                                placeholderTextColor={Colors.textSecondary}
+                                            />
+                                        </View>
+                                        {errors.billPort && <Text style={styles.errorText}>{errors.billPort}</Text>}
+                                    </View>
+                                </>
+                            )}
+                            {billConnectionType === 'usb' && (
+                                renderDeviceSelector(usbDevices, billUsbDevice, setBillUsbDevice, isLoadingUsb, scanUsbDevices, "Thiết bị USB", "billUsbDevice")
+                            )}
+                            {billConnectionType === 'serial' && (
+                                renderDeviceSelector(serialPorts, billSerialPort, setBillSerialPort, isLoadingSerial, scanSerialPorts, "Cổng Serial", "billSerialPort")
+                            )}
 
                             <View style={styles.inputGroup}>
                                 <TextNormal style={styles.label}>{"Kích thước giấy"}</TextNormal>
@@ -530,6 +763,96 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
         marginTop: 8,
         fontStyle: 'italic',
+    },
+    // Connection type selector styles
+    connectionTypeContainer: {
+        flexDirection: 'row',
+        backgroundColor: Colors.bgInput,
+        borderRadius: 8,
+        padding: 4,
+        maxWidth: 200,
+    },
+    connectionTypeButton: {
+        flex: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 8,
+        borderRadius: 6,
+        alignItems: 'center',
+    },
+    connectionTypeButtonActive: {
+        backgroundColor: Colors.whiteColor,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.2,
+        shadowRadius: 1.41,
+        elevation: 2,
+    },
+    connectionTypeText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: Colors.textSecondary,
+    },
+    connectionTypeTextActive: {
+        color: Colors.textPrimary,
+    },
+    // Device selector styles
+    deviceSelectorHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    scanButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 6,
+        backgroundColor: Colors.primary,
+        alignItems: 'center',
+    },
+    scanButtonDisabled: {
+        opacity: 0.7,
+    },
+    scanButtonText: {
+        color: Colors.whiteColor,
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    deviceDropdown: {
+        borderWidth: 1,
+        borderColor: Colors.border,
+        borderRadius: 8,
+        backgroundColor: Colors.whiteColor,
+        minHeight: 45,
+        justifyContent: 'center',
+    },
+    deviceList: {
+        maxHeight: 150, // Adjust as needed
+    },
+    deviceItem: {
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
+    },
+    deviceItemSelected: {
+        backgroundColor: Colors.primaryLight,
+    },
+    deviceItemText: {
+        fontSize: 16,
+        color: Colors.textPrimary,
+    },
+    deviceItemTextSelected: {
+        color: Colors.whiteColor,
+        fontWeight: '600',
+    },
+    noDeviceText: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        textAlign: 'center',
+        paddingVertical: 10,
     },
 });
 

@@ -354,7 +354,10 @@ const getLabelPrinterInfo = async () => {
         IP: printerInfo.IP || "",
         sWidth: printerInfo.sWidth || 50,
         sHeight: printerInfo.sHeight || 30,
-        autoPrint: printerInfo.autoPrint || false
+        autoPrint: printerInfo.autoPrint || false,
+        connectionType: printerInfo.connectionType || 'network',
+        usbDevice: printerInfo.usbDevice || '',
+        serialPort: printerInfo.serialPort || ''
       };
     }
   } catch (error) {
@@ -364,7 +367,10 @@ const getLabelPrinterInfo = async () => {
     IP: "",
     sWidth: 50,
     sHeight: 30,
-    autoPrint: false
+    autoPrint: false,
+    connectionType: 'network',
+    usbDevice: '',
+    serialPort: ''
   };
 };
 
@@ -375,7 +381,10 @@ const getBillPrinterInfo = async () => {
       return {
         billIP: printerInfo.billIP || "",
         billPort: printerInfo.billPort || 9100,
-        billPaperSize: printerInfo.billPaperSize || '80mm'
+        billPaperSize: printerInfo.billPaperSize || '80mm',
+        billConnectionType: printerInfo.billConnectionType || 'network',
+        billUsbDevice: printerInfo.billUsbDevice || '',
+        billSerialPort: printerInfo.billSerialPort || ''
       };
     }
   } catch (error) {
@@ -384,7 +393,10 @@ const getBillPrinterInfo = async () => {
   return {
     billIP: "",
     billPort: 9100,
-    billPaperSize: '80mm'
+    billPaperSize: '80mm',
+    billConnectionType: 'network',
+    billUsbDevice: '',
+    billSerialPort: ''
   };
 };
 
