@@ -13,6 +13,7 @@ const TableSelector = ({ isVisible, close, currentOrder }) => {
   const dispatch = useDispatch();
   const tables = useSelector((state) => getTablesSelector(state));
   const [blockedTables, setBlockedTables] = useState({});
+  const isTableSelectionRequired = currentOrder?.orderType === "1" || currentOrder?.orderType === 1;
   console.log('tables::', tables)
 
   useEffect(() => {
@@ -37,12 +38,14 @@ const TableSelector = ({ isVisible, close, currentOrder }) => {
   return (
     <Modal
       isVisible={isVisible}
-      onBackButtonPress={() => console.log('back hardware')}
-      onBackdropPress={close}
+      onBackButtonPress={isTableSelectionRequired ? undefined : close}
+      onBackdropPress={isTableSelectionRequired ? undefined : close}
       propagateSwipe
       style={styles.containerModal}>
       <View style={styles.containerView}>
-        <TextNormal style={styles.title}>{'Số thẻ'}</TextNormal>
+        <TextNormal style={styles.title}>
+          {isTableSelectionRequired ? 'Chọn bàn (bắt buộc)' : 'Số thẻ'}
+        </TextNormal>
         <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.wrapperTable}
@@ -143,9 +146,7 @@ const styles = StyleSheet.create({
     maxHeight: widthDevice * 0.7,
     backgroundColor: 'white',
     borderRadius: 16,
-    // position: 'absolute',
-    // top: 103,
-    left: heightDevice * 0.2,
+    alignSelf: 'center',
     marginVertical: 150,
   },
   line: { height: 6, backgroundColor: '#F5F5F5' },

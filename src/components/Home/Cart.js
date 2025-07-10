@@ -64,6 +64,7 @@ const Cart = ({ showTable }) => {
     dispatch(setOrderAction({
       ...currentOrder,
       orderType: i.id,
+      table: i.id === 1 || i.id === "1" ? currentOrder.table : '', // Reset table when orderType is not 1
     }));
     if (i.id === 1 || i.id === "1") {
       showTable();
