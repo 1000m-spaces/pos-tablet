@@ -19,6 +19,16 @@ class OrderController {
       return { success: false, error: error.message };
     }
   };
+  // New method to fetch orders from getOrderOnlineNew API
+  fetchOrderOnlineNew = async payload => {
+    try {
+      console.log('fetchOrderOnlineNew', UrlApi.getOnlineOrder, payload);
+      const { data } = await HttpClient.post(UrlApi.getOnlineOrder, payload);
+      return { success: true, data: data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
   fetchOrder = async payload => {
     try {
       console.log('fetchOrder', UrlApi.fetchOrder, payload);

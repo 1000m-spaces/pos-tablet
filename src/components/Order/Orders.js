@@ -23,6 +23,65 @@ const orderFilters = [
   { id: 2, name: 'Lịch sử' },
 ];
 
+// Function to transform new API response to match expected order structure
+const transformOrderOnlineNew = (apiOrder) => {
+  try {
+    // Parse the request_products JSON string
+    const requestProducts = apiOrder.request_products ? JSON.parse(apiOrder.request_products) : [];
+
+    // Transform products to itemInfo.items structure
+    const items = apiOrder.products?.map((product, index) => {
+      // Find corresponding request product for additional info
+      const requestProduct = requestProducts.find(req => req.pid == product.prod_id) || {};
+
+      // Transform extras to modifierGroups
+      const modifierGroups = product.extras?.map(extra => ({
+        modifierGroupName: extra.group_extra_name || 'Extras',
+        modifiers: [{
+          modifierName: extra.name,
+          modifierPrice: extra.paid_price || 0
+        }]
+      })) || [];
+
+      return {
+        name: product.prodname,
+        quantity: parseInt(product.quantity) || 1,
+        comment: requestProduct.note || '',
+        modifierGroups: modifierGroups,
+        fare: {
+          priceDisplay: product.paid_price ? parseInt(product.paid_price).toLocaleString('vi-VN') : '0',
+          currencySymbol: '₫'
+        }
+      };
+    }) || [];
+
+    // Transform the order to match expected structure
+    return {
+      displayID: apiOrder.id,
+      state: 'ORDER_CREATED', // Default state for new orders
+      orderValue: apiOrder.price_paid ? parseInt(apiOrder.price_paid).toLocaleString('vi-VN') : '0',
+      itemInfo: {
+        items: items
+      },
+      eater: {
+        name: apiOrder.order_name || 'Khách hàng',
+        mobileNumber: apiOrder.userphone || '',
+        comment: apiOrder.description || '',
+        address: {
+          address: apiOrder.address || ''
+        }
+      },
+      // Add service info from tableName
+      service: apiOrder.table_name || apiOrder.tableName || 'Unknown',
+      // Mark as online order from new API
+      source: 'online_new'
+    };
+  } catch (error) {
+    console.error('Error transforming order:', error);
+    return null;
+  }
+};
+
 const Orders = () => {
   const [data, setData] = useState([]);
   const [orderType, setOrderType] = useState(1);
@@ -57,16 +116,40 @@ const Orders = () => {
 
     try {
       if (orderType === 1) {
-        const res = await orderController.fetchOrder({
-          branch_id: userShop.id,
-          brand_id: userShop.partnerid,
-          merchant_id: userShop.partnerid,
-          service: "GRAB",
-        });
+        // Fetch from both APIs and combine data
+        const [grabOrdersRes, onlineOrdersRes] = await Promise.all([
+          // Original GRAB orders
+          orderController.fetchOrder({
+            branch_id: userShop.id,
+            brand_id: userShop.partnerid,
+            merchant_id: userShop.partnerid,
+            service: "GRAB",
+          }),
+          // New online orders
+          orderController.fetchOrderOnlineNew({
+            rest_id: userShop.id
+          })
+        ]);
 
-        if (res.success) {
-          setData(res?.data?.orders || []);
-        } else {
+        let combinedOrders = [];
+
+        // Process GRAB orders
+        if (grabOrdersRes.success) {
+          combinedOrders = [...(grabOrdersRes?.data?.orders || [])];
+        }
+
+        // Process and transform new online orders
+        if (onlineOrdersRes.success && onlineOrdersRes.data?.status) {
+          const transformedOrders = onlineOrdersRes.data.data
+            .map(transformOrderOnlineNew)
+            .filter(order => order !== null); // Remove failed transformations
+
+          combinedOrders = [...combinedOrders, ...transformedOrders];
+        }
+
+        setData(combinedOrders);
+
+        if (!grabOrdersRes.success && !onlineOrdersRes.success) {
           Toast.show({
             type: 'error',
             text1: 'Lỗi khi tải đơn hàng mới',
@@ -74,6 +157,7 @@ const Orders = () => {
           });
         }
       } else {
+        // History orders - keep existing logic
         const formattedDate = formatDate(selectedDate);
         const res = await orderController.fetchOrderHistory({
           branch_id: userShop.id,

@@ -544,7 +544,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
     }, [orders, printedLabels, orderType]);
 
     const tableData = orders?.map(order => [
-        "GRAB",
+        order.service || "GRAB",
         order.displayID,
         order.orderValue,
         order.itemInfo?.items?.length,
