@@ -337,19 +337,19 @@ const PrinterSettingsModal = ({
                                 key={index}
                                 style={[
                                     styles.deviceItem,
-                                    selectedDevice === (typeof device === 'string' ? device : device.name || device.deviceName) && styles.deviceItemSelected
+                                    selectedDevice === (typeof device === 'string' ? device : device.name || device.deviceName || device.mName) && styles.deviceItemSelected
                                 ]}
                                 onPress={() => {
-                                    const deviceName = typeof device === 'string' ? device : device.name || device.deviceName || device.toString();
+                                    const deviceName = typeof device === 'string' ? device : device.name || device.deviceName || device.mName || device.toString();
                                     setSelectedDevice(deviceName);
                                     setErrors(prev => ({ ...prev, [errorKey]: null }));
                                 }}
                             >
                                 <TextNormal style={[
                                     styles.deviceItemText,
-                                    selectedDevice === (typeof device === 'string' ? device : device.name || device.deviceName) && styles.deviceItemTextSelected
+                                    selectedDevice === (typeof device === 'string' ? device : device.name || device.deviceName || device.mName) && styles.deviceItemTextSelected
                                 ]}>
-                                    {typeof device === 'string' ? device : device.name || device.deviceName || device.toString()}
+                                    {typeof device === 'string' ? device : device.name || device.deviceName || device.mName || device.toString()}
                                 </TextNormal>
                             </TouchableOpacity>
                         ))}
