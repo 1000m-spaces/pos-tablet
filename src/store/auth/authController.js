@@ -24,7 +24,7 @@ class AuthController {
       console.log('login::', data)
       return { success: true, data: data };
     } catch (error) {
-      console.log('login error::', error)
+      console.log('login error::', error, UrlApi.loginInternal)
       return { success: false, error: error.message };
     }
   };

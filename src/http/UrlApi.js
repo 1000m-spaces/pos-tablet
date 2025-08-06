@@ -5,8 +5,8 @@ const BASE_PATH_CASE_DEV = 'https://v01api.1000m.vn/api1.0.php/'
 const BASE_PATH_MENU = 'https://v01api.1000m.vn/api1.0.php/'
 
 const BASE_PATH_1000M = 'https://api.1000m.vn/'
-// const BASE_PATH_POS = 'https://dev-pos.1000m.vn/'
-const BASE_PATH_POS = 'https://v01api.1000m.vn/api1.0.php/'
+const BASE_PATH_POS = 'https://dev-pos.1000m.vn/'
+// const BASE_PATH_POS = 'https://v01api.1000m.vn/'
 
 // const BASE_PATH_1000M = 'https://dev-api.1000m.vn/'
 

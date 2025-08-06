@@ -56,7 +56,14 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                 if (printerInfo && printerInfo.sWidth && printerInfo.sHeight) {
                     setPrinterSettings({
                         width: mmToPixels(Number(printerInfo.sWidth)),
-                        height: mmToPixels(Number(printerInfo.sHeight))
+                        height: mmToPixels(Number(printerInfo.sHeight)),
+                        fontSize: {
+                            storeName: calculateDynamicFontSize(printerInfo.labelStoreName || 15),
+                            orderNumber: calculateDynamicFontSize(printerInfo.labelOrderNumber || 15),
+                            itemName: calculateDynamicFontSize(printerInfo.labelItemName || 15),
+                            modifier: calculateDynamicFontSize(printerInfo.labelModifier || 14),
+                            note: calculateDynamicFontSize(printerInfo.labelNote || 14)
+                        }
                     });
                 }
             } catch (error) {
@@ -74,7 +81,8 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         ...(printerSettings || {}),
         fontSize: {
             ...DEFAULT_SETTINGS.fontSize,
-            ...(settings.fontSize || {})
+            ...(settings.fontSize || {}),
+            ...(printerSettings?.fontSize || {})
         }
     };
 
