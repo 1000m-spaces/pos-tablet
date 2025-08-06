@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from 'store/actions';
-import { userInfo, currentOrderSelector, onlineOrderSelector } from 'store/selectors';
+import { currentOrderSelector, onlineOrderSelector } from 'store/selectors';
 import { NAVIGATION_LOGIN } from 'navigation/routes';
 import AsyncStorage from 'store/async_storage/index';
 import {
@@ -22,7 +22,7 @@ import styles from './styles';
 
 const Profile = ({ navigation }) => {
     const dispatch = useDispatch();
-    const user = useSelector(state => userInfo(state));
+    const [user, setUser] = useState(null);
     const currentOrder = useSelector(state => currentOrderSelector(state));
     const onlineOrders = useSelector(state => onlineOrderSelector(state));
 
@@ -34,11 +34,15 @@ const Profile = ({ navigation }) => {
     });
     const [isLoading, setIsLoading] = useState(true);
 
-    // Load order statistics
+    // Load user info and order statistics
     useEffect(() => {
-        const loadOrderStats = async () => {
+        const loadUserAndOrderStats = async () => {
             try {
                 setIsLoading(true);
+
+                // Get user info from AsyncStorage
+                const userData = await AsyncStorage.getUser();
+                setUser(userData);
 
                 // Get pending orders
                 const pendingOrders = await AsyncStorage.getPendingOrders();
@@ -89,7 +93,7 @@ const Profile = ({ navigation }) => {
             }
         };
 
-        loadOrderStats();
+        loadUserAndOrderStats();
     }, []);
 
     const formatCurrency = (amount) => {

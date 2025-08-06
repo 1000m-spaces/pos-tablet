@@ -84,9 +84,33 @@ function* getOnlineOrderSaga({payload}) {
     });
   }
 }
+
+function* confirmOrderOnlineSaga({payload}) {
+  try {
+    const result = yield call(orderController.confirmOrderOnline, payload);
+    if (result.success === true) {
+      yield put({
+        type: NEOCAFE.CONFIRM_ORDER_ONLINE_SUCCESS,
+        payload: result.data,
+      });
+    } else {
+      yield put({
+        type: NEOCAFE.CONFIRM_ORDER_ONLINE_ERROR,
+        payload: {errorMsg: result.error || 'Xảy ra lỗi khi xác nhận đơn hàng'},
+      });
+    }
+  } catch (error) {
+    yield put({
+      type: NEOCAFE.CONFIRM_ORDER_ONLINE_ERROR,
+      payload: {errorMsg: 'Xảy ra lỗi khi xác nhận đơn hàng'},
+    });
+  }
+}
+
 export default function* watcherSaga() {
   yield takeLatest(NEOCAFE.CREATE_ORDER_REQUEST, createOrderSaga);
   yield takeLatest(NEOCAFE.ADD_PRODUCT_CART_REQUEST, addProductCartSaga);
   yield takeLatest(NEOCAFE.SET_ORDER_REQUEST, setOrderSaga);
   yield takeLatest(NEOCAFE.GET_ONLINE_ORDER_REQUEST, getOnlineOrderSaga);
+  yield takeLatest(NEOCAFE.CONFIRM_ORDER_ONLINE_REQUEST, confirmOrderOnlineSaga);
 }

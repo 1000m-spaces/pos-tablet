@@ -58,5 +58,15 @@ class OrderController {
       return { success: false, error: error.message };
     }
   };
+
+  confirmOrderOnline = async payload => {
+    try {
+      console.log('confirmOrderOnline', UrlApi.confirmOrderOnline, payload);
+      const { data } = await HttpClient.post(UrlApi.confirmOrderOnline, payload);
+      return { success: true, data: data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
 }
 export default new OrderController();

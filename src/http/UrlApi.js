@@ -1,11 +1,12 @@
 // import { BASE_PATH_MENU } from 'assets/config';
-// const BASE_PATH_MENU = 'https://test.mycafe.co/api1.0.php/';
 const BASE_PATH_CAFE = 'https://api.neocafe.tech/v1/';
+// https://dev-api-php.1000m.vn/api1.0.php/
 const BASE_PATH_CASE_DEV = 'https://v01api.1000m.vn/api1.0.php/'
 const BASE_PATH_MENU = 'https://v01api.1000m.vn/api1.0.php/'
 
 const BASE_PATH_1000M = 'https://api.1000m.vn/'
-const BASE_PATH_POS = 'https://dev-pos.1000m.vn/'
+const BASE_PATH_POS = 'https://v01pos.1000m.vn/'
+// const BASE_PATH_POS = 'https://dev-pos.1000m.vn/'
 // const BASE_PATH_POS = 'https://v01api.1000m.vn/'
 
 // const BASE_PATH_1000M = 'https://dev-api.1000m.vn/'
@@ -48,6 +49,7 @@ export const UrlApi = {
 
   createOrder: BASE_PATH_MENU + 'order',
   cancelOrder: BASE_PATH_MENU + 'cancelOrderOnline',
+  confirmOrderOnline: BASE_PATH_MENU + 'confirmOrderOnline',
   getListHistoryOrder: BASE_PATH_MENU + 'getOrderDetail',
 
   orderSuccessPayment: BASE_PATH_MENU + 'getOrderPaidSuccessNew', // don da thanh toan

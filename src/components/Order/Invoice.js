@@ -9,6 +9,8 @@ import { TextNormal } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
 import { syncPendingOrdersAction } from 'store/sync/syncAction';
 import { getPendingSyncLoadingSelector, getPendingSyncErrorSelector } from 'store/sync/syncSelector';
+import { confirmOrderOnline } from 'store/order/orderAction';
+import { confirmOrderOnlineStatusSelector } from 'store/order/orderSelector';
 import { useIsFocused } from '@react-navigation/native';
 import FilterRow from './FilterRow';
 import PrinterSettingsModal from 'common/PrinterSettingsModal';
@@ -31,6 +33,7 @@ const Invoice = () => {
     // Redux selectors
     const pendingSyncLoading = useSelector(getPendingSyncLoadingSelector);
     const pendingSyncError = useSelector(getPendingSyncErrorSelector);
+    const confirmOrderStatus = useSelector(confirmOrderOnlineStatusSelector);
 
     // Handle printer settings saved
     const handlePrinterSettingsSaved = (printerSettings) => {
@@ -117,6 +120,15 @@ const Invoice = () => {
         });
     };
 
+    const handleConfirmOrder = (orderId) => {
+        dispatch(confirmOrderOnline({ order_id: orderId }));
+        Toast.show({
+            type: 'info',
+            text1: 'Đang xác nhận đơn hàng...',
+            position: 'bottom',
+        });
+    };
+
     const getStatusDisplayText = (status) => {
         switch (status) {
             case "WaitingForPayment": return "Chờ thanh toán";
@@ -144,6 +156,24 @@ const Invoice = () => {
             }
         }
     }, [pendingSyncLoading, pendingSyncError, fetchOfflineOrders]);
+
+    // Listen to confirm order results
+    useEffect(() => {
+        if (confirmOrderStatus === 'SUCCESS') {
+            Toast.show({
+                type: 'success',
+                text1: 'Xác nhận đơn hàng thành công',
+                position: 'bottom',
+            });
+            fetchOfflineOrders(); // Refresh orders after confirm
+        } else if (confirmOrderStatus === 'ERROR') {
+            Toast.show({
+                type: 'error',
+                text1: 'Xác nhận đơn hàng thất bại',
+                position: 'bottom',
+            });
+        }
+    }, [confirmOrderStatus, fetchOfflineOrders]);
 
     return (
         <>
@@ -246,7 +276,7 @@ const Invoice = () => {
                             <TextNormal style={styles.loadingText}>Đang tải đơn offline...</TextNormal>
                         </View>
                     ) : (
-                        <OfflineOrderTable orders={data} onRefresh={fetchOfflineOrders} />
+                        <OfflineOrderTable orders={data} onRefresh={fetchOfflineOrders} onConfirmOrder={handleConfirmOrder} />
                     )}
                 </View>
             </SafeAreaView>

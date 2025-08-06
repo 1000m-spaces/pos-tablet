@@ -21,3 +21,8 @@ export const resetGetOnlineOrder = payload => ({
   type: NEOCAFE.GET_ONLINE_ORDER_RESET,
   payload,
 });
+
+export const confirmOrderOnline = payload => ({
+  type: NEOCAFE.CONFIRM_ORDER_ONLINE_REQUEST,
+  payload,
+});

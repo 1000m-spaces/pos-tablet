@@ -16,6 +16,7 @@ const initializeState = {
   onlineOrders: [],
   statusGetOnlineOrder: Status.DEFAULT,
   statusSetOrder: Status.DEFAULT,
+  statusConfirmOrderOnline: Status.DEFAULT,
   //order
   statusCreateOrder: Status.DEFAULT,
   order: null,
@@ -107,6 +108,22 @@ export default (state = initializeState, { type, payload }) => {
       return {
         ...state,
         statusCreateOrder: Status.ERROR,
+      };
+    // CONFIRM ORDER ONLINE
+    case NEOCAFE.CONFIRM_ORDER_ONLINE_REQUEST:
+      return {
+        ...state,
+        statusConfirmOrderOnline: Status.LOADING,
+      };
+    case NEOCAFE.CONFIRM_ORDER_ONLINE_SUCCESS:
+      return {
+        ...state,
+        statusConfirmOrderOnline: Status.SUCCESS,
+      };
+    case NEOCAFE.CONFIRM_ORDER_ONLINE_ERROR:
+      return {
+        ...state,
+        statusConfirmOrderOnline: Status.ERROR,
       };
     default: {
       return state;
