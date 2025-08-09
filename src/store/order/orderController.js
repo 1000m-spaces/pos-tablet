@@ -11,6 +11,22 @@ class OrderController {
       return { success: false, error: error.message };
     }
   };
+  getOrderShipping = async payload => {
+    try {
+      const { data } = await HttpClient.post(UrlApi.getOrderShipping, payload);
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+  getOrderPaidSuccess = async payload => {
+    try {
+      const { data } = await HttpClient.post(UrlApi.getOrderPaidSuccess, payload);
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
   getOnlineOrder = async payload => {
     try {
       const { data } = await HttpClient.post(UrlApi.getOnlineOrder, payload);

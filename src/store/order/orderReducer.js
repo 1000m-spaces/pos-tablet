@@ -15,6 +15,11 @@ const initializeState = {
   statusAddProductCart: Status.DEFAULT,
   onlineOrders: [],
   statusGetOnlineOrder: Status.DEFAULT,
+  // new lists
+  shippingOrders: [],
+  statusGetOrderShipping: Status.DEFAULT,
+  paidSuccessOrders: [],
+  statusGetOrderPaidSuccess: Status.DEFAULT,
   statusSetOrder: Status.DEFAULT,
   statusConfirmOrderOnline: Status.DEFAULT,
   //order
@@ -46,6 +51,50 @@ export default (state = initializeState, { type, payload }) => {
       return {
         ...state,
         statusGetOnlineOrder: Status.DEFAULT,
+      };
+    // GET ORDER SHIPPING
+    case NEOCAFE.GET_ORDER_SHIPPING_REQUEST:
+      return {
+        ...state,
+        statusGetOrderShipping: Status.LOADING,
+      };
+    case NEOCAFE.GET_ORDER_SHIPPING_SUCCESS:
+      return {
+        ...state,
+        shippingOrders: payload,
+        statusGetOrderShipping: Status.SUCCESS,
+      };
+    case NEOCAFE.GET_ORDER_SHIPPING_ERROR:
+      return {
+        ...state,
+        statusGetOrderShipping: Status.ERROR,
+      };
+    case NEOCAFE.GET_ORDER_SHIPPING_RESET:
+      return {
+        ...state,
+        statusGetOrderShipping: Status.DEFAULT,
+      };
+    // GET ORDER PAID SUCCESS
+    case NEOCAFE.GET_ORDER_PAID_SUCCESS_REQUEST:
+      return {
+        ...state,
+        statusGetOrderPaidSuccess: Status.LOADING,
+      };
+    case NEOCAFE.GET_ORDER_PAID_SUCCESS_SUCCESS:
+      return {
+        ...state,
+        paidSuccessOrders: payload,
+        statusGetOrderPaidSuccess: Status.SUCCESS,
+      };
+    case NEOCAFE.GET_ORDER_PAID_SUCCESS_ERROR:
+      return {
+        ...state,
+        statusGetOrderPaidSuccess: Status.ERROR,
+      };
+    case NEOCAFE.GET_ORDER_PAID_SUCCESS_RESET:
+      return {
+        ...state,
+        statusGetOrderPaidSuccess: Status.DEFAULT,
       };
     // ADD PRODUCT TO CART
     case NEOCAFE.ADD_PRODUCT_CART_REQUEST:
