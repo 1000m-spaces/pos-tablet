@@ -67,7 +67,7 @@ export const UrlApi = {
   getUserInfo: BASE_PATH_MENU + 'userinfo',
   getVersion: BASE_PATH_CAFE + 'version',
   sendPhone: BASE_PATH_MENU + 'phone',
-  loginInternal: BASE_PATH_POS + 'login',
+  loginInternal: BASE_PATH_MENU + 'loginInternal',
   internalMenuShop: BASE_PATH_MENU + 'getInternalMenuShop',
   orderInternal: BASE_PATH_MENU + 'orderInternal',
   confirmPhone: BASE_PATH_MENU + 'phone',

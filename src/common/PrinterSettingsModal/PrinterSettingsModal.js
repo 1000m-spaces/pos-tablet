@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TextInput, Text, Switch, TouchableOpacity, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import Modal from 'react-native-modal';
 import Toast from 'react-native-toast-message';
@@ -47,6 +47,10 @@ const PrinterSettingsModal = ({
     const [serialPorts, setSerialPorts] = useState([]);
     const [isLoadingUsb, setIsLoadingUsb] = useState(false);
     const [isLoadingSerial, setIsLoadingSerial] = useState(false);
+
+    // Refs for device selector scroll views
+    const usbScrollRef = useRef(null);
+    const serialScrollRef = useRef(null);
 
     const [errors, setErrors] = useState({});
     const [isSaving, setIsSaving] = useState(false);
@@ -345,56 +349,71 @@ const PrinterSettingsModal = ({
         </View>
     );
 
-    const renderDeviceSelector = (devices, selectedDevice, setSelectedDevice, isLoading, onScan, label, errorKey) => (
-        <View style={styles.inputGroup}>
-            <View style={styles.deviceSelectorHeader}>
-                <TextNormal style={styles.label}>{label}</TextNormal>
-                <TouchableOpacity
-                    style={[styles.scanButton, isLoading && styles.scanButtonDisabled]}
-                    onPress={onScan}
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <ActivityIndicator size="small" color={Colors.whiteColor} />
+    const renderDeviceSelector = (devices, selectedDevice, setSelectedDevice, isLoading, onScan, label, errorKey, scrollRef) => {
+        const scrollToSelectedDevice = (selectedIndex) => {
+            if (scrollRef.current && selectedIndex >= 0) {
+                // Calculate the position to scroll to (item height * index)
+                const itemHeight = 41; // deviceItem height + border
+                const scrollPosition = selectedIndex * itemHeight;
+                scrollRef.current.scrollTo({ y: scrollPosition, animated: true });
+            }
+        };
+
+        return (
+            <View style={styles.inputGroup}>
+                <View style={styles.deviceSelectorHeader}>
+                    <TextNormal style={styles.label}>{label}</TextNormal>
+                    <TouchableOpacity
+                        style={[styles.scanButton, isLoading && styles.scanButtonDisabled]}
+                        onPress={onScan}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator size="small" color={Colors.whiteColor} />
+                        ) : (
+                            <TextNormal style={styles.scanButtonText}>Quét</TextNormal>
+                        )}
+                    </TouchableOpacity>
+                </View>
+                <View style={[styles.deviceDropdown, errors[errorKey] && styles.inputError]}>
+                    {devices.length === 0 ? (
+                        <TextNormal style={styles.noDeviceText}>
+                            {isLoading ? 'Đang quét...' : 'Không tìm thấy thiết bị'}
+                        </TextNormal>
                     ) : (
-                        <TextNormal style={styles.scanButtonText}>Quét</TextNormal>
+                        <ScrollView
+                            ref={scrollRef}
+                            style={styles.deviceList}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {devices.map((device, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    style={[
+                                        styles.deviceItem,
+                                        selectedDevice === device && styles.deviceItemSelected
+                                    ]}
+                                    onPress={() => {
+                                        setSelectedDevice(device);
+                                        setErrors(prev => ({ ...prev, [errorKey]: null }));
+                                        scrollToSelectedDevice(index);
+                                    }}
+                                >
+                                    <TextNormal style={[
+                                        styles.deviceItemText,
+                                        selectedDevice === device && styles.deviceItemTextSelected
+                                    ]}>
+                                        {device}
+                                    </TextNormal>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                     )}
-                </TouchableOpacity>
+                </View>
+                {errors[errorKey] && <Text style={styles.errorText}>{errors[errorKey]}</Text>}
             </View>
-            <View style={[styles.deviceDropdown, errors[errorKey] && styles.inputError]}>
-                {devices.length === 0 ? (
-                    <TextNormal style={styles.noDeviceText}>
-                        {isLoading ? 'Đang quét...' : 'Không tìm thấy thiết bị'}
-                    </TextNormal>
-                ) : (
-                    <ScrollView style={styles.deviceList} showsVerticalScrollIndicator={false}>
-                        {devices.map((device, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={[
-                                    styles.deviceItem,
-                                    selectedDevice === (typeof device === 'string' ? device : device.name || device.deviceName || device.mName) && styles.deviceItemSelected
-                                ]}
-                                onPress={() => {
-                                    const deviceName = typeof device === 'string' ? device : device.name || device.deviceName || device.mName || device.toString();
-                                    setSelectedDevice(deviceName);
-                                    setErrors(prev => ({ ...prev, [errorKey]: null }));
-                                }}
-                            >
-                                <TextNormal style={[
-                                    styles.deviceItemText,
-                                    selectedDevice === (typeof device === 'string' ? device : device.name || device.deviceName || device.mName) && styles.deviceItemTextSelected
-                                ]}>
-                                    {typeof device === 'string' ? device : device.name || device.deviceName || device.mName || device.toString()}
-                                </TextNormal>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                )}
-            </View>
-            {errors[errorKey] && <Text style={styles.errorText}>{errors[errorKey]}</Text>}
-        </View>
-    );
+        );
+    };
 
     return (
         <Modal
@@ -456,10 +475,10 @@ const PrinterSettingsModal = ({
                                 </View>
                             )}
                             {labelConnectionType === 'usb' && (
-                                renderDeviceSelector(usbDevices, labelUsbDevice, setLabelUsbDevice, isLoadingUsb, scanUsbDevices, "Thiết bị USB", "labelUsbDevice")
+                                renderDeviceSelector(usbDevices, labelUsbDevice, setLabelUsbDevice, isLoadingUsb, scanUsbDevices, "Thiết bị USB", "labelUsbDevice", usbScrollRef)
                             )}
                             {labelConnectionType === 'serial' && (
-                                renderDeviceSelector(serialPorts, labelSerialPort, setLabelSerialPort, isLoadingSerial, scanSerialPorts, "Cổng Serial", "labelSerialPort")
+                                renderDeviceSelector(serialPorts, labelSerialPort, setLabelSerialPort, isLoadingSerial, scanSerialPorts, "Cổng Serial", "labelSerialPort", serialScrollRef)
                             )}
 
                             <View style={styles.inputGroup}>
@@ -632,10 +651,10 @@ const PrinterSettingsModal = ({
                                 </>
                             )}
                             {billConnectionType === 'usb' && (
-                                renderDeviceSelector(usbDevices, billUsbDevice, setBillUsbDevice, isLoadingUsb, scanUsbDevices, "Thiết bị USB", "billUsbDevice")
+                                renderDeviceSelector(usbDevices, billUsbDevice, setBillUsbDevice, isLoadingUsb, scanUsbDevices, "Thiết bị USB", "billUsbDevice", usbScrollRef)
                             )}
                             {billConnectionType === 'serial' && (
-                                renderDeviceSelector(serialPorts, billSerialPort, setBillSerialPort, isLoadingSerial, scanSerialPorts, "Cổng Serial", "billSerialPort")
+                                renderDeviceSelector(serialPorts, billSerialPort, setBillSerialPort, isLoadingSerial, scanSerialPorts, "Cổng Serial", "billSerialPort", serialScrollRef)
                             )}
 
                             <View style={styles.inputGroup}>
@@ -1002,7 +1021,9 @@ const styles = StyleSheet.create({
         borderBottomColor: Colors.border,
     },
     deviceItemSelected: {
-        backgroundColor: Colors.primaryLight,
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
+        borderWidth: 2,
     },
     deviceItemText: {
         fontSize: 16,

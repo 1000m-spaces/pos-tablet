@@ -501,7 +501,6 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
             }
 
             const imageData = await viewBillShotRef.current.capture();
-            console.log('imageData', imageData);
             const printerWidth = getThermalPrinterWidth(billPrinterInfo.billPaperSize);
             await billPrinterRef.current.printBitmap(imageData, 1, printerWidth, 0);
 

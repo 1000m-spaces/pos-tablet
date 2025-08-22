@@ -19,7 +19,8 @@ const OrderDetailDialog = ({
     onPrintBill,
     onStatusChange,
     loadingVisible,
-    isOfflineOrder = false
+    isOfflineOrder = false,
+    onConfirm,
 }) => {
     const [showStatusOptions, setShowStatusOptions] = useState(false);
 
@@ -415,6 +416,14 @@ const OrderDetailDialog = ({
                     >
                         <Text style={styles.dockedButtonText}>🧾 In HĐ</Text>
                     </Pressable>
+                    {!isOfflineOrder && typeof onConfirm === 'function' && (
+                        <Pressable
+                            style={[styles.dockedButton, styles.confirmButton]}
+                            onPress={() => onConfirm(selectedOrder)}
+                        >
+                            <Text style={styles.dockedButtonText}>✅ Xác nhận</Text>
+                        </Pressable>
+                    )}
                     <Pressable
                         style={[styles.dockedButton, styles.closeButton]}
                         onPress={onClose}
@@ -715,6 +724,9 @@ const styles = StyleSheet.create({
     },
     printBillButton: {
         backgroundColor: "#4CAF50",
+    },
+    confirmButton: {
+        backgroundColor: "#2E7D32",
     },
     closeButton: {
         backgroundColor: "#757575",
