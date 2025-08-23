@@ -4,7 +4,8 @@ import Orientation from 'react-native-orientation-locker';
 import { LogBox, TextInput, StatusBar, Dimensions } from 'react-native';
 import { setCustomText } from 'react-native-global-props';
 import 'react-native-gesture-handler';
-import Toast from 'react-native-toast-message'
+import Toast from 'react-native-toast-message';
+import { PrinterProvider } from './services/PrinterService';
 
 
 const customTextProps = {
@@ -28,10 +29,16 @@ const App = () => {
     };
   }, []);
 
-  return <>
-    <RootNavigation />
-    <Toast />
-  </>;
+  return (
+    <PrinterProvider>
+      <RootNavigation />
+      <Toast
+        position="top"
+        topOffset={50}
+        visibilityTime={4000}
+      />
+    </PrinterProvider>
+  );
 };
 
 export default App;

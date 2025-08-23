@@ -6,6 +6,7 @@ import AsyncStorage from 'store/async_storage/index';
 import Colors from 'theme/Colors';
 import { TextNormal } from 'common/Text/TextFont';
 import { getUsbDevices, getSerialDevices } from 'rn-xprinter';
+import { usePrinter } from '../../services/PrinterService';
 
 const PrinterSettingsModal = ({
     visible,
@@ -13,6 +14,23 @@ const PrinterSettingsModal = ({
     initialPrinterType = 'label',
     onSettingsSaved
 }) => {
+    // Use global printer service
+    const {
+        billPrinterStatus,
+        labelPrinterStatus,
+        isBillConnecting,
+        isLabelConnecting,
+        billPrinterSettings: globalBillSettings,
+        labelPrinterSettings: globalLabelSettings,
+        connectBillPrinter,
+        connectLabelPrinter,
+        disconnectBillPrinter,
+        disconnectLabelPrinter,
+        testBillPrinter,
+        testLabelPrinter,
+        getConnectionDetails,
+        handleSettingsUpdate
+    } = usePrinter();
     // Label printer settings state
     const [ip, setIP] = useState("");
     const [sWidth, setSWidth] = useState(50);
@@ -276,6 +294,9 @@ const PrinterSettingsModal = ({
                 position: 'bottom',
             });
 
+            // Update global printer service
+            await handleSettingsUpdate();
+
             // Call callback if provided
             if (onSettingsSaved) {
                 onSettingsSaved(printerSettings);
@@ -297,6 +318,79 @@ const PrinterSettingsModal = ({
     const handleClose = () => {
         setErrors({});
         onClose();
+    };
+
+    // Render connection status and controls
+    const renderConnectionControls = (printerType) => {
+        const isLabel = printerType === 'label';
+        const status = isLabel ? labelPrinterStatus : billPrinterStatus;
+        const isConnecting = isLabel ? isLabelConnecting : isBillConnecting;
+        const settings = isLabel ? globalLabelSettings : globalBillSettings;
+
+        const connectFunction = isLabel ? connectLabelPrinter : connectBillPrinter;
+        const disconnectFunction = isLabel ? disconnectLabelPrinter : disconnectBillPrinter;
+        const testFunction = isLabel ? testLabelPrinter : testBillPrinter;
+
+        const getStatusColor = () => {
+            switch (status) {
+                case 'connected': return '#4CAF50';
+                case 'connecting': return '#FF9800';
+                case 'disconnected': return '#F44336';
+                default: return '#9E9E9E';
+            }
+        };
+
+        const getStatusText = () => {
+            switch (status) {
+                case 'connected': return 'Đã kết nối';
+                case 'connecting': return 'Đang kết nối...';
+                case 'disconnected': return 'Chưa kết nối';
+                default: return 'Không xác định';
+            }
+        };
+
+        return (
+            <View style={styles.connectionControlsContainer}>
+                <View style={styles.connectionStatusContainer}>
+                    <View style={[styles.statusIndicator, { backgroundColor: getStatusColor() }]} />
+                    <TextNormal style={[styles.statusText, { color: getStatusColor() }]}>
+                        {getStatusText()}
+                    </TextNormal>
+                    {settings && (
+                        <TextNormal style={styles.connectionDetails}>
+                            {getConnectionDetails(settings, printerType)}
+                        </TextNormal>
+                    )}
+                </View>
+
+                <View style={styles.connectionButtonsContainer}>
+                    <TouchableOpacity
+                        style={[
+                            styles.connectionButton,
+                            styles.connectButton,
+                            status === 'connected' && styles.disconnectButton
+                        ]}
+                        onPress={status === 'connected' ? disconnectFunction : connectFunction}
+                        disabled={isConnecting}
+                    >
+                        <TextNormal style={styles.connectionButtonText}>
+                            {isConnecting ? 'Đang kết nối...' :
+                                status === 'connected' ? 'Ngắt kết nối' : 'Kết nối'}
+                        </TextNormal>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.connectionButton, styles.testButton]}
+                        onPress={testFunction}
+                        disabled={isConnecting}
+                    >
+                        <TextNormal style={styles.connectionButtonText}>
+                            Kiểm tra
+                        </TextNormal>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
     };
 
     const renderConnectionTypeSelector = (connectionType, setConnectionType, printerTypePrefix = '') => (
@@ -454,6 +548,8 @@ const PrinterSettingsModal = ({
                     {printerType === 'label' ? (
                         // Label Printer Settings
                         <>
+                            {/* Connection status and controls */}
+                            {renderConnectionControls('label')}
                             {renderConnectionTypeSelector(labelConnectionType, setLabelConnectionType, 'label')}
                             {labelConnectionType === 'network' && (
                                 <View style={styles.inputGroup}>
@@ -611,6 +707,8 @@ const PrinterSettingsModal = ({
                     ) : (
                         // Bill Printer Settings
                         <>
+                            {/* Connection status and controls */}
+                            {renderConnectionControls('bill')}
                             {renderConnectionTypeSelector(billConnectionType, setBillConnectionType, 'bill')}
                             {billConnectionType === 'network' && (
                                 <>
@@ -1052,6 +1150,65 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: Colors.textPrimary,
         textAlign: 'center',
+    },
+    // Connection controls styles
+    connectionControlsContainer: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#E9ECEF',
+    },
+    connectionStatusContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        flexWrap: 'wrap',
+    },
+    statusIndicator: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        marginRight: 8,
+    },
+    statusText: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginRight: 8,
+    },
+    connectionDetails: {
+        fontSize: 12,
+        color: Colors.textSecondary,
+        fontStyle: 'italic',
+        flex: 1,
+        textAlign: 'right',
+    },
+    connectionButtonsContainer: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    connectionButton: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    connectButton: {
+        backgroundColor: '#4CAF50',
+    },
+    disconnectButton: {
+        backgroundColor: '#F44336',
+    },
+    testButton: {
+        backgroundColor: '#FF9800',
+    },
+    connectionButtonText: {
+        color: Colors.whiteColor,
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
 

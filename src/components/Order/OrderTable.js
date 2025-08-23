@@ -619,7 +619,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
                     <BillTemplate selectedOrder={printingOrder} />
                 )}
             </ViewShot>
-            <Toast />
+            <Toast
+                position="top"
+                topOffset={50}
+                visibilityTime={4000}
+            />
         </>
     );
 };
