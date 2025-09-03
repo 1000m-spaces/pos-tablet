@@ -24,6 +24,7 @@ import AsyncStorage from 'store/async_storage';
 import NoteModal from './NoteModal';
 import VoucherModal from './VoucherModal';
 import PaymentMethodModal from './PaymentMethodModal';
+import ConfirmationModal from 'common/ConfirmationModal/ConfirmationModal';
 
 const PaymentCart = () => {
   const dispatch = useDispatch();
@@ -34,6 +35,7 @@ const PaymentCart = () => {
   const paymentChannelsLoading = useSelector(state => getPaymentChannelsLoadingSelector(state));
   const [payment, setPayment] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+  const [isModalOrderStatus, setIsModalOrderStatus] = useState(false);
 
   const [modal, setModal] = useState(false);
 
@@ -249,33 +251,48 @@ const PaymentCart = () => {
       console.log('Order saved to local storage:', orderData);
 
       // Show success message
-      Alert.alert(
-        'Thành công',
-        'Đơn hàng hoàn tất',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Reset cart after successful payment
-              dispatch(setOrderAction({
-                take_away: false,
-                products: [],
-                applied_products: [],
-                table: '',
-                tableId: '',
-                note: '',
-                delivery: null,
-                orderType: null,
-              }));
-            }
-          }
-        ]
-      );
+      // Alert.alert(
+      //   'Thành công',
+      //   'Đơn hàng hoàn tất',
+      //   [
+      //     {
+      //       text: 'OK',
+      //       onPress: () => {
+      //         // Reset cart after successful payment
+      //         dispatch(setOrderAction({
+      //           take_away: false,
+      //           products: [],
+      //           applied_products: [],
+      //           table: '',
+      //           tableId: '',
+      //           note: '',
+      //           delivery: null,
+      //           orderType: null,
+      //         }));
+      //       }
+      //     }
+      //   ]
+      // );
+      setIsModalOrderStatus(true);
 
     } catch (error) {
       console.error('Error processing payment:', error);
       Alert.alert('Lỗi', 'Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.');
     }
+  };
+
+  const onCancelModalOrderStatus = () => {
+    dispatch(setOrderAction({
+      take_away: false,
+      products: [],
+      applied_products: [],
+      table: '',
+      tableId: '',
+      note: '',
+      delivery: null,
+      orderType: null,
+    }));
+    setIsModalOrderStatus(false);
   };
 
   const onSelectPaymentMethod = (method) => {
@@ -380,6 +397,12 @@ const PaymentCart = () => {
           />
         )}
       </Modal>
+      <ConfirmationModal isOpen={isModalOrderStatus} isWarning={true}
+        title={'       Thành công \n Đơn hàng hoàn tất'}
+        onCancel={() => onCancelModalOrderStatus()}
+      >
+        <Svg name={'success'} size={80} style={{ alignSelf: 'center', marginBottom: 20 }} />
+      </ConfirmationModal>
     </View>
   );
 };
@@ -398,7 +421,7 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   orderBtnText: {
-    fontWeight: 'bold',
+    fontWeight: '600',
     fontSize: 18,
     color: Colors.whiteColor,
   },

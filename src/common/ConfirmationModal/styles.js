@@ -1,18 +1,18 @@
-import {heightDevice, widthDevice} from 'assets/constans';
-import {StyleSheet} from 'react-native';
+import { heightDevice, widthDevice } from 'assets/constans';
+import { StyleSheet } from 'react-native';
 import Colors from 'theme/Colors';
 
 const styles = StyleSheet.create({
   containerChildren: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 10,
+    // paddingVertical: 10,
     // backgroundColor: 'red',
   },
   headerModal: {
     // backgroundColor: '#255D54',
     borderRadius: 20,
-    paddingVertical: 10,
+    paddingVertical: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 20,
   },
-  textContents: {width: '80%', textAlign: 'center'},
+  textContents: { width: '80%', textAlign: 'center' },
   modalButtonCancel: {
     width: 120,
     paddingVertical: 5,
@@ -58,16 +58,25 @@ const styles = StyleSheet.create({
     paddingTop: 5,
   },
   containerModalWithChildren: {
-    backgroundColor: 'whitesmoke',
-    width: widthDevice - 24,
-    borderRadius: 10,
-  },
-  containerModal: {
-    backgroundColor: 'whitesmoke',
-    width: widthDevice - 24,
+    // backgroundColor: 'whitesmoke',
+    backgroundColor: 'white',
+    width: widthDevice * 0.4758,
     // height: heightDevice / 4,
     borderRadius: 20,
   },
+  containerModal: {
+    backgroundColor: 'white',
+    width: widthDevice * 0.4758,
+    // height: heightDevice / 4,
+    borderRadius: 20,
+  },
+  main: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    height: heightDevice,
+    width: widthDevice,
+    justifyContent: 'center',
+    alignItems: 'center'
+  }
 });
 
 export default styles;

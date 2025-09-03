@@ -85,7 +85,7 @@ const Header = ({ navigation, productMenu, currentCate, setCurrentCate, onSearch
   return (
     <View style={styles.containerHeader}>
       <View style={styles.wrapperHeader}>
-        <View>
+        <View style={{ width: 246 }}>
           <TextSemiBold style={styles.storeText}>
             {userShop ? userShop.name_vn : 'Loading...'}
           </TextSemiBold>
@@ -94,7 +94,7 @@ const Header = ({ navigation, productMenu, currentCate, setCurrentCate, onSearch
           </TextNormal>
         </View>
         <View style={styles.searchHeader}>
-          <Svg name={'search'} size={18} />
+          <Svg name={'search'} size={24} />
           <TextInput
             style={{
               color: Colors.secondary,
@@ -115,6 +115,7 @@ const Header = ({ navigation, productMenu, currentCate, setCurrentCate, onSearch
         </View>
       </View>
       <FlatList
+        nestedScrollEnabled={true}
         data={filteredProductMenu || []}
         keyExtractor={(_, idx) => idx}
         renderItem={renderTabCate}

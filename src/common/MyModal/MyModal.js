@@ -1,8 +1,8 @@
 import React from 'react';
-import {Modal, TouchableOpacity, View} from 'react-native';
+import { Modal, TouchableOpacity, View } from 'react-native';
 import styles from './styles';
 
-const MyModal = ({children, onPressOutSide, visible}) => {
+const MyModal = ({ children, onPressOutSide, visible }) => {
   return (
     <Modal
       transparent

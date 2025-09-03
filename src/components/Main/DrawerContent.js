@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
 import { setScreenAction, logout } from 'store/actions';
 import { NAVIGATION_LOGIN } from 'navigation/routes';
+import { widthDevice } from 'assets/constans';
 const DrawerList = [
   { icon: 'menu_pos', label: 'Menu', navigateTo: NAVIGATION_HOME },
   { icon: 'order_pos', label: 'Đơn online', navigateTo: NAVIGATION_ORDER },
@@ -69,14 +70,14 @@ const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation }) =>
           <Svg
             name={icon}
             size={24}
-            color={currentScreen === navigateTo ? 'white' : 'gray'}
+            color={currentScreen === navigateTo ? 'white' : '#B9B9B9'}
           />
           <TextNormal
             style={{
               color:
                 currentScreen && currentScreen === navigateTo
                   ? Colors.whiteColor
-                  : Colors.grayText,
+                  : '#B9B9B9',
             }}>
             {label}
           </TextNormal>
@@ -123,7 +124,7 @@ const DrawerContent = props => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#001f3f', width: 108 }}>
+    <View style={{ flex: 1, backgroundColor: '#021526', width: widthDevice * 0.09 }}>
       <DrawerContentScrollView {...props}>
         <View style={styles.drawerContent}>
           <TouchableOpacity activeOpacity={0.8}>
@@ -137,14 +138,19 @@ const DrawerContent = props => {
       <View style={styles.bottomDrawerSection}>
         <DrawerItem
           icon={({ color, size }) => (
-            <Icons
-              type={'Feather'}
-              name="arrow-right"
-              color={color}
-              size={size}
-            />
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+              <Icons
+                type={'AntDesign'}
+                name={'close'}
+                color={'white'}
+                size={30}
+              />
+              <Text style={{ color: 'white', flexWrap: 'wrap', fontSize: 12, marginLeft: 5 }} numberOfLines={2}>
+                Sign Out
+              </Text>
+            </View>
           )}
-          label="Sign Out"
+          label={''}
           onPress={handleLogout}
         />
       </View>
@@ -190,7 +196,7 @@ const styles = StyleSheet.create({
   drawerSection: {
     marginTop: 10,
     // alignItems: 'center',
-    width: 108,
+    width: widthDevice * 0.09,
     justifyContent: 'center',
     // backgroundColor: 'red',
   },

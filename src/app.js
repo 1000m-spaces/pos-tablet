@@ -5,6 +5,7 @@ import { LogBox, TextInput, StatusBar, Dimensions } from 'react-native';
 import { setCustomText } from 'react-native-global-props';
 import 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message'
+import ImmersiveMode from 'react-native-immersive-mode';
 
 
 const customTextProps = {
@@ -25,6 +26,19 @@ const App = () => {
     return () => {
       // Bỏ khóa khi component bị unmount
       Orientation.unlockAllOrientations();
+    };
+  }, []);
+
+  useEffect(() => {
+    // Cho phép layout tràn màn hình
+    ImmersiveMode.fullLayout(true);
+    // Ẩn cả status bar + navigation bar theo kiểu sticky
+    ImmersiveMode.setBarMode('FullSticky');
+
+    return () => {
+      // Khôi phục khi unmount (tùy bạn có cần hay không)
+      ImmersiveMode.setBarMode('Normal');
+      ImmersiveMode.fullLayout(false);
     };
   }, []);
 

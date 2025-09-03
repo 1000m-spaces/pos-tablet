@@ -1,5 +1,5 @@
-import {heightDevice, widthDevice} from 'assets/constans';
-import {StyleSheet} from 'react-native';
+import { heightDevice, widthDevice } from 'assets/constans';
+import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
   container: {

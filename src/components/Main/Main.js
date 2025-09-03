@@ -10,6 +10,7 @@ import AsyncStorage from 'store/async_storage/index';
 import DrawerContent from './DrawerContent';
 import { useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
+import { widthDevice } from 'assets/constans';
 
 const Main = () => {
   const currentScreen = useSelector(state => screenSelector(state));
@@ -50,7 +51,7 @@ const Main = () => {
           drawerActiveBackgroundColor: Colors.primary,
           drawerActiveTintColor: Colors.whiteColor,
           drawerStyle: {
-            width: 108,
+            width: widthDevice * 0.09,
           },
           swipeEnabled: false,
           drawerPosition: 'left',
