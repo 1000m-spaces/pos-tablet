@@ -15,16 +15,18 @@ import {
   getTablesSelector,
   userInfo,
   getPaymentChannelsSelector,
-  getPaymentChannelsLoadingSelector
+  getPaymentChannelsLoadingSelector,
+  getStatusCreateOrder
 } from 'store/selectors';
 import Colors from 'theme/Colors';
 import Modal from 'react-native-modal';
-import { getVoucherAction, setOrderAction, getPaymentChannelsAction } from 'store/actions';
+import { getVoucherAction, setOrderAction, getPaymentChannelsAction, createOrder, resetCreateOrder } from 'store/actions';
 import AsyncStorage from 'store/async_storage';
 import NoteModal from './NoteModal';
 import VoucherModal from './VoucherModal';
 import PaymentMethodModal from './PaymentMethodModal';
 import ConfirmationModal from 'common/ConfirmationModal/ConfirmationModal';
+import Status from 'common/Status/Status';
 
 const PaymentCart = () => {
   const dispatch = useDispatch();
@@ -33,9 +35,12 @@ const PaymentCart = () => {
   const user = useSelector(state => userInfo(state));
   const paymentChannels = useSelector(state => getPaymentChannelsSelector(state));
   const paymentChannelsLoading = useSelector(state => getPaymentChannelsLoadingSelector(state));
+  const isStatusCreateOrder = useSelector(state => getStatusCreateOrder(state));
+
   const [payment, setPayment] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [isModalOrderStatus, setIsModalOrderStatus] = useState(false);
+  const [isOrderDataSaved, setIsOrderDataSaved] = useState(null);
 
   const [modal, setModal] = useState(false);
 
@@ -243,10 +248,13 @@ const PaymentCart = () => {
         created_at: new Date().toISOString(),
         syncStatus: 'pending' // Add sync status field
       };
+      console.log('Final order data to create:', orderData);
+      setIsOrderDataSaved(orderData); // Save order data to state for retry if needed
+      dispatch(createOrder(orderData));
 
       // Save to local storage as last order and add to pending orders queue
-      await AsyncStorage.setLastOrder(orderData);
-      await AsyncStorage.addPendingOrder(orderData);
+      // await AsyncStorage.setLastOrder(orderData);
+      // await AsyncStorage.addPendingOrder(orderData);
 
       console.log('Order saved to local storage:', orderData);
 
@@ -280,6 +288,18 @@ const PaymentCart = () => {
       Alert.alert('Lỗi', 'Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.');
     }
   };
+
+  useEffect(() => {
+    (async () => {
+      if (isStatusCreateOrder === Status.ERROR && isOrderDataSaved) {
+        // Save to local storage as last order and add to pending orders queue
+        console.log('Saving failed order to local storage for retry');
+        await AsyncStorage.setLastOrder(isOrderDataSaved);
+        await AsyncStorage.addPendingOrder(isOrderDataSaved);
+        dispatch(resetCreateOrder());
+      }
+    })();
+  }, [isStatusCreateOrder]);
 
   const onCancelModalOrderStatus = () => {
     dispatch(setOrderAction({

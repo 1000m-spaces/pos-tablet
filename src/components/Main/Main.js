@@ -8,15 +8,28 @@ const Drawer = createDrawerNavigator();
 import Colors from 'theme/Colors';
 import AsyncStorage from 'store/async_storage/index';
 import DrawerContent from './DrawerContent';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
 import { widthDevice } from 'assets/constans';
+import { syncPendingOrdersAction } from 'store/actions';
 
 const Main = () => {
+  const dispatch = useDispatch();
   const currentScreen = useSelector(state => screenSelector(state));
   const [userShop, setUserShop] = useState(null);
 
   console.log('Main: Current screen from selector:', currentScreen);
+
+  useEffect(() => {
+    // Background job: sync offline orders every 1 minute
+    const intervalId = setInterval(() => {
+      dispatch(syncPendingOrdersAction());
+      // Optionally refresh local data after dispatching sync action
+    }, 30000); // 60,000 ms = 1 minute
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
+  }, [dispatch]);
 
   useEffect(() => {
     const loadUserShop = async () => {
@@ -37,6 +50,7 @@ const Main = () => {
   }
 
   console.log('Main: Rendering drawer navigator with user shop:', userShop?.name_vn);
+
 
   return (
     <>

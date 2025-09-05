@@ -75,6 +75,7 @@ function* loginInternalSaga({ payload }) {
       };
 
       yield asyncStorage.setUser(userData);
+      console.log('Stored user dataBBBBBBBBBBBB:', userData);
       yield put({
         type: NEOCAFE.LOGIN_SUCCESS,
         payload: {

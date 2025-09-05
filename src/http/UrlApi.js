@@ -1,15 +1,18 @@
-// import { BASE_PATH_MENU } from 'assets/config';
-const BASE_PATH_CAFE = 'https://api.neocafe.tech/v1/';
-// https://dev-api-php.1000m.vn/api1.0.php/
-const BASE_PATH_CASE_DEV = 'https://v01api.1000m.vn/api1.0.php/'
-const BASE_PATH_MENU = 'https://v01api.1000m.vn/api1.0.php/'
 
-const BASE_PATH_1000M = 'https://api.1000m.vn/'
+import { BASE_PATH_CAFE, BASE_PATH_MENU } from 'assets/config';
+// const BASE_PATH_CAFE = 'https://api.neocafe.tech/v1/';
+// https://dev-api-php.1000m.vn/api1.0.php/
+// const BASE_PATH_CASE_PROD = 'https://v01api.1000m.vn/api1.0.php/'
+// const BASE_PATH_CASE_DEV = 'https://dev-api-php.1000m.vn/api1.0.php/'
+
+// const BASE_PATH_MENU = 'https://dev-api-php.1000m.vn/api1.0.php/'
+
+// const BASE_PATH_1000M = 'https://api.1000m.vn/'
 const BASE_PATH_POS = 'https://v01pos.1000m.vn/'
 // const BASE_PATH_POS = 'https://dev-pos.1000m.vn/'
 // const BASE_PATH_POS = 'https://v01api.1000m.vn/'
 
-// const BASE_PATH_1000M = 'https://dev-api.1000m.vn/'
+const BASE_PATH_1000M = 'https://dev-api.1000m.vn/'
 
 export const UrlApi = {
   // ------------------ PRODUCT ------------------------
@@ -39,7 +42,7 @@ export const UrlApi = {
   // ---------------------- ORDER ------------------------------
   getPaidOrder: BASE_PATH_CAFE + 'getOrderPaidSuccessNew',
   getNotPaidOrder: BASE_PATH_CAFE + 'getOrderNotPaidNew',
-  getOnlineOrder: BASE_PATH_CASE_DEV + 'getOrderOnlineNew',
+  getOnlineOrder: BASE_PATH_MENU + 'getOrderOnlineNew',
   getNotCompleteOrder: BASE_PATH_CAFE + 'getOrderNotCompleteNew',
 
   fetchOrder: BASE_PATH_1000M + 'synthetic/orders/v1/fetch',
@@ -64,7 +67,7 @@ export const UrlApi = {
   getUserInfo: BASE_PATH_MENU + 'userinfo',
   getVersion: BASE_PATH_CAFE + 'version',
   sendPhone: BASE_PATH_MENU + 'phone',
-  loginInternal: BASE_PATH_POS + 'login',
+  loginInternal: BASE_PATH_MENU + 'loginInternal',
   internalMenuShop: BASE_PATH_MENU + 'getInternalMenuShop',
   orderInternal: BASE_PATH_MENU + 'orderInternal',
   confirmPhone: BASE_PATH_MENU + 'phone',
@@ -89,20 +92,20 @@ export const UrlApi = {
   unrenewPackage: BASE_PATH_CAFE + 'subscriptions/users/unrenew',
   storeShipmentAddress: BASE_PATH_MENU + 'addAddressWhenSubscriptionFalse',
 
-  getListStore: BASE_PATH_CASE_DEV + 'getListShop',
+  getListStore: BASE_PATH_MENU + 'getListShop',
 
   // ----------------------- TABLES ----------------------------
-  getListShopTable: BASE_PATH_CASE_DEV + 'getListShopTable',
+  getListShopTable: BASE_PATH_MENU + 'getListShopTable',
 
   // ----------------------- PAYMENT & ORDER CHANNELS ------------------
-  getTransType: BASE_PATH_CASE_DEV + 'getTransType', // Payment methods (cash, card, etc.)
+  getTransType: BASE_PATH_MENU + 'getTransType', // Payment methods (cash, card, etc.)
 
-  getListChanelType: BASE_PATH_CASE_DEV + 'getListChanelType', // Order channel types (dine-in, takeaway, etc.)
+  getListChanelType: BASE_PATH_MENU + 'getListChanelType', // Order channel types (dine-in, takeaway, etc.)
 
 
   // ----------------------- SYNC ORDERS -----------------------
-  syncOrders: BASE_PATH_CASE_DEV + 'syncOrders',
+  syncOrders: BASE_PATH_MENU + 'syncOrders',
 
   // ----------------------- PRODUCT DETAILS -------------------
-  getProdDetail: BASE_PATH_CASE_DEV + 'getProdDetail',
+  getProdDetail: BASE_PATH_MENU + 'getProdDetail',
 };

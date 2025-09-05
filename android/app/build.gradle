@@ -72,6 +72,14 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+
+project.ext.envConfigFiles = [
+    debug: ".env.dev",
+    dev: ".env.dev",
+    release: ".env.prod",
+]
+apply from: project(":react-native-config").projectDir.getPath() + "/dotenv.gradle"
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion

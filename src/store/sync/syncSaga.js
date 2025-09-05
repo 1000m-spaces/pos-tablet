@@ -29,6 +29,7 @@ function* syncPendingOrdersSaga() {
     try {
         // Get pending orders from local storage
         const pendingOrders = yield call(AsyncStorageService.getPendingOrders);
+        console.log('Pending orders to sync:', pendingOrders);
 
         // Filter out already synced orders
         const ordersToSync = pendingOrders.filter(order => !order.syncStatus || order.syncStatus === 'pending');

@@ -109,6 +109,12 @@ export default (state = initializeState, { type, payload }) => {
         ...state,
         statusCreateOrder: Status.ERROR,
       };
+    case NEOCAFE.CREATE_ORDER_RESET:
+      return {
+        ...state,
+        statusCreateOrder: Status.DEFAULT,
+        order: null,
+      };
     // CONFIRM ORDER ONLINE
     case NEOCAFE.CONFIRM_ORDER_ONLINE_REQUEST:
       return {

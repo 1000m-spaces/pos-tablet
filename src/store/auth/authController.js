@@ -19,7 +19,7 @@ class AuthController {
       const { data } = await HttpClient.post(UrlApi.loginInternal, {
         username: payload.username,
         password: payload.password,
-        version: 'web'
+        // version: 'web'
       });
       console.log('login::', data)
       return { success: true, data: data };
