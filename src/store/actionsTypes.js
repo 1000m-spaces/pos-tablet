@@ -42,6 +42,9 @@ export const NEOCAFE = createRequestTypes(
     'ADD_PRODUCT_CART',
     'SET_ORDER',
     'GET_ONLINE_ORDER',
+    // newly added order fetchers
+    'GET_ORDER_SHIPPING',
+    'GET_ORDER_PAID_SUCCESS',
     'CONFIRM_ORDER_ONLINE',
     // product
     'GET_MENU',

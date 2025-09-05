@@ -40,6 +40,9 @@ export const UrlApi = {
   getPaidOrder: BASE_PATH_CAFE + 'getOrderPaidSuccessNew',
   getNotPaidOrder: BASE_PATH_CAFE + 'getOrderNotPaidNew',
   getOnlineOrder: BASE_PATH_CASE_DEV + 'getOrderOnlineNew',
+  // Newly added endpoints for POS tablet flows
+  getOrderShipping: BASE_PATH_CASE_DEV + 'getOrderShippingNew',
+  getOrderPaidSuccess: BASE_PATH_CASE_DEV + 'getOrderPaidSuccessNew',
   getNotCompleteOrder: BASE_PATH_CAFE + 'getOrderNotCompleteNew',
 
   fetchOrder: BASE_PATH_1000M + 'synthetic/orders/v1/fetch',
@@ -64,7 +67,7 @@ export const UrlApi = {
   getUserInfo: BASE_PATH_MENU + 'userinfo',
   getVersion: BASE_PATH_CAFE + 'version',
   sendPhone: BASE_PATH_MENU + 'phone',
-  loginInternal: BASE_PATH_POS + 'login',
+  loginInternal: BASE_PATH_MENU + 'loginInternal',
   internalMenuShop: BASE_PATH_MENU + 'getInternalMenuShop',
   orderInternal: BASE_PATH_MENU + 'orderInternal',
   confirmPhone: BASE_PATH_MENU + 'phone',

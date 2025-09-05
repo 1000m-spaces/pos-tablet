@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TextInput, Text, Switch, TouchableOpacity, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import Modal from 'react-native-modal';
 import Toast from 'react-native-toast-message';
@@ -6,6 +6,7 @@ import AsyncStorage from 'store/async_storage/index';
 import Colors from 'theme/Colors';
 import { TextNormal } from 'common/Text/TextFont';
 import { getUsbDevices, getSerialDevices } from 'rn-xprinter';
+import { usePrinter } from '../../services/PrinterService';
 
 const PrinterSettingsModal = ({
     visible,
@@ -13,6 +14,23 @@ const PrinterSettingsModal = ({
     initialPrinterType = 'label',
     onSettingsSaved
 }) => {
+    // Use global printer service
+    const {
+        billPrinterStatus,
+        labelPrinterStatus,
+        isBillConnecting,
+        isLabelConnecting,
+        billPrinterSettings: globalBillSettings,
+        labelPrinterSettings: globalLabelSettings,
+        connectBillPrinter,
+        connectLabelPrinter,
+        disconnectBillPrinter,
+        disconnectLabelPrinter,
+        testBillPrinter,
+        testLabelPrinter,
+        getConnectionDetails,
+        handleSettingsUpdate
+    } = usePrinter();
     // Label printer settings state
     const [ip, setIP] = useState("");
     const [sWidth, setSWidth] = useState(50);
@@ -47,6 +65,10 @@ const PrinterSettingsModal = ({
     const [serialPorts, setSerialPorts] = useState([]);
     const [isLoadingUsb, setIsLoadingUsb] = useState(false);
     const [isLoadingSerial, setIsLoadingSerial] = useState(false);
+
+    // Refs for device selector scroll views
+    const usbScrollRef = useRef(null);
+    const serialScrollRef = useRef(null);
 
     const [errors, setErrors] = useState({});
     const [isSaving, setIsSaving] = useState(false);
@@ -272,6 +294,9 @@ const PrinterSettingsModal = ({
                 position: 'bottom',
             });
 
+            // Update global printer service
+            await handleSettingsUpdate();
+
             // Call callback if provided
             if (onSettingsSaved) {
                 onSettingsSaved(printerSettings);
@@ -293,6 +318,79 @@ const PrinterSettingsModal = ({
     const handleClose = () => {
         setErrors({});
         onClose();
+    };
+
+    // Render connection status and controls
+    const renderConnectionControls = (printerType) => {
+        const isLabel = printerType === 'label';
+        const status = isLabel ? labelPrinterStatus : billPrinterStatus;
+        const isConnecting = isLabel ? isLabelConnecting : isBillConnecting;
+        const settings = isLabel ? globalLabelSettings : globalBillSettings;
+
+        const connectFunction = isLabel ? connectLabelPrinter : connectBillPrinter;
+        const disconnectFunction = isLabel ? disconnectLabelPrinter : disconnectBillPrinter;
+        const testFunction = isLabel ? testLabelPrinter : testBillPrinter;
+
+        const getStatusColor = () => {
+            switch (status) {
+                case 'connected': return '#4CAF50';
+                case 'connecting': return '#FF9800';
+                case 'disconnected': return '#F44336';
+                default: return '#9E9E9E';
+            }
+        };
+
+        const getStatusText = () => {
+            switch (status) {
+                case 'connected': return 'Đã kết nối';
+                case 'connecting': return 'Đang kết nối...';
+                case 'disconnected': return 'Chưa kết nối';
+                default: return 'Không xác định';
+            }
+        };
+
+        return (
+            <View style={styles.connectionControlsContainer}>
+                <View style={styles.connectionStatusContainer}>
+                    <View style={[styles.statusIndicator, { backgroundColor: getStatusColor() }]} />
+                    <TextNormal style={[styles.statusText, { color: getStatusColor() }]}>
+                        {getStatusText()}
+                    </TextNormal>
+                    {settings && (
+                        <TextNormal style={styles.connectionDetails}>
+                            {getConnectionDetails(settings, printerType)}
+                        </TextNormal>
+                    )}
+                </View>
+
+                <View style={styles.connectionButtonsContainer}>
+                    <TouchableOpacity
+                        style={[
+                            styles.connectionButton,
+                            styles.connectButton,
+                            status === 'connected' && styles.disconnectButton
+                        ]}
+                        onPress={status === 'connected' ? disconnectFunction : connectFunction}
+                        disabled={isConnecting}
+                    >
+                        <TextNormal style={styles.connectionButtonText}>
+                            {isConnecting ? 'Đang kết nối...' :
+                                status === 'connected' ? 'Ngắt kết nối' : 'Kết nối'}
+                        </TextNormal>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.connectionButton, styles.testButton]}
+                        onPress={testFunction}
+                        disabled={isConnecting}
+                    >
+                        <TextNormal style={styles.connectionButtonText}>
+                            Kiểm tra
+                        </TextNormal>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        );
     };
 
     const renderConnectionTypeSelector = (connectionType, setConnectionType, printerTypePrefix = '') => (
@@ -345,56 +443,71 @@ const PrinterSettingsModal = ({
         </View>
     );
 
-    const renderDeviceSelector = (devices, selectedDevice, setSelectedDevice, isLoading, onScan, label, errorKey) => (
-        <View style={styles.inputGroup}>
-            <View style={styles.deviceSelectorHeader}>
-                <TextNormal style={styles.label}>{label}</TextNormal>
-                <TouchableOpacity
-                    style={[styles.scanButton, isLoading && styles.scanButtonDisabled]}
-                    onPress={onScan}
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <ActivityIndicator size="small" color={Colors.whiteColor} />
+    const renderDeviceSelector = (devices, selectedDevice, setSelectedDevice, isLoading, onScan, label, errorKey, scrollRef) => {
+        const scrollToSelectedDevice = (selectedIndex) => {
+            if (scrollRef.current && selectedIndex >= 0) {
+                // Calculate the position to scroll to (item height * index)
+                const itemHeight = 41; // deviceItem height + border
+                const scrollPosition = selectedIndex * itemHeight;
+                scrollRef.current.scrollTo({ y: scrollPosition, animated: true });
+            }
+        };
+
+        return (
+            <View style={styles.inputGroup}>
+                <View style={styles.deviceSelectorHeader}>
+                    <TextNormal style={styles.label}>{label}</TextNormal>
+                    <TouchableOpacity
+                        style={[styles.scanButton, isLoading && styles.scanButtonDisabled]}
+                        onPress={onScan}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <ActivityIndicator size="small" color={Colors.whiteColor} />
+                        ) : (
+                            <TextNormal style={styles.scanButtonText}>Quét</TextNormal>
+                        )}
+                    </TouchableOpacity>
+                </View>
+                <View style={[styles.deviceDropdown, errors[errorKey] && styles.inputError]}>
+                    {devices.length === 0 ? (
+                        <TextNormal style={styles.noDeviceText}>
+                            {isLoading ? 'Đang quét...' : 'Không tìm thấy thiết bị'}
+                        </TextNormal>
                     ) : (
-                        <TextNormal style={styles.scanButtonText}>Quét</TextNormal>
+                        <ScrollView
+                            ref={scrollRef}
+                            style={styles.deviceList}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {devices.map((device, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    style={[
+                                        styles.deviceItem,
+                                        selectedDevice === device && styles.deviceItemSelected
+                                    ]}
+                                    onPress={() => {
+                                        setSelectedDevice(device);
+                                        setErrors(prev => ({ ...prev, [errorKey]: null }));
+                                        scrollToSelectedDevice(index);
+                                    }}
+                                >
+                                    <TextNormal style={[
+                                        styles.deviceItemText,
+                                        selectedDevice === device && styles.deviceItemTextSelected
+                                    ]}>
+                                        {device}
+                                    </TextNormal>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                     )}
-                </TouchableOpacity>
+                </View>
+                {errors[errorKey] && <Text style={styles.errorText}>{errors[errorKey]}</Text>}
             </View>
-            <View style={[styles.deviceDropdown, errors[errorKey] && styles.inputError]}>
-                {devices.length === 0 ? (
-                    <TextNormal style={styles.noDeviceText}>
-                        {isLoading ? 'Đang quét...' : 'Không tìm thấy thiết bị'}
-                    </TextNormal>
-                ) : (
-                    <ScrollView style={styles.deviceList} showsVerticalScrollIndicator={false}>
-                        {devices.map((device, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={[
-                                    styles.deviceItem,
-                                    selectedDevice === (typeof device === 'string' ? device : device.name || device.deviceName || device.mName) && styles.deviceItemSelected
-                                ]}
-                                onPress={() => {
-                                    const deviceName = typeof device === 'string' ? device : device.name || device.deviceName || device.mName || device.toString();
-                                    setSelectedDevice(deviceName);
-                                    setErrors(prev => ({ ...prev, [errorKey]: null }));
-                                }}
-                            >
-                                <TextNormal style={[
-                                    styles.deviceItemText,
-                                    selectedDevice === (typeof device === 'string' ? device : device.name || device.deviceName || device.mName) && styles.deviceItemTextSelected
-                                ]}>
-                                    {typeof device === 'string' ? device : device.name || device.deviceName || device.mName || device.toString()}
-                                </TextNormal>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                )}
-            </View>
-            {errors[errorKey] && <Text style={styles.errorText}>{errors[errorKey]}</Text>}
-        </View>
-    );
+        );
+    };
 
     return (
         <Modal
@@ -435,6 +548,8 @@ const PrinterSettingsModal = ({
                     {printerType === 'label' ? (
                         // Label Printer Settings
                         <>
+                            {/* Connection status and controls */}
+                            {renderConnectionControls('label')}
                             {renderConnectionTypeSelector(labelConnectionType, setLabelConnectionType, 'label')}
                             {labelConnectionType === 'network' && (
                                 <View style={styles.inputGroup}>
@@ -456,10 +571,10 @@ const PrinterSettingsModal = ({
                                 </View>
                             )}
                             {labelConnectionType === 'usb' && (
-                                renderDeviceSelector(usbDevices, labelUsbDevice, setLabelUsbDevice, isLoadingUsb, scanUsbDevices, "Thiết bị USB", "labelUsbDevice")
+                                renderDeviceSelector(usbDevices, labelUsbDevice, setLabelUsbDevice, isLoadingUsb, scanUsbDevices, "Thiết bị USB", "labelUsbDevice", usbScrollRef)
                             )}
                             {labelConnectionType === 'serial' && (
-                                renderDeviceSelector(serialPorts, labelSerialPort, setLabelSerialPort, isLoadingSerial, scanSerialPorts, "Cổng Serial", "labelSerialPort")
+                                renderDeviceSelector(serialPorts, labelSerialPort, setLabelSerialPort, isLoadingSerial, scanSerialPorts, "Cổng Serial", "labelSerialPort", serialScrollRef)
                             )}
 
                             <View style={styles.inputGroup}>
@@ -592,6 +707,8 @@ const PrinterSettingsModal = ({
                     ) : (
                         // Bill Printer Settings
                         <>
+                            {/* Connection status and controls */}
+                            {renderConnectionControls('bill')}
                             {renderConnectionTypeSelector(billConnectionType, setBillConnectionType, 'bill')}
                             {billConnectionType === 'network' && (
                                 <>
@@ -632,10 +749,10 @@ const PrinterSettingsModal = ({
                                 </>
                             )}
                             {billConnectionType === 'usb' && (
-                                renderDeviceSelector(usbDevices, billUsbDevice, setBillUsbDevice, isLoadingUsb, scanUsbDevices, "Thiết bị USB", "billUsbDevice")
+                                renderDeviceSelector(usbDevices, billUsbDevice, setBillUsbDevice, isLoadingUsb, scanUsbDevices, "Thiết bị USB", "billUsbDevice", usbScrollRef)
                             )}
                             {billConnectionType === 'serial' && (
-                                renderDeviceSelector(serialPorts, billSerialPort, setBillSerialPort, isLoadingSerial, scanSerialPorts, "Cổng Serial", "billSerialPort")
+                                renderDeviceSelector(serialPorts, billSerialPort, setBillSerialPort, isLoadingSerial, scanSerialPorts, "Cổng Serial", "billSerialPort", serialScrollRef)
                             )}
 
                             <View style={styles.inputGroup}>
@@ -1002,7 +1119,9 @@ const styles = StyleSheet.create({
         borderBottomColor: Colors.border,
     },
     deviceItemSelected: {
-        backgroundColor: Colors.primaryLight,
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
+        borderWidth: 2,
     },
     deviceItemText: {
         fontSize: 16,
@@ -1031,6 +1150,65 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: Colors.textPrimary,
         textAlign: 'center',
+    },
+    // Connection controls styles
+    connectionControlsContainer: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#E9ECEF',
+    },
+    connectionStatusContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        flexWrap: 'wrap',
+    },
+    statusIndicator: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        marginRight: 8,
+    },
+    statusText: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginRight: 8,
+    },
+    connectionDetails: {
+        fontSize: 12,
+        color: Colors.textSecondary,
+        fontStyle: 'italic',
+        flex: 1,
+        textAlign: 'right',
+    },
+    connectionButtonsContainer: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    connectionButton: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    connectButton: {
+        backgroundColor: '#4CAF50',
+    },
+    disconnectButton: {
+        backgroundColor: '#F44336',
+    },
+    testButton: {
+        backgroundColor: '#FF9800',
+    },
+    connectionButtonText: {
+        color: Colors.whiteColor,
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
 

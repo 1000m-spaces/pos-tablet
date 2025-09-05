@@ -6,6 +6,7 @@ import { setCustomText } from 'react-native-global-props';
 import 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message'
 import ImmersiveMode from 'react-native-immersive-mode';
+import { PrinterProvider } from './services/PrinterService';
 
 
 const customTextProps = {
@@ -42,10 +43,16 @@ const App = () => {
     };
   }, []);
 
-  return <>
-    <RootNavigation />
-    <Toast />
-  </>;
+  return (
+    <PrinterProvider>
+      <RootNavigation />
+      <Toast
+        position="top"
+        topOffset={50}
+        visibilityTime={4000}
+      />
+    </PrinterProvider>
+  );
 };
 
 export default App;

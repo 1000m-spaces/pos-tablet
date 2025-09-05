@@ -414,7 +414,11 @@ const Orders = () => {
           </View>
         </View>
       </SafeAreaView>
-      <Toast />
+      <Toast
+        position="top"
+        topOffset={50}
+        visibilityTime={4000}
+      />
     </>
   );
 };

@@ -6954,10 +6954,10 @@
   dependencies:
     "glob" "^7.1.3"
 
-"rn-xprinter@^2.0.4":
-  "integrity" "sha512-6/UMYPqdj5hUtWw9rHpTn3XkccPQ1hmk5cQpILZfChsbUx53hjPpz3IdYY22qvwsEqDEX8MMXd+rmqGUIksJVg=="
-  "resolved" "https://registry.npmjs.org/rn-xprinter/-/rn-xprinter-2.0.4.tgz"
-  "version" "2.0.4"
+rn-xprinter@^2.0.7:
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/rn-xprinter/-/rn-xprinter-2.0.7.tgz#95f45cb412909d863333972e10c6691361d5a922"
+  integrity sha512-LKFGrkS+XzyqtU15/zrfkyd7xsGjrSe961h75xEIFD0+W8JvcRA3T7XuuEuBwQYT+vb/Wl4uWe1oqGG5Mm7TKQ==
 
 "run-parallel@^1.1.9":
   "integrity" "sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA=="

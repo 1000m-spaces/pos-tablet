@@ -1,18 +1,18 @@
-import {takeLatest, call, put, select} from 'redux-saga/effects';
-import {NEOCAFE} from 'store/actionsTypes';
+import { takeLatest, call, put, select } from 'redux-saga/effects';
+import { NEOCAFE } from 'store/actionsTypes';
 import orderController from './orderController';
 // import {isTokenConfirm} from './authSelector';
 // import {confirmOtpReset, loginPhoneReset, sendPhoneReset} from './authAction';
-import {asyncStorage} from 'store/index';
+import { asyncStorage } from 'store/index';
 // import AsyncStorage from '@react-native-async-storage/async-storage';
 // import {resetGetListShop, resetOrder} from 'store/actions';
 // import strings from 'localization/Localization';
 
-function* createOrderSaga({payload}) {
+function* createOrderSaga({ payload }) {
   try {
     const result = yield call(orderController.createOrderController, payload);
     if (result.success === true && result?.data && result?.data?.status) {
-      const {data} = result.data;
+      const { data } = result.data;
       console.log('result success order:', data);
       yield put({
         type: NEOCAFE.CREATE_ORDER_SUCCESS,
@@ -22,12 +22,12 @@ function* createOrderSaga({payload}) {
       console.log('result errorr order:', result);
       yield put({
         type: NEOCAFE.CREATE_ORDER_ERROR,
-        payload: {errorMsg: result?.data?.error},
+        payload: { errorMsg: result?.data?.error },
       });
     } else {
       yield put({
         type: NEOCAFE.CREATE_ORDER_ERROR,
-        payload: {errorMsg: 'Xảy ra lỗi trong quá trình tạo đơn'},
+        payload: { errorMsg: 'Xảy ra lỗi trong quá trình tạo đơn' },
       });
     }
   } catch (e) {
@@ -40,7 +40,7 @@ function* createOrderSaga({payload}) {
     });
   }
 }
-function* setOrderSaga({payload}) {
+function* setOrderSaga({ payload }) {
   try {
     yield put({
       type: NEOCAFE.SET_ORDER_SUCCESS,
@@ -52,7 +52,7 @@ function* setOrderSaga({payload}) {
     });
   }
 }
-function* addProductCartSaga({payload}) {
+function* addProductCartSaga({ payload }) {
   try {
     yield put({
       type: NEOCAFE.ADD_PRODUCT_CART_SUCCESS,
@@ -64,7 +64,7 @@ function* addProductCartSaga({payload}) {
     });
   }
 }
-function* getOnlineOrderSaga({payload}) {
+function* getOnlineOrderSaga({ payload }) {
   try {
     const result = yield call(orderController.getOnlineOrder, payload);
     console.log('result:::', result);
@@ -85,7 +85,7 @@ function* getOnlineOrderSaga({payload}) {
   }
 }
 
-function* confirmOrderOnlineSaga({payload}) {
+function* confirmOrderOnlineSaga({ payload }) {
   try {
     const result = yield call(orderController.confirmOrderOnline, payload);
     if (result.success === true) {
@@ -96,14 +96,46 @@ function* confirmOrderOnlineSaga({payload}) {
     } else {
       yield put({
         type: NEOCAFE.CONFIRM_ORDER_ONLINE_ERROR,
-        payload: {errorMsg: result.error || 'Xảy ra lỗi khi xác nhận đơn hàng'},
+        payload: { errorMsg: result.error || 'Xảy ra lỗi khi xác nhận đơn hàng' },
       });
     }
   } catch (error) {
     yield put({
       type: NEOCAFE.CONFIRM_ORDER_ONLINE_ERROR,
-      payload: {errorMsg: 'Xảy ra lỗi khi xác nhận đơn hàng'},
+      payload: { errorMsg: 'Xảy ra lỗi khi xác nhận đơn hàng' },
     });
+  }
+}
+
+function* getOrderShippingSaga({ payload }) {
+  try {
+    const result = yield call(orderController.getOrderShipping, payload);
+    if (result && result.success) {
+      yield put({
+        type: NEOCAFE.GET_ORDER_SHIPPING_SUCCESS,
+        payload: result.data,
+      });
+    } else {
+      yield put({ type: NEOCAFE.GET_ORDER_SHIPPING_ERROR });
+    }
+  } catch (error) {
+    yield put({ type: NEOCAFE.GET_ORDER_SHIPPING_ERROR });
+  }
+}
+
+function* getOrderPaidSuccessSaga({ payload }) {
+  try {
+    const result = yield call(orderController.getOrderPaidSuccess, payload);
+    if (result && result.success) {
+      yield put({
+        type: NEOCAFE.GET_ORDER_PAID_SUCCESS_SUCCESS,
+        payload: result.data,
+      });
+    } else {
+      yield put({ type: NEOCAFE.GET_ORDER_PAID_SUCCESS_ERROR });
+    }
+  } catch (error) {
+    yield put({ type: NEOCAFE.GET_ORDER_PAID_SUCCESS_ERROR });
   }
 }
 
@@ -113,4 +145,6 @@ export default function* watcherSaga() {
   yield takeLatest(NEOCAFE.SET_ORDER_REQUEST, setOrderSaga);
   yield takeLatest(NEOCAFE.GET_ONLINE_ORDER_REQUEST, getOnlineOrderSaga);
   yield takeLatest(NEOCAFE.CONFIRM_ORDER_ONLINE_REQUEST, confirmOrderOnlineSaga);
+  yield takeLatest(NEOCAFE.GET_ORDER_SHIPPING_REQUEST, getOrderShippingSaga);
+  yield takeLatest(NEOCAFE.GET_ORDER_PAID_SUCCESS_REQUEST, getOrderPaidSuccessSaga);
 }
