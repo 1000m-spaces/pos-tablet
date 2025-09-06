@@ -442,16 +442,7 @@ export const PrinterProvider = ({ children }) => {
 
             // Use TSPL commands for label printer test
             if (labelPrinterSettings && labelPrinterSettings.sWidth && labelPrinterSettings.sHeight) {
-                await labelPrinterRef.current.tsplPrintText(
-                    Math.round(labelPrinterSettings.sWidth * 0.1),
-                    Math.round(labelPrinterSettings.sHeight * 0.1),
-                    'Label Test OK',
-                    1,
-                    1,
-                    0,
-                    0,
-                    false
-                );
+                await labelPrinterRef.current.tsplPrintTest();
             } else {
                 await labelPrinterRef.current.printText('Label Printer Test\nConnection OK\n\n');
             }
