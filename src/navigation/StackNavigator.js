@@ -23,7 +23,6 @@ const StackNavigator = () => {
       <Stack.Screen name={NAVIGATION_SPLASH} component={Screens.Splash} />
       <Stack.Screen name={NAVIGATION_LOGIN} component={Screens.Login} />
       <Stack.Screen name={NAVIGATION_ORDER} component={Screens.Orders} />
-      <Stack.Screen name={NAVIGATION_ORDER_1000M} component={Screens.Orders1000M} />
       <Stack.Screen name={NAVIGATION_PROFILE} component={Screens.Profile} />
     </Stack.Navigator>
   );
