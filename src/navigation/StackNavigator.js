@@ -7,6 +7,7 @@ import {
   NAVIGATION_HOME,
   NAVIGATION_ORDER,
   NAVIGATION_PROFILE,
+  NAVIGATION_ORDER_1000M,
 } from './routes';
 import * as Screens from 'components';
 

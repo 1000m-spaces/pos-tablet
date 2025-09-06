@@ -6,7 +6,6 @@ import PrintTemplate from "./TemTemplate";
 import { useRef } from "react";
 import AsyncStorage from 'store/async_storage/index'
 import Toast from 'react-native-toast-message'
-import XPrinter from 'rn-xprinter';
 import OrderDetailDialog from './OrderDetailDialog';
 import BillTemplate from "./BillTemplate";
 import Colors from 'theme/Colors';
@@ -14,6 +13,7 @@ import { TextNormal } from 'common/Text/TextFont';
 import RNFS from 'react-native-fs';
 import { useDispatch } from 'react-redux';
 import { syncPendingOrdersAction } from 'store/sync/syncAction';
+import { usePrinter } from '../../services/PrinterService';
 
 const { width, height } = Dimensions.get("window");
 
@@ -57,27 +57,17 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
     const viewBillShotRef = useRef();
     const dispatch = useDispatch();
 
-    // Create printer instances
-    const labelPrinterRef = useRef(null);
-    const billPrinterRef = useRef(null);
-
-    // Initialize printer instances
-    useEffect(() => {
-        labelPrinterRef.current = new XPrinter();
-        billPrinterRef.current = new XPrinter();
-
-        return () => {
-            // Cleanup printer instances
-            if (labelPrinterRef.current) {
-                labelPrinterRef.current.dispose();
-                labelPrinterRef.current = null;
-            }
-            if (billPrinterRef.current) {
-                billPrinterRef.current.dispose();
-                billPrinterRef.current = null;
-            }
-        };
-    }, []);
+    // Use global printer service
+    const {
+        labelPrinter,
+        billPrinter,
+        labelPrinterStatus,
+        billPrinterStatus,
+        labelPrinterSettings,
+        billPrinterSettings,
+        connectLabelPrinter,
+        connectBillPrinter
+    } = usePrinter();
 
     const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Đồng bộ", "Thời gian"];
     const numColumns = tableHead.length;
@@ -140,36 +130,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
         loadPrinterInfo();
     }, []);
 
-    // Helper function to connect to printer based on connection type
-    const connectToPrinter = async (printerInstance, printerConfig) => {
-        try {
-            switch (printerConfig.connectionType) {
-                case 'network':
-                    if (!printerConfig.IP) {
-                        throw new Error('IP address not configured');
-                    }
-                    return await printerInstance.netConnect(printerConfig.IP);
 
-                case 'usb':
-                    if (!printerConfig.usbDevice) {
-                        throw new Error('USB device not selected');
-                    }
-                    return await printerInstance.usbConnect(printerConfig.usbDevice);
-
-                case 'serial':
-                    if (!printerConfig.serialPort) {
-                        throw new Error('Serial port not selected');
-                    }
-                    return await printerInstance.serialConnect(printerConfig.serialPort);
-
-                default:
-                    throw new Error('Unknown connection type');
-            }
-        } catch (error) {
-            console.error('Printer connection error:', error);
-            throw error;
-        }
-    };
 
 
 
@@ -298,26 +259,26 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
 
         setLoadingVisible(true);
         try {
-            const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
+            // Check if label printer is connected
+            if (labelPrinterStatus !== 'connected') {
+                Toast.show({
+                    type: 'info',
+                    text1: 'Kết nối máy in tem...',
+                    text2: 'Đang thiết lập kết nối'
+                });
 
-            // Validate printer configuration based on connection type
-            if (!labelPrinterInfo || !labelPrinterInfo.sWidth || !labelPrinterInfo.sHeight) {
-                throw new Error('Printer settings not configured');
+                // Try to connect
+                const connected = await connectLabelPrinter();
+                if (!connected) {
+                    throw new Error('Không thể kết nối máy in tem');
+                }
+
+                // Wait for connection to stabilize
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
-            if (labelPrinterInfo.connectionType === 'network' && !labelPrinterInfo.IP) {
-                throw new Error('Printer settings not configured');
-            } else if (labelPrinterInfo.connectionType === 'usb' && !labelPrinterInfo.usbDevice) {
-                throw new Error('Printer settings not configured');
-            } else if (labelPrinterInfo.connectionType === 'serial' && !labelPrinterInfo.serialPort) {
-                throw new Error('Printer settings not configured');
-            }
-
-            // Attempt to connect to printer before printing
-            try {
-                await connectToPrinter(labelPrinterRef.current, labelPrinterInfo);
-            } catch (connectError) {
-                console.error('Printer connection error:', connectError);
+            // Validate printer configuration
+            if (!labelPrinterSettings || !labelPrinterSettings.sWidth || !labelPrinterSettings.sHeight) {
                 throw new Error('Printer settings not configured');
             }
 
@@ -383,9 +344,9 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
                         const uri = await viewTemShotRef.current.capture();
                         const imageInfo = await Image.getSize(uri);
                         const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                        await labelPrinterRef.current.tsplPrintBitmap(
-                            Number(labelPrinterInfo.sWidth),
-                            Number(labelPrinterInfo.sHeight),
+                        await labelPrinter.tsplPrintBitmap(
+                            Number(labelPrinterSettings.sWidth),
+                            Number(labelPrinterSettings.sHeight),
                             base64,
                             imageInfo.width
                         );
@@ -418,9 +379,6 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
             });
         } finally {
             setLoadingVisible(false);
-            if (labelPrinterRef.current) {
-                labelPrinterRef.current.closeConnection();
-            }
         }
     };
 
@@ -435,18 +393,26 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
 
         setLoadingVisible(true);
         try {
-            const billPrinterInfo = await AsyncStorage.getBillPrinterInfo();
+            // Check if bill printer is connected
+            if (billPrinterStatus !== 'connected') {
+                Toast.show({
+                    type: 'info',
+                    text1: 'Kết nối máy in bill...',
+                    text2: 'Đang thiết lập kết nối'
+                });
 
-            // Validate bill printer configuration based on connection type
-            if (!billPrinterInfo) {
-                throw new Error('Printer settings not configured');
+                // Try to connect
+                const connected = await connectBillPrinter();
+                if (!connected) {
+                    throw new Error('Không thể kết nối máy in bill');
+                }
+
+                // Wait for connection to stabilize
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
-            if (billPrinterInfo.billConnectionType === 'network' && !billPrinterInfo.billIP) {
-                throw new Error('Printer settings not configured');
-            } else if (billPrinterInfo.billConnectionType === 'usb' && !billPrinterInfo.billUsbDevice) {
-                throw new Error('Printer settings not configured');
-            } else if (billPrinterInfo.billConnectionType === 'serial' && !billPrinterInfo.billSerialPort) {
+            // Validate bill printer configuration
+            if (!billPrinterSettings) {
                 throw new Error('Printer settings not configured');
             }
 
@@ -486,24 +452,9 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
             // Wait for the ViewShot to be ready
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            // Attempt to connect to printer before printing
-            try {
-                const billConfig = {
-                    connectionType: billPrinterInfo.billConnectionType || 'network',
-                    IP: billPrinterInfo.billIP,
-                    usbDevice: billPrinterInfo.billUsbDevice,
-                    serialPort: billPrinterInfo.billSerialPort
-                };
-                await connectToPrinter(billPrinterRef.current, billConfig);
-            } catch (connectError) {
-                console.error('Printer connection error:', connectError);
-                throw new Error('Printer settings not configured');
-            }
-
             const imageData = await viewBillShotRef.current.capture();
-            console.log('imageData', imageData);
-            const printerWidth = getThermalPrinterWidth(billPrinterInfo.billPaperSize);
-            await billPrinterRef.current.printBitmap(imageData, 1, printerWidth, 0);
+            const printerWidth = getThermalPrinterWidth(billPrinterSettings.billPaperSize);
+            await billPrinter.printBitmap(imageData, 1, printerWidth, 0);
 
             Toast.show({
                 type: 'success',
@@ -520,9 +471,6 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
         } finally {
             setLoadingVisible(false);
             setPrintingOrder(null);
-            if (billPrinterRef.current) {
-                billPrinterRef.current.closeConnection();
-            }
         }
     };
 

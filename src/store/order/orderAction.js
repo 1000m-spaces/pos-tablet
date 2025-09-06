@@ -29,3 +29,20 @@ export const confirmOrderOnline = payload => ({
   type: NEOCAFE.CONFIRM_ORDER_ONLINE_REQUEST,
   payload,
 });
+
+// Newly added actions for shipping and paid-success orders
+export const getOrderShipping = payload => ({
+  type: NEOCAFE.GET_ORDER_SHIPPING_REQUEST,
+  payload,
+});
+export const resetGetOrderShipping = () => ({
+  type: NEOCAFE.GET_ORDER_SHIPPING_RESET,
+});
+
+export const getOrderPaidSuccess = payload => ({
+  type: NEOCAFE.GET_ORDER_PAID_SUCCESS_REQUEST,
+  payload,
+});
+export const resetGetOrderPaidSuccess = () => ({
+  type: NEOCAFE.GET_ORDER_PAID_SUCCESS_RESET,
+});

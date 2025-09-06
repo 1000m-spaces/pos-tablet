@@ -246,7 +246,7 @@ const PaymentCart = () => {
         orderStatus: "Paymented", // Default to Paymented for cash orders
         tableId: currentOrder.tableId || null, // Store tableId for blocking
         created_at: new Date().toISOString(),
-        syncStatus: 'pending' // Add sync status field
+        syncStatus: 'synced' // Add sync status field
       };
       console.log('Final order data to create:', orderData);
       setIsOrderDataSaved(orderData); // Save order data to state for retry if needed
@@ -291,8 +291,13 @@ const PaymentCart = () => {
 
   useEffect(() => {
     (async () => {
-      if (isStatusCreateOrder === Status.ERROR && isOrderDataSaved) {
+      if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
+        await AsyncStorage.setLastOrder(orderData);
+        await AsyncStorage.addPendingOrder(orderData);
+      } else if (isStatusCreateOrder === Status.ERROR && isOrderDataSaved) {
         // Save to local storage as last order and add to pending orders queue
+        let data = isOrderDataSaved;
+        data.syncStatus = 'pending'; // Update sync status to pending for retry
         console.log('Saving failed order to local storage for retry');
         await AsyncStorage.setLastOrder(isOrderDataSaved);
         await AsyncStorage.addPendingOrder(isOrderDataSaved);

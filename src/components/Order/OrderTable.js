@@ -48,7 +48,7 @@ const Badge = ({ text, colorText, colorBg, width }) => (
     </View>
 );
 
-const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
+const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -590,6 +590,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                 printedLabels={printedLabels}
                 onPrintTem={printTem}
                 onPrintBill={printBill}
+                onConfirm={onConfirmOrder ? () => onConfirmOrder(selectedOrder) : undefined}
                 loadingVisible={loadingVisible}
             />
 
@@ -618,7 +619,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter }) => {
                     <BillTemplate selectedOrder={printingOrder} />
                 )}
             </ViewShot>
-            <Toast />
+            <Toast
+                position="top"
+                topOffset={50}
+                visibilityTime={4000}
+            />
         </>
     );
 };

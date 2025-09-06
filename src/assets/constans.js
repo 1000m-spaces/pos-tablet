@@ -1,8 +1,8 @@
 import { Dimensions, Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 // import {heightDevices, widthDevices} from '../app';
-export const heightDevice = Dimensions.get('window').width;
-export const widthDevice = Dimensions.get('window').height;
+export const heightDevice = Dimensions.get('window').height;
+export const widthDevice = Dimensions.get('window').width;
 
 export const versionSystem = DeviceInfo.getSystemVersion();
 export const versionNameApp = DeviceInfo.getVersion();

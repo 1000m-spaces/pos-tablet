@@ -1,5 +1,5 @@
 
-import { BASE_PATH_CAFE, BASE_PATH_MENU } from 'assets/config';
+import { BASE_PATH_1000M, BASE_PATH_CAFE, BASE_PATH_MENU } from 'assets/config';
 // const BASE_PATH_CAFE = 'https://api.neocafe.tech/v1/';
 // https://dev-api-php.1000m.vn/api1.0.php/
 // const BASE_PATH_CASE_PROD = 'https://v01api.1000m.vn/api1.0.php/'
@@ -12,7 +12,7 @@ const BASE_PATH_POS = 'https://v01pos.1000m.vn/'
 // const BASE_PATH_POS = 'https://dev-pos.1000m.vn/'
 // const BASE_PATH_POS = 'https://v01api.1000m.vn/'
 
-const BASE_PATH_1000M = 'https://dev-api.1000m.vn/'
+// const BASE_PATH_1000M = 'https://dev-api.1000m.vn/'
 
 export const UrlApi = {
   // ------------------ PRODUCT ------------------------
@@ -43,6 +43,9 @@ export const UrlApi = {
   getPaidOrder: BASE_PATH_CAFE + 'getOrderPaidSuccessNew',
   getNotPaidOrder: BASE_PATH_CAFE + 'getOrderNotPaidNew',
   getOnlineOrder: BASE_PATH_MENU + 'getOrderOnlineNew',
+  // Newly added endpoints for POS tablet flows
+  getOrderShipping: BASE_PATH_MENU + 'getOrderShippingNew',
+  getOrderPaidSuccess: BASE_PATH_MENU + 'getOrderPaidSuccessNew',
   getNotCompleteOrder: BASE_PATH_CAFE + 'getOrderNotCompleteNew',
 
   fetchOrder: BASE_PATH_1000M + 'synthetic/orders/v1/fetch',

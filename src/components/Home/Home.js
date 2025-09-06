@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, SafeAreaView, TouchableOpacity, View } from 'react-native';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { getMenuAction, setProductAction, getShopTablesAction } from 'store/actions';
+import { getMenuAction, setProductAction, getShopTablesAction, getPaymentChannelsAction } from 'store/actions';
 import { currentOrderSelector, productMenuSelector } from 'store/selectors';
 import ProductItemMenu from './ProductItemMenu';
 import Colors from 'theme/Colors';
@@ -86,6 +86,10 @@ const Home = ({ navigation }) => {
   };
 
   const onShowTable = () => setShowModal(2);
+
+  useEffect(() => {
+    dispatch(getPaymentChannelsAction());
+  }, [])
 
   return (
     <SafeAreaView

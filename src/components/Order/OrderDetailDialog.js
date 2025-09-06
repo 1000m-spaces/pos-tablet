@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import Modal from 'react-native-modal';
 import Toast from 'react-native-toast-message';
 import Spinner from 'react-native-loading-spinner-overlay';
+import { usePrinter } from '../../services/PrinterService';
 
 const Badge = ({ text, colorText, colorBg, width }) => (
     <View style={[styles.badge, { backgroundColor: colorBg, width: width }]}>
@@ -19,9 +20,19 @@ const OrderDetailDialog = ({
     onPrintBill,
     onStatusChange,
     loadingVisible,
-    isOfflineOrder = false
+    isOfflineOrder = false,
+    onConfirm,
 }) => {
     const [showStatusOptions, setShowStatusOptions] = useState(false);
+
+    // Use global printer service for status display
+    const {
+        labelPrinterStatus,
+        billPrinterStatus,
+        getConnectionDetails,
+        labelPrinterSettings,
+        billPrinterSettings
+    } = usePrinter();
 
     const getStatusColor = (status) => {
         switch (status) {
@@ -404,17 +415,57 @@ const OrderDetailDialog = ({
                 {/* Docked Action Buttons */}
                 <View style={styles.dockedActions}>
                     <Pressable
-                        style={[styles.dockedButton, styles.printTemButton]}
+                        style={[
+                            styles.dockedButton,
+                            styles.printTemButton,
+                            labelPrinterStatus !== 'connected' && styles.disabledButton
+                        ]}
                         onPress={() => onPrintTem(selectedOrder)}
+                        disabled={labelPrinterStatus === 'connecting'}
                     >
-                        <Text style={styles.dockedButtonText}>🏷️ In Tem</Text>
+                        <View style={styles.buttonContent}>
+                            <View style={[
+                                styles.printerStatusIndicator,
+                                { backgroundColor: labelPrinterStatus === 'connected' ? '#4CAF50' : labelPrinterStatus === 'connecting' ? '#FF9800' : '#F44336' }
+                            ]} />
+                            <Text style={styles.dockedButtonText}>🏷️ In Tem</Text>
+                        </View>
+                        {labelPrinterStatus !== 'connected' && (
+                            <Text style={styles.statusHint}>
+                                {labelPrinterStatus === 'connecting' ? 'Đang kết nối...' : 'Chưa kết nối'}
+                            </Text>
+                        )}
                     </Pressable>
                     <Pressable
-                        style={[styles.dockedButton, styles.printBillButton]}
+                        style={[
+                            styles.dockedButton,
+                            styles.printBillButton,
+                            billPrinterStatus !== 'connected' && styles.disabledButton
+                        ]}
                         onPress={() => onPrintBill(selectedOrder)}
+                        disabled={billPrinterStatus === 'connecting'}
                     >
-                        <Text style={styles.dockedButtonText}>🧾 In HĐ</Text>
+                        <View style={styles.buttonContent}>
+                            <View style={[
+                                styles.printerStatusIndicator,
+                                { backgroundColor: billPrinterStatus === 'connected' ? '#4CAF50' : billPrinterStatus === 'connecting' ? '#FF9800' : '#F44336' }
+                            ]} />
+                            <Text style={styles.dockedButtonText}>🧾 In HĐ</Text>
+                        </View>
+                        {billPrinterStatus !== 'connected' && (
+                            <Text style={styles.statusHint}>
+                                {billPrinterStatus === 'connecting' ? 'Đang kết nối...' : 'Chưa kết nối'}
+                            </Text>
+                        )}
                     </Pressable>
+                    {!isOfflineOrder && typeof onConfirm === 'function' && (
+                        <Pressable
+                            style={[styles.dockedButton, styles.confirmButton]}
+                            onPress={() => onConfirm(selectedOrder)}
+                        >
+                            <Text style={styles.dockedButtonText}>✅ Xác nhận</Text>
+                        </Pressable>
+                    )}
                     <Pressable
                         style={[styles.dockedButton, styles.closeButton]}
                         onPress={onClose}
@@ -716,8 +767,32 @@ const styles = StyleSheet.create({
     printBillButton: {
         backgroundColor: "#4CAF50",
     },
+    confirmButton: {
+        backgroundColor: "#2E7D32",
+    },
     closeButton: {
         backgroundColor: "#757575",
+    },
+    // Printer status styles
+    buttonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    printerStatusIndicator: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 6,
+    },
+    statusHint: {
+        fontSize: 10,
+        color: '#CCCCCC',
+        marginTop: 2,
+        textAlign: 'center',
+    },
+    disabledButton: {
+        opacity: 0.6,
     },
     // Toast styles
     toastContainer: {
