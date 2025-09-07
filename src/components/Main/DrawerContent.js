@@ -11,7 +11,7 @@ import { TextNormal } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
 import Icons from 'common/Icons/Icons';
 import Colors from 'theme/Colors';
-import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_INVOICE, NAVIGATION_PROFILE } from 'navigation/routes';
+import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_APP_ORDER, NAVIGATION_INVOICE, NAVIGATION_PROFILE } from 'navigation/routes';
 import { useDispatch, useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
 import { setScreenAction, logout } from 'store/actions';
@@ -20,6 +20,7 @@ import { widthDevice } from 'assets/constans';
 const DrawerList = [
   { icon: 'menu_pos', label: 'Menu', navigateTo: NAVIGATION_HOME },
   { icon: 'order_pos', label: 'Đơn online', navigateTo: NAVIGATION_ORDER },
+  { icon: 'invoice_pos', label: 'Đơn app', navigateTo: NAVIGATION_APP_ORDER },
   { icon: 'invoice_pos', label: 'Hóa Đơn', navigateTo: NAVIGATION_INVOICE },
   { icon: 'account_pos', label: 'Tài khoản', navigateTo: NAVIGATION_PROFILE },
 ];
