@@ -292,8 +292,8 @@ const PaymentCart = () => {
   useEffect(() => {
     (async () => {
       if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
-        await AsyncStorage.setLastOrder(orderData);
-        await AsyncStorage.addPendingOrder(orderData);
+        await AsyncStorage.setLastOrder(isOrderDataSaved);
+        await AsyncStorage.addPendingOrder(isOrderDataSaved);
       } else if (isStatusCreateOrder === Status.ERROR && isOrderDataSaved) {
         // Save to local storage as last order and add to pending orders queue
         let data = isOrderDataSaved;
