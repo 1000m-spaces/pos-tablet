@@ -520,7 +520,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
     };
 
     const tableData = filteredOrders.map((order, index) => [
-        order.session || `OFF-${index + 1}`,
+        order.session || `M-${index + 1}`,
         order.shopTableName || 'N/A',
         formatCurrency(order.total_amount || 0),
         getItemCount(order).toString(),

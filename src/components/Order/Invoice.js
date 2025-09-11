@@ -14,6 +14,7 @@ import { confirmOrderOnlineStatusSelector } from 'store/order/orderSelector';
 import { useIsFocused } from '@react-navigation/native';
 import FilterRow from './FilterRow';
 import PrinterSettingsModal from 'common/PrinterSettingsModal';
+import { usePrinter } from '../../services/PrinterService';
 
 const Invoice = () => {
     const dispatch = useDispatch();
@@ -25,6 +26,9 @@ const Invoice = () => {
     const [blockedTables, setBlockedTables] = useState({});
     const isFocused = useIsFocused();
     const [selectedDate, setSelectedDate] = useState(new Date());
+
+    // Printer service
+    const { labelPrinterStatus, billPrinterStatus } = usePrinter();
 
     // Printer settings state
     const [printerModalVisible, setPrinterModalVisible] = useState(false);
@@ -199,7 +203,7 @@ const Invoice = () => {
                                     }}
                                     disabled={isLoading || pendingSyncLoading}
                                 >
-                                    <Svg name={'printer'} size={24} color={Colors.primary} />
+                                    <Svg name={labelPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} color={Colors.primary} />
                                     <TextNormal style={[styles.actionText, { color: Colors.primary, fontWeight: '600' }]}>
                                         In tem
                                     </TextNormal>
@@ -214,7 +218,7 @@ const Invoice = () => {
                                     }}
                                     disabled={isLoading || pendingSyncLoading}
                                 >
-                                    <Svg name={'printer'} size={24} color={Colors.primary} />
+                                    <Svg name={billPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} color={Colors.primary} />
                                     <TextNormal style={[styles.actionText, { color: Colors.primary, fontWeight: '600' }]}>
                                         In bill
                                     </TextNormal>

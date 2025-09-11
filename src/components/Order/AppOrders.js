@@ -17,6 +17,7 @@ import OrderTable from './OrderTable';
 import PrinterSettingsModal from 'common/PrinterSettingsModal';
 import AsyncStorage from 'store/async_storage/index';
 import { getOrderShipping, getOrderPaidSuccess, resetGetOrderShipping, resetGetOrderPaidSuccess } from 'store/order/orderAction';
+import { usePrinter } from '../../services/PrinterService';
 
 const appOrderFilters = [
   { id: 1, name: 'Đơn mới' },
@@ -93,6 +94,9 @@ const AppOrders = () => {
   const [userShop, setUserShop] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [printerType, setPrinterType] = useState('label');
+
+  // Printer service
+  const { labelPrinterStatus, billPrinterStatus } = usePrinter();
 
   // Redux selectors
   const shippingOrders = useSelector(state => state.order.shippingOrders);
@@ -301,7 +305,7 @@ const AppOrders = () => {
                     }}
                     disabled={isLoading}
                   >
-                    <Svg name={'printer'} size={40} color={'transparent'} />
+                    <Svg name={labelPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} />
                     <TextNormal style={styles.actionButtonText}>In tem</TextNormal>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -314,7 +318,7 @@ const AppOrders = () => {
                     }}
                     disabled={isLoading}
                   >
-                    <Svg name={'printer'} size={40} color={'transparent'} />
+                    <Svg name={billPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} />
                     <TextNormal style={styles.actionButtonText}>In bill</TextNormal>
                   </TouchableOpacity>
                 </View>
