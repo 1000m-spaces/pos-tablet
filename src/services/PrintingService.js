@@ -3,6 +3,7 @@ import Toast from 'react-native-toast-message';
 import XPrinter from 'rn-xprinter';
 import RNFS from 'react-native-fs';
 import AsyncStorage from 'store/async_storage';
+import { getOrderIdentifierForPrinting } from '../utils/orderUtils';
 
 class PrintingService {
     constructor() {
@@ -208,8 +209,9 @@ class PrintingService {
                 }
             }
 
-            // Update print status
-            await AsyncStorage.setPrintedLabels(transformedOrder.displayID);
+            // Update print status using consistent order identifier
+            const orderIdentifier = getOrderIdentifierForPrinting(orderData, true); // true for offline orders
+            await AsyncStorage.setPrintedLabels(orderIdentifier);
 
             Toast.show({
                 type: 'success',
@@ -323,11 +325,24 @@ class PrintingService {
         console.log('Starting auto print for order:', orderData.offlineOrderId);
 
         let success = true;
+        let labelsPrinted = false;
+        let billPrinted = false;
+
+        // Transform order data to get the display ID for status tracking
+        const transformedOrder = this.transformOrderForPrinting(orderData);
 
         // Print labels
         try {
             const labelSuccess = await this.printLabels(orderData, labelViewShotRef, showSettingPrinter);
-            if (!labelSuccess) success = false;
+            if (labelSuccess) {
+                labelsPrinted = true;
+                console.log(`Labels printed successfully for order: ${transformedOrder.displayID}`);
+                // Ensure printed labels status is updated (redundant but explicit)
+                const orderIdentifier = getOrderIdentifierForPrinting(orderData, true); // true for offline orders
+                await AsyncStorage.setPrintedLabels(orderIdentifier);
+            } else {
+                success = false;
+            }
         } catch (error) {
             console.error('Auto print labels failed:', error);
             success = false;
@@ -339,11 +354,23 @@ class PrintingService {
         // Print bill
         try {
             const billSuccess = await this.printBill(orderData, billViewShotRef, showSettingPrinter);
-            if (!billSuccess) success = false;
+            if (billSuccess) {
+                billPrinted = true;
+                console.log(`Bill printed successfully for order: ${transformedOrder.displayID}`);
+            } else {
+                success = false;
+            }
         } catch (error) {
             console.error('Auto print bill failed:', error);
             success = false;
         }
+
+        // Log final status
+        console.log(`Auto print completed for order ${transformedOrder.displayID}:`, {
+            labelsPrinted,
+            billPrinted,
+            overallSuccess: success
+        });
 
         if (success) {
             Toast.show({
@@ -351,9 +378,56 @@ class PrintingService {
                 text1: `Đã tự động in đơn hàng ${orderData.offlineOrderId}`,
                 text2: 'In tem và hoá đơn thành công'
             });
+        } else {
+            // Show partial success message if only one type failed
+            if (labelsPrinted && !billPrinted) {
+                Toast.show({
+                    type: 'info',
+                    text1: `Đơn hàng ${orderData.offlineOrderId}`,
+                    text2: 'In tem thành công, in hoá đơn thất bại'
+                });
+            } else if (!labelsPrinted && billPrinted) {
+                Toast.show({
+                    type: 'info',
+                    text1: `Đơn hàng ${orderData.offlineOrderId}`,
+                    text2: 'In hoá đơn thành công, in tem thất bại'
+                });
+            }
         }
 
         return success;
+    }
+
+    // Check if labels have already been printed for an order
+    async isOrderLabelsPrinted(orderData) {
+        try {
+            const orderIdentifier = getOrderIdentifierForPrinting(orderData, true); // true for offline orders
+            const printedLabels = await AsyncStorage.getPrintedLabels();
+            return printedLabels.includes(orderIdentifier);
+        } catch (error) {
+            console.error('Error checking printed labels status:', error);
+            return false;
+        }
+    }
+
+    // Auto print with duplicate check
+    async autoPrintOrderWithCheck(orderData, labelViewShotRef, billViewShotRef, showSettingPrinter = null, forcePrint = false) {
+        // Check if labels already printed (unless forcing)
+        if (!forcePrint) {
+            const alreadyPrinted = await this.isOrderLabelsPrinted(orderData);
+            if (alreadyPrinted) {
+                console.log(`Labels already printed for order: ${orderData.offlineOrderId}`);
+                Toast.show({
+                    type: 'info',
+                    text1: `Đơn hàng ${orderData.offlineOrderId}`,
+                    text2: 'Tem đã được in trước đó'
+                });
+                return true; // Consider it successful since labels were already printed
+            }
+        }
+
+        // Proceed with normal auto print
+        return await this.autoPrintOrder(orderData, labelViewShotRef, billViewShotRef, showSettingPrinter);
     }
 }
 

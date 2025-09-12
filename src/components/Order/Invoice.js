@@ -21,7 +21,7 @@ const Invoice = () => {
     const [data, setData] = useState([]);
     const [userShop, setUserShop] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [printedLabels, setPrintedLabels] = useState([]);
+    const [printedLabels, setPrintedLabelsState] = useState([]);
     const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
     const [blockedTables, setBlockedTables] = useState({});
     const isFocused = useIsFocused();
@@ -52,7 +52,7 @@ const Invoice = () => {
             const printedLabelsData = await AsyncStorage.getPrintedLabels();
             const blockedTablesData = await AsyncStorage.getBlockedTables();
 
-            setPrintedLabels(printedLabelsData);
+            setPrintedLabelsState(printedLabelsData);
             setBlockedTables(blockedTablesData);
 
             // Enhance orders with sync, print, and order status

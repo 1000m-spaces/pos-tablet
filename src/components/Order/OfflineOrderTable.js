@@ -14,6 +14,7 @@ import RNFS from 'react-native-fs';
 import { useDispatch } from 'react-redux';
 import { syncPendingOrdersAction } from 'store/sync/syncAction';
 import { usePrinter } from '../../services/PrinterService';
+import { getOrderIdentifierForPrinting } from '../../utils/orderUtils';
 
 const { width, height } = Dimensions.get("window");
 
@@ -51,7 +52,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [printingOrder, setPrintingOrder] = useState(null);
-    const [printedLabels, setPrintedLabels] = useState([]);
+    const [printedLabels, setPrintedLabelsState] = useState([]);
     const [printerInfo, setPrinterInfo] = useState(null);
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
@@ -117,7 +118,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
     useEffect(() => {
         const loadPrintedLabels = async () => {
             const labels = await AsyncStorage.getPrintedLabels();
-            setPrintedLabels(labels);
+            setPrintedLabelsState(labels);
         };
         loadPrintedLabels();
     }, []);
@@ -357,8 +358,10 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
                 }
             }
 
-            // Mark as printed
-            await AsyncStorage.setPrintedLabels(order.session);
+            // Mark as printed using consistent order identifier
+            const orderIdentifier = getOrderIdentifierForPrinting(order, true); // true for offline orders
+            await AsyncStorage.setPrintedLabels(orderIdentifier);
+            setPrintedLabelsState(prev => [...prev, orderIdentifier]);
 
             Toast.show({
                 type: 'success',

@@ -145,8 +145,8 @@ const PaymentCart = () => {
             current: viewBillShotRef.current
           };
 
-          // Trigger auto-printing
-          await printingService.autoPrintOrder(
+          // Trigger auto-printing with duplicate check
+          await printingService.autoPrintOrderWithCheck(
             isOrderDataSaved,
             labelViewShotWrapper,
             billViewShotWrapper

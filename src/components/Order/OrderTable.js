@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message'
 import XPrinter from 'rn-xprinter';
 import RNFS from 'react-native-fs';
 import OrderDetailDialog from './OrderDetailDialog';
+import { getOrderIdentifierForPrinting } from '../../utils/orderUtils';
 
 const { width, height } = Dimensions.get("window");
 
@@ -53,7 +54,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [printingOrder, setPrintingOrder] = useState(null);
-    const [printedLabels, setPrintedLabels] = useState([]);
+    const [printedLabels, setPrintedLabelsState] = useState([]);
     const [isAutoPrinting, setIsAutoPrinting] = useState(false);
     const [printerInfo, setPrinterInfo] = useState(null);
     const viewTemShotRef = useRef();
@@ -98,7 +99,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
     useEffect(() => {
         const loadPrintedLabels = async () => {
             const labels = await AsyncStorage.getPrintedLabels();
-            setPrintedLabels(labels);
+            setPrintedLabelsState(labels);
         };
         loadPrintedLabels();
     }, []);
@@ -332,8 +333,9 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             setPrintingOrder(null);
 
             // Update print status after successful print
-            await AsyncStorage.setPrintedLabels(originalOrder.displayID);
-            setPrintedLabels(prev => [...prev, originalOrder.displayID]);
+            const orderIdentifier = getOrderIdentifierForPrinting(originalOrder, false); // false for online orders
+            await AsyncStorage.setPrintedLabels(orderIdentifier);
+            setPrintedLabelsState(prev => [...prev, orderIdentifier]);
 
             Toast.show({
                 type: 'success',
@@ -493,8 +495,9 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             setPrintingOrder(null);
 
             // Update print status
-            await AsyncStorage.setPrintedLabels(order.displayID);
-            setPrintedLabels(prev => [...prev, order.displayID]);
+            const orderIdentifier = getOrderIdentifierForPrinting(order, false); // false for online orders
+            await AsyncStorage.setPrintedLabels(orderIdentifier);
+            setPrintedLabelsState(prev => [...prev, orderIdentifier]);
 
             Toast.show({
                 type: 'success',
