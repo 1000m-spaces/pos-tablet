@@ -4,9 +4,7 @@ import orderController from './orderController';
 // import {isTokenConfirm} from './authSelector';
 // import {confirmOtpReset, loginPhoneReset, sendPhoneReset} from './authAction';
 import { asyncStorage } from 'store/index';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import {resetGetListShop, resetOrder} from 'store/actions';
-// import strings from 'localization/Localization';
+import AsyncStorage from 'store/async_storage';
 
 function* createOrderSaga({ payload }) {
   try {
@@ -14,6 +12,30 @@ function* createOrderSaga({ payload }) {
     if (result.success === true && result?.data && result?.data?.status) {
       const { data } = result.data;
       console.log('result success order:', data);
+
+      // Save successful order to local storage for history
+      try {
+        const orderForHistory = {
+          ...payload,
+          syncStatus: 'synced',
+          synced_at: new Date().toISOString(),
+          api_response: data, // Store API response data
+          order_id: data.order_id || data.id, // Store server order ID if available
+          updated_at: new Date().toISOString()
+        };
+
+        // Save as last order
+        yield call(AsyncStorage.setLastOrder, orderForHistory);
+
+        // Add to pending orders list (which serves as order history)
+        yield call(AsyncStorage.addPendingOrder, orderForHistory);
+
+        console.log('Order saved to local storage after successful API call:', orderForHistory);
+      } catch (storageError) {
+        console.log('Error saving order to local storage:', storageError);
+        // Don't fail the entire operation if storage fails
+      }
+
       yield put({
         type: NEOCAFE.CREATE_ORDER_SUCCESS,
         payload: data,

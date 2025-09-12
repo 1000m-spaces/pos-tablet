@@ -191,7 +191,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
         setModalVisible(true);
     };
 
-    const printTem = async () => {
+    const printTem = async (order = selectedOrder) => {
         if (Platform.OS !== "android") {
             Toast.show({
                 type: 'error',
@@ -226,7 +226,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             }
 
             // Store the original order
-            const originalOrder = selectedOrder;
+            const originalOrder = order || selectedOrder;
             setPrintingOrder(originalOrder);
 
             // Calculate total number of labels to be printed
@@ -356,7 +356,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
         }
     };
 
-    const printBill = async () => {
+    const printBill = async (order = selectedOrder) => {
         if (Platform.OS !== "android") {
             Toast.show({
                 type: 'error',
@@ -383,7 +383,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             }
 
             // Set the order for printing
-            setPrintingOrder(selectedOrder);
+            setPrintingOrder(order || selectedOrder);
 
             // Wait for the ViewShot to be ready
             await new Promise(resolve => setTimeout(resolve, 500));

@@ -18,11 +18,71 @@ import PrinterSettingsModal from 'common/PrinterSettingsModal';
 import AsyncStorage from 'store/async_storage/index';
 import { getOrderShipping, getOrderPaidSuccess, resetGetOrderShipping, resetGetOrderPaidSuccess } from 'store/order/orderAction';
 import { usePrinter } from '../../services/PrinterService';
+import orderController from 'store/order/orderController';
 
 const appOrderFilters = [
   { id: 1, name: 'Đơn mới' },
   { id: 2, name: 'Lịch sử' },
 ];
+
+// Function to transform new online API response to match expected order structure
+const transformOrderOnlineNew = (apiOrder) => {
+  try {
+    // Parse the request_products JSON string
+    const requestProducts = apiOrder.request_products ? JSON.parse(apiOrder.request_products) : [];
+
+    // Transform products to itemInfo.items structure
+    const items = apiOrder.products?.map((product, index) => {
+      // Find corresponding request product for additional info
+      const requestProduct = requestProducts.find(req => req.pid == product.prod_id) || {};
+
+      // Transform extras to modifierGroups
+      const modifierGroups = product.extras?.map(extra => ({
+        modifierGroupName: extra.group_extra_name || 'Extras',
+        modifiers: [{
+          modifierName: extra.name,
+          modifierPrice: extra.paid_price || 0
+        }]
+      })) || [];
+
+      return {
+        name: product.prodname,
+        quantity: parseInt(product.quantity) || 1,
+        comment: requestProduct.note || '',
+        modifierGroups: modifierGroups,
+        fare: {
+          priceDisplay: product.paid_price ? parseInt(product.paid_price).toLocaleString('vi-VN') : '0',
+          currencySymbol: '₫'
+        }
+      };
+    }) || [];
+
+    // Transform the order to match expected structure
+    return {
+      displayID: apiOrder.id,
+      state: 'ORDER_CREATED', // Default state for new orders
+      orderValue: apiOrder.price_paid ? parseInt(apiOrder.price_paid).toLocaleString('vi-VN') : '0',
+      itemInfo: {
+        items: items
+      },
+      eater: {
+        name: apiOrder.order_name || 'Khách hàng',
+        mobileNumber: apiOrder.userphone || '',
+        comment: apiOrder.description || '',
+        address: {
+          address: apiOrder.address || ''
+        }
+      },
+      // Add service info from tableName
+      service: apiOrder.table_name || apiOrder.tableName || 'Unknown',
+      // Mark as online order from new API
+      source: 'online_new'
+    };
+  } catch (error) {
+    console.error('Error transforming online order:', error);
+    return null;
+  }
+};
 
 // Function to transform app order response to match expected order structure
 const transformAppOrder = (apiOrder) => {
@@ -119,10 +179,27 @@ const AppOrders = () => {
 
     try {
       if (orderType === 1) {
-        // Fetch shipping orders (Đơn mới)
-        dispatch(getOrderShipping({
-          rest_id: userShop.id
-        }));
+        // Fetch from both Redux action and direct API call
+        const [, onlineOrdersRes] = await Promise.all([
+          // Redux action for shipping orders
+          dispatch(getOrderShipping({
+            rest_id: userShop.id
+          })),
+          // Direct API call for new online orders
+          orderController.fetchOrderOnlineNew({
+            rest_id: userShop.id
+          })
+        ]);
+
+        // Handle online orders from direct API call
+        if (onlineOrdersRes.success && onlineOrdersRes.data?.status) {
+          const transformedOnlineOrders = onlineOrdersRes.data.data
+            .map(transformOrderOnlineNew)
+            .filter(order => order !== null);
+
+          // We'll combine this with Redux data in the useEffect
+          setData(prevData => [...prevData, ...transformedOnlineOrders]);
+        }
       } else {
         // Fetch paid success orders (Lịch sử)
         dispatch(getOrderPaidSuccess({
@@ -176,10 +253,16 @@ const AppOrders = () => {
   useEffect(() => {
     if (orderType === 1 && statusGetOrderShipping === 'SUCCESS') {
       if (shippingOrders?.status && shippingOrders?.data) {
-        const transformedOrders = shippingOrders.data
+        const transformedAppOrders = shippingOrders.data
           .map(transformAppOrder)
           .filter(order => order !== null);
-        setData(transformedOrders);
+
+        // Combine with existing online orders (if any were set by direct API call)
+        setData(prevData => {
+          // Filter out any app orders to avoid duplicates, keep online orders
+          const onlineOrders = prevData.filter(order => order.source === 'online_new');
+          return [...transformedAppOrders, ...onlineOrders];
+        });
       } else if (shippingOrders?.status === false) {
         Toast.show({
           type: 'error',
