@@ -78,10 +78,16 @@ const Invoice = () => {
                 return dateB - dateA;
             });
 
+            // Filter by date - only show orders from selected date
+            const selectedDateStr = selectedDate.toDateString();
+            let filteredOrders = sortedOrders.filter(order => {
+                const orderDate = new Date(order.created_at);
+                return orderDate.toDateString() === selectedDateStr;
+            });
+
             // Filter by status if a filter is selected
-            let filteredOrders = sortedOrders;
             if (selectedStatusFilter !== 'all') {
-                filteredOrders = sortedOrders.filter(order => order.orderStatus === selectedStatusFilter);
+                filteredOrders = filteredOrders.filter(order => order.orderStatus === selectedStatusFilter);
             }
 
             setData(filteredOrders);
@@ -95,7 +101,7 @@ const Invoice = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedStatusFilter]);
+    }, [selectedStatusFilter, selectedDate]);
 
     const loadUserShop = async () => {
         const user = await AsyncStorage.getUser();
