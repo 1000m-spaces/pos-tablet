@@ -419,6 +419,7 @@ const PaymentCart = () => {
             loading={paymentChannelsLoading}
             onCloseModal={onCloseModal}
             onSelectPayment={onSelectPaymentMethod}
+            currentOrder={currentOrder}
           />
         )}
       </Modal>
@@ -443,6 +444,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 16,
     left: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
+    top: heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
     margin: 0,
   },
   orderBtnText: {

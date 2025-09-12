@@ -228,7 +228,7 @@ const Cart = ({ showTable }) => {
           paddingVertical: 10,
         }}
       />
-      {currentOrder.products.length > 0 && <PaymentCart />}
+      {currentOrder.products.length > 0 && <PaymentCart currentOrder={currentOrder} />}
     </View>
   );
 };

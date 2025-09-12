@@ -11,7 +11,7 @@ import Svg from 'common/Svg/Svg';
 import Colors from 'theme/Colors';
 import { heightDevice, widthDevice } from 'assets/constans';
 
-const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onSelectPayment }) => {
+const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onSelectPayment, currentOrder }) => {
     const [selectedMethod, setSelectedMethod] = useState(null);
 
     // Use payment methods if available
@@ -28,22 +28,30 @@ const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onS
         onCloseModal();
     };
 
-    const renderPaymentMethod = ({ item }) => (
-        <TouchableOpacity
-            style={[
-                styles.methodItem,
-                selectedMethod?.id === item.id && styles.selectedMethod
-            ]}
-            onPress={() => handleSelectMethod(item)}
-        >
-            <View style={styles.methodInfo}>
-                {/* <View style={styles.methodIcon}>
+    const renderPaymentMethod = ({ item }) => {
+        console.log('Rendering payment method:', item)
+        if (item?.chanel_type_id == '22243' && currentOrder?.orderType != '1') {
+            onSelectPayment(item);
+            onCloseModal();
+        }
+        return (
+            <TouchableOpacity
+                style={[
+                    styles.methodItem,
+                    selectedMethod?.id === item.id && styles.selectedMethod,
+                    { opacity: currentOrder?.orderType == '1' && item?.chanel_type_id == '22243' ? 0.3 : 1 }
+                ]}
+                disabled={currentOrder?.orderType == '1' && item?.chanel_type_id == '22243'} // Disable if chanel_type_id is '22243' ví food app
+                onPress={() => handleSelectMethod(item)}
+            >
+                <View style={styles.methodInfo}>
+                    {/* <View style={styles.methodIcon}>
                     <Svg name={item.icon || 'cash'} size={24} color={Colors.primary} />
                 </View> */}
-                <TextNormal style={styles.methodName}>{item.name}</TextNormal>
-            </View>
-        </TouchableOpacity>
-    );
+                    <TextNormal style={styles.methodName}>{item.name}</TextNormal>
+                </View>
+            </TouchableOpacity>)
+    };
 
     return (
         <View style={styles.container}>

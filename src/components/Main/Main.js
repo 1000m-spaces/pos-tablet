@@ -89,7 +89,7 @@ const Main = () => {
           name={NAVIGATION_APP_ORDER}
           component={Screens.AppOrders}
           options={{
-            drawerLabel: 'Đơn app'
+            drawerLabel: 'Food App'
           }}
         />
         <Drawer.Screen
