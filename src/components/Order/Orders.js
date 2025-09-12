@@ -17,6 +17,7 @@ import Colors from 'theme/Colors';
 import OrderTable from './OrderTable';
 import PrinterSettingsModal from 'common/PrinterSettingsModal';
 import AsyncStorage from 'store/async_storage/index'
+import { usePrinter } from '../../services/PrinterService';
 
 const orderFilters = [
   { id: 1, name: 'Đơn mới' },
@@ -91,6 +92,9 @@ const Orders = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [printerType, setPrinterType] = useState('label'); // 'label' or 'bill'
+
+  // Printer service
+  const { labelPrinterStatus, billPrinterStatus } = usePrinter();
 
   const formatDate = (date) => {
     return date.toLocaleDateString('en-GB', {
@@ -334,7 +338,7 @@ const Orders = () => {
                     }}
                     disabled={isLoading}
                   >
-                    <Svg name={'printer'} size={40} color={'transparent'} />
+                    <Svg name={labelPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} />
                     <TextNormal style={styles.actionButtonText}>In tem</TextNormal>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -347,7 +351,7 @@ const Orders = () => {
                     }}
                     disabled={isLoading}
                   >
-                    <Svg name={'printer'} size={40} color={'transparent'} />
+                    <Svg name={billPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} />
                     <TextNormal style={styles.actionButtonText}>In bill</TextNormal>
                   </TouchableOpacity>
                 </View>

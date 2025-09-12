@@ -127,7 +127,8 @@ export const PrinterProvider = ({ children }) => {
                         if (!printerConfig.billIP) {
                             throw new Error('IP address not configured for bill printer');
                         }
-                        return await printerInstance.netConnect(printerConfig.billIP);
+                        const billPort = printerConfig.billPort || 9100;
+                        return await printerInstance.netConnect(printerConfig.billIP, billPort);
                     case 'usb':
                         if (!printerConfig.billUsbDevice) {
                             throw new Error('USB device not selected for bill printer');
@@ -209,8 +210,23 @@ export const PrinterProvider = ({ children }) => {
             return false;
         }
 
-        if (billPrinterStatus === 'connected' || isBillConnecting) {
-            return billPrinterStatus === 'connected';
+        // Prevent concurrent connection attempts
+        if (isBillConnecting) {
+            Toast.show({
+                type: 'warning',
+                text1: 'Connection in progress',
+                text2: 'Please wait for current connection attempt to complete'
+            });
+            return false;
+        }
+
+        if (billPrinterStatus === 'connected') {
+            Toast.show({
+                type: 'info',
+                text1: 'Already connected',
+                text2: 'Bill printer is already connected'
+            });
+            return true;
         }
 
         if (!settings || !isValidPrinterConfig(settings, 'bill')) {
@@ -233,7 +249,14 @@ export const PrinterProvider = ({ children }) => {
         });
 
         try {
-            await connectToPrinter(billPrinterRef.current, settings, 'bill');
+            // Add timeout for connection
+            const connectionPromise = connectToPrinter(billPrinterRef.current, settings, 'bill');
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Connection timeout after 30 seconds')), 30000);
+            });
+
+            await Promise.race([connectionPromise, timeoutPromise]);
+
             setBillPrinterStatus('connected');
             Toast.show({
                 type: 'success',
@@ -244,10 +267,23 @@ export const PrinterProvider = ({ children }) => {
         } catch (error) {
             console.error('Bill printer connection failed:', error);
             setBillPrinterStatus('disconnected');
+
+            // Provide more specific error messages
+            let errorMessage = 'Could not connect to bill printer';
+            if (error.message.includes('timeout')) {
+                errorMessage = 'Connection timed out - check printer network settings';
+            } else if (error.message.includes('IP address')) {
+                errorMessage = 'Invalid IP address or printer not reachable';
+            } else if (error.message.includes('USB')) {
+                errorMessage = 'USB device not found or access denied';
+            } else if (error.message.includes('Serial')) {
+                errorMessage = 'Serial port not available or already in use';
+            }
+
             Toast.show({
                 type: 'error',
                 text1: 'Bill printer connection failed',
-                text2: error.message || 'Could not connect to bill printer'
+                text2: error.message || errorMessage
             });
             return false;
         } finally {
@@ -266,8 +302,23 @@ export const PrinterProvider = ({ children }) => {
             return false;
         }
 
-        if (labelPrinterStatus === 'connected' || isLabelConnecting) {
-            return labelPrinterStatus === 'connected';
+        // Prevent concurrent connection attempts
+        if (isLabelConnecting) {
+            Toast.show({
+                type: 'warning',
+                text1: 'Connection in progress',
+                text2: 'Please wait for current connection attempt to complete'
+            });
+            return false;
+        }
+
+        if (labelPrinterStatus === 'connected') {
+            Toast.show({
+                type: 'info',
+                text1: 'Already connected',
+                text2: 'Label printer is already connected'
+            });
+            return true;
         }
 
         if (!settings || !isValidPrinterConfig(settings, 'label')) {
@@ -290,7 +341,14 @@ export const PrinterProvider = ({ children }) => {
         });
 
         try {
-            await connectToPrinter(labelPrinterRef.current, settings, 'label');
+            // Add timeout for connection
+            const connectionPromise = connectToPrinter(labelPrinterRef.current, settings, 'label');
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Connection timeout after 30 seconds')), 30000);
+            });
+
+            await Promise.race([connectionPromise, timeoutPromise]);
+
             setLabelPrinterStatus('connected');
             Toast.show({
                 type: 'success',
@@ -301,10 +359,23 @@ export const PrinterProvider = ({ children }) => {
         } catch (error) {
             console.error('Label printer connection failed:', error);
             setLabelPrinterStatus('disconnected');
+
+            // Provide more specific error messages
+            let errorMessage = 'Could not connect to label printer';
+            if (error.message.includes('timeout')) {
+                errorMessage = 'Connection timed out - check printer network settings';
+            } else if (error.message.includes('IP address')) {
+                errorMessage = 'Invalid IP address or printer not reachable';
+            } else if (error.message.includes('USB')) {
+                errorMessage = 'USB device not found or access denied';
+            } else if (error.message.includes('Serial')) {
+                errorMessage = 'Serial port not available or already in use';
+            }
+
             Toast.show({
                 type: 'error',
                 text1: 'Label printer connection failed',
-                text2: error.message || 'Could not connect to label printer'
+                text2: error.message || errorMessage
             });
             return false;
         } finally {

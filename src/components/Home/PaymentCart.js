@@ -216,7 +216,7 @@ const PaymentCart = () => {
       };
 
       const offlineOrderId = generateOfflineOrderId();
-      const session = `OFF-${offlineOrderId}`;
+      const session = `M-${offlineOrderId}`;
 
       // Create order object
       console.log('Selected payment method for order:', selectedPaymentMethod);

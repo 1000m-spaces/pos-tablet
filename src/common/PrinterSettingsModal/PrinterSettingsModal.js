@@ -320,6 +320,40 @@ const PrinterSettingsModal = ({
         onClose();
     };
 
+    // Helper function to get current modal settings for connection
+    const getCurrentSettings = (printerType) => {
+        if (printerType === 'label') {
+            return {
+                IP: ip,
+                sWidth: parseInt(sWidth),
+                sHeight: parseInt(sHeight),
+                autoPrint: autoPrint,
+                connectionType: labelConnectionType,
+                usbDevice: labelUsbDevice,
+                serialPort: labelSerialPort,
+                // Label font sizes
+                labelStoreName: parseInt(labelStoreName),
+                labelOrderNumber: parseInt(labelOrderNumber),
+                labelItemName: parseInt(labelItemName),
+                labelModifier: parseInt(labelModifier),
+                labelNote: parseInt(labelNote)
+            };
+        } else {
+            return {
+                billIP: billIP,
+                billPort: parseInt(billPort),
+                billPaperSize: billPaperSize,
+                billConnectionType: billConnectionType,
+                billUsbDevice: billUsbDevice,
+                billSerialPort: billSerialPort,
+                // Bill font sizes
+                billHeader: parseInt(billHeader),
+                billContent: parseInt(billContent),
+                billTotal: parseInt(billTotal)
+            };
+        }
+    };
+
     // Render connection status and controls
     const renderConnectionControls = (printerType) => {
         const isLabel = printerType === 'label';
@@ -327,7 +361,60 @@ const PrinterSettingsModal = ({
         const isConnecting = isLabel ? isLabelConnecting : isBillConnecting;
         const settings = isLabel ? globalLabelSettings : globalBillSettings;
 
-        const connectFunction = isLabel ? connectLabelPrinter : connectBillPrinter;
+        // Create connect functions that use current modal settings
+        const connectWithCurrentSettings = async () => {
+            // Validate current settings before connecting
+            const currentSettings = getCurrentSettings(printerType);
+
+            // Basic validation for the specific printer type
+            let hasRequiredSettings = false;
+
+            if (isLabel) {
+                if (labelConnectionType === 'network') {
+                    hasRequiredSettings = !!ip && /^(\d{1,3}\.){3}\d{1,3}$/.test(ip);
+                } else if (labelConnectionType === 'usb') {
+                    hasRequiredSettings = !!labelUsbDevice;
+                } else if (labelConnectionType === 'serial') {
+                    hasRequiredSettings = !!labelSerialPort;
+                }
+                hasRequiredSettings = hasRequiredSettings && sWidth > 0 && sHeight > 0;
+            } else {
+                if (billConnectionType === 'network') {
+                    hasRequiredSettings = !!billIP && /^(\d{1,3}\.){3}\d{1,3}$/.test(billIP) && billPort > 0;
+                } else if (billConnectionType === 'usb') {
+                    hasRequiredSettings = !!billUsbDevice;
+                } else if (billConnectionType === 'serial') {
+                    hasRequiredSettings = !!billSerialPort;
+                }
+            }
+
+            if (!hasRequiredSettings) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Cài đặt không hợp lệ',
+                    text2: 'Vui lòng kiểm tra lại thông tin kết nối'
+                });
+                return false;
+            }
+
+            try {
+                if (isLabel) {
+                    return await connectLabelPrinter(currentSettings);
+                } else {
+                    return await connectBillPrinter(currentSettings);
+                }
+            } catch (error) {
+                console.error('Connection error:', error);
+                Toast.show({
+                    type: 'error',
+                    text1: 'Kết nối thất bại',
+                    text2: error.message || 'Không thể kết nối máy in'
+                });
+                return false;
+            }
+        };
+
+        const connectFunction = connectWithCurrentSettings;
         const disconnectFunction = isLabel ? disconnectLabelPrinter : disconnectBillPrinter;
         const testFunction = isLabel ? testLabelPrinter : testBillPrinter;
 
