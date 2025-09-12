@@ -615,8 +615,8 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
                     setModalVisible(false);
                     setSelectedOrder(null);
                 }}
-                onPrintTem={() => printTem(selectedOrder)}
-                onPrintBill={() => printBill(selectedOrder)}
+                onPrintTem={printTem}
+                onPrintBill={printBill}
                 onStatusChange={handleStatusChange}
                 loadingVisible={loadingVisible}
                 isOfflineOrder={true}
