@@ -386,6 +386,7 @@ const PaymentCart = () => {
         perDiscount: 0,
         session: session,
         offlineOrderId: offlineOrderId, // 6-character sorted order ID
+        offline_code: offlineOrderId, // 6-character sorted order ID
         shopid: user?.shops?.id || user?.shopid || "246",
         userid: user?.userid || "1752",
         roleid: user?.roleid || "4",
