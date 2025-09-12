@@ -11,6 +11,8 @@ import {
   Platform,
   Dimensions,
   PixelRatio,
+  Animated,
+  BackHandler,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -72,6 +74,9 @@ const PaymentCart = () => {
   // Printing related state and refs
   const [printingOrder, setPrintingOrder] = useState(null);
   const [printerInfo, setPrinterInfo] = useState(null);
+  const [isAutoPrinting, setIsAutoPrinting] = useState(false);
+  const [autoPrintStatus, setAutoPrintStatus] = useState('');
+  const spinValue = useRef(new Animated.Value(0)).current;
   const viewTemShotRef = useRef();
   const viewBillShotRef = useRef();
 
@@ -96,6 +101,24 @@ const PaymentCart = () => {
     // Fetch payment channels when component mounts
     dispatch(getPaymentChannelsAction());
   }, [dispatch]);
+
+  // Prevent back navigation during auto print
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isAutoPrinting) {
+        // Show a gentle reminder instead of allowing navigation
+        Alert.alert(
+          'Đang in đơn hàng',
+          'Vui lòng đợi quá trình in hoàn tất trước khi thoát',
+          [{ text: 'OK', style: 'default' }]
+        );
+        return true; // Prevent default back action
+      }
+      return false; // Allow default back action
+    });
+
+    return () => backHandler.remove();
+  }, [isAutoPrinting]);
 
   useEffect(() => {
     // Set default payment method when payment channels are loaded
@@ -133,6 +156,19 @@ const PaymentCart = () => {
       if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
         console.log('Order created successfully, starting auto print...');
 
+        // Show auto print loading
+        setIsAutoPrinting(true);
+        setAutoPrintStatus('Đang chuẩn bị in...');
+
+        // Start spinner animation
+        Animated.loop(
+          Animated.timing(spinValue, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          })
+        ).start();
+
         try {
           // Create ViewShot wrapper objects that the printing service expects
           const labelViewShotWrapper = {
@@ -145,22 +181,43 @@ const PaymentCart = () => {
             current: viewBillShotRef.current
           };
 
-          // Trigger auto-printing with duplicate check
-          await printingService.autoPrintOrderWithCheck(
+          // Trigger auto-printing with duplicate check and status updates
+          const printSuccess = await printingService.autoPrintOrderWithCheck(
             isOrderDataSaved,
             labelViewShotWrapper,
-            billViewShotWrapper
+            billViewShotWrapper,
+            null, // showSettingPrinter
+            false, // forcePrint
+            (status) => setAutoPrintStatus(status) // Real-time status updates
           );
+
+          if (printSuccess) {
+            setAutoPrintStatus('In thành công!');
+            // Brief delay to show success message
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          } else {
+            setAutoPrintStatus('In không thành công');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+
         } catch (error) {
           console.error('Auto print failed:', error);
+          setAutoPrintStatus('Lỗi khi in!');
+          await new Promise(resolve => setTimeout(resolve, 2000));
         } finally {
-          // Reset printing order
-          setPrintingOrder(null);
-        }
+          // Stop spinner animation
+          spinValue.stopAnimation();
+          spinValue.setValue(0);
 
-        // Reset the order creation status and saved data
-        dispatch(resetCreateOrder());
-        setIsOrderDataSaved(null);
+          // Reset printing order and loading state
+          setPrintingOrder(null);
+          setIsAutoPrinting(false);
+          setAutoPrintStatus('');
+
+          // Reset the order creation status and saved data
+          dispatch(resetCreateOrder());
+          setIsOrderDataSaved(null);
+        }
       }
     };
 
@@ -449,8 +506,20 @@ const PaymentCart = () => {
           {payment !== null && `${formatMoney(payment?.commitedTotal)}đ`}
         </TextNormal>
       </View>
-      <TouchableOpacity style={styles.orderBtn} onPress={handlePaymentClick}>
-        <TextNormal style={styles.orderBtnText}>{'Thanh toán'}</TextNormal>
+      <TouchableOpacity
+        style={[
+          styles.orderBtn,
+          isAutoPrinting && styles.orderBtnDisabled
+        ]}
+        onPress={handlePaymentClick}
+        disabled={isAutoPrinting}
+      >
+        <TextNormal style={[
+          styles.orderBtnText,
+          isAutoPrinting && styles.orderBtnTextDisabled
+        ]}>
+          {isAutoPrinting ? 'Đang xử lý...' : 'Thanh toán'}
+        </TextNormal>
       </TouchableOpacity>
       <Modal
         isVisible={modal > 0}
@@ -488,6 +557,53 @@ const PaymentCart = () => {
       >
         <Svg name={'success'} size={80} style={{ alignSelf: 'center', marginBottom: 20 }} />
       </ConfirmationModal>
+
+      {/* Auto Print Loading Modal */}
+      <Modal
+        isVisible={isAutoPrinting}
+        animationType="fade"
+        backdropColor="rgba(0,0,0,0.7)"
+        backdropOpacity={0.7}
+        hasBackdrop={true}
+        onBackButtonPress={() => { }} // Prevent back button press during auto print
+        onBackdropPress={() => { }} // Prevent backdrop press during auto print
+        style={{
+          justifyContent: 'center',
+          alignItems: 'center',
+          margin: 0,
+        }}
+      >
+        <View style={styles.autoPrintModal}>
+          <View style={styles.autoPrintContent}>
+            {/* Loading Spinner */}
+            <View style={styles.loadingSpinner}>
+              <Animated.View
+                style={[
+                  styles.spinner,
+                  {
+                    transform: [{
+                      rotate: spinValue.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '360deg'],
+                      })
+                    }]
+                  }
+                ]}
+              />
+            </View>
+
+            {/* Status Text */}
+            <TextNormal style={styles.autoPrintTitle}>
+              {autoPrintStatus || 'Đang tự động in...'}
+            </TextNormal>
+
+            {/* Progress Description */}
+            <TextNormal style={styles.autoPrintDescription}>
+              Vui lòng đợi trong giây lát, đừng chuyển màn hình
+            </TextNormal>
+          </View>
+        </View>
+      </Modal>
 
       {/* Hidden ViewShot components for printing */}
       <ViewShot
@@ -559,6 +675,14 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginVertical: 5,
   },
+  orderBtnDisabled: {
+    backgroundColor: Colors.placeholder,
+    opacity: 0.7,
+  },
+  orderBtnTextDisabled: {
+    color: '#FFFFFF',
+    opacity: 0.8,
+  },
   line: {
     width: '100%',
     height: 1,
@@ -598,6 +722,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     justifyContent: 'space-between',
     paddingVertical: 8,
+  },
+  // Auto Print Modal Styles
+  autoPrintModal: {
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 20,
+    padding: 30,
+    minWidth: 300,
+    maxWidth: 400,
+    alignItems: 'center',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  autoPrintContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingSpinner: {
+    marginBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spinner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 4,
+    borderColor: Colors.primary,
+    borderTopColor: 'transparent',
+  },
+  autoPrintTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.primary,
+    textAlign: 'center',
+    marginBottom: 10,
+    minHeight: 25,
+  },
+  autoPrintDescription: {
+    fontSize: 14,
+    color: Colors.placeholder,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 280,
   },
 
 });
