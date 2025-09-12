@@ -31,7 +31,6 @@ import Status from 'common/Status/Status';
 const PaymentCart = () => {
   const dispatch = useDispatch();
   const currentOrder = useSelector(state => currentOrderSelector(state));
-  const tables = useSelector(state => getTablesSelector(state));
   const user = useSelector(state => userInfo(state));
   const paymentChannels = useSelector(state => getPaymentChannelsSelector(state));
   const paymentChannelsLoading = useSelector(state => getPaymentChannelsLoadingSelector(state));
@@ -269,13 +268,11 @@ const PaymentCart = () => {
       if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
         // Order is already saved in orderSaga for successful API calls
         console.log('Order successfully processed and saved via API');
+        dispatch(resetCreateOrder());
       } else if (isStatusCreateOrder === Status.ERROR && isOrderDataSaved) {
-        // Save failed order to local storage for retry
-        let data = { ...isOrderDataSaved };
-        data.syncStatus = 'pending'; // Update sync status to pending for retry
-        console.log('Saving failed order to local storage for retry');
-        await AsyncStorage.setLastOrder(data);
-        await AsyncStorage.addPendingOrder(data);
+        // Failed orders are now saved directly in orderSaga for better consistency
+        // Just reset the order state here
+        console.log('Order failed - error handling and storage completed in saga');
         dispatch(resetCreateOrder());
       }
     })();

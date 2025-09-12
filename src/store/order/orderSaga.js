@@ -42,17 +42,74 @@ function* createOrderSaga({ payload }) {
       });
     } else if (result.success === true && result?.data?.status === false) {
       console.log('result errorr order:', result);
+
+      // Save failed order to local storage for retry (consolidate error handling here)
+      try {
+        const failedOrder = {
+          ...payload,
+          syncStatus: 'pending',
+          error_reason: result?.data?.error || 'API returned false status',
+          failed_at: new Date().toISOString(),
+          retry_count: 0,
+          updated_at: new Date().toISOString()
+        };
+
+        yield call(AsyncStorage.setLastOrder, failedOrder);
+        yield call(AsyncStorage.addPendingOrder, failedOrder);
+        console.log('Failed order saved to local storage for retry:', failedOrder);
+      } catch (storageError) {
+        console.log('Error saving failed order to local storage:', storageError);
+      }
+
       yield put({
         type: NEOCAFE.CREATE_ORDER_ERROR,
         payload: { errorMsg: result?.data?.error },
       });
     } else {
+      // Save failed order to local storage for retry (consolidate error handling here)
+      try {
+        const failedOrder = {
+          ...payload,
+          syncStatus: 'pending',
+          error_reason: 'Invalid API response format',
+          failed_at: new Date().toISOString(),
+          retry_count: 0,
+          updated_at: new Date().toISOString()
+        };
+
+        yield call(AsyncStorage.setLastOrder, failedOrder);
+        yield call(AsyncStorage.addPendingOrder, failedOrder);
+        console.log('Failed order saved to local storage for retry:', failedOrder);
+      } catch (storageError) {
+        console.log('Error saving failed order to local storage:', storageError);
+      }
+
       yield put({
         type: NEOCAFE.CREATE_ORDER_ERROR,
         payload: { errorMsg: 'Xảy ra lỗi trong quá trình tạo đơn' },
       });
     }
   } catch (e) {
+    console.log('API call exception:', e);
+
+    // Save failed order to local storage for retry (consolidate error handling here)
+    try {
+      const failedOrder = {
+        ...payload,
+        syncStatus: 'pending',
+        error_reason: e.message || 'Network or server error',
+        failed_at: new Date().toISOString(),
+        retry_count: 0,
+        updated_at: new Date().toISOString()
+      };
+
+      yield call(AsyncStorage.setLastOrder, failedOrder);
+      yield call(AsyncStorage.addPendingOrder, failedOrder);
+      console.log('Failed order saved to local storage for retry due to exception:', failedOrder);
+    } catch (storageError) {
+      console.log('Error saving failed order to local storage:', storageError);
+    }
+
     yield put({
       type: NEOCAFE.CREATE_ORDER_ERROR,
       payload: {
