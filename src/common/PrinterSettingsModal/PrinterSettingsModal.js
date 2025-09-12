@@ -18,14 +18,10 @@ const PrinterSettingsModal = ({
     const {
         billPrinterStatus,
         labelPrinterStatus,
-        isBillConnecting,
-        isLabelConnecting,
+        isBillTesting,
+        isLabelTesting,
         billPrinterSettings: globalBillSettings,
         labelPrinterSettings: globalLabelSettings,
-        connectBillPrinter,
-        connectLabelPrinter,
-        disconnectBillPrinter,
-        disconnectLabelPrinter,
         testBillPrinter,
         testLabelPrinter,
         getConnectionDetails,
@@ -320,22 +316,55 @@ const PrinterSettingsModal = ({
         onClose();
     };
 
+    // Helper function to get current modal settings for connection
+    const getCurrentSettings = (printerType) => {
+        if (printerType === 'label') {
+            return {
+                IP: ip,
+                sWidth: parseInt(sWidth),
+                sHeight: parseInt(sHeight),
+                autoPrint: autoPrint,
+                connectionType: labelConnectionType,
+                usbDevice: labelUsbDevice,
+                serialPort: labelSerialPort,
+                // Label font sizes
+                labelStoreName: parseInt(labelStoreName),
+                labelOrderNumber: parseInt(labelOrderNumber),
+                labelItemName: parseInt(labelItemName),
+                labelModifier: parseInt(labelModifier),
+                labelNote: parseInt(labelNote)
+            };
+        } else {
+            return {
+                billIP: billIP,
+                billPort: parseInt(billPort),
+                billPaperSize: billPaperSize,
+                billConnectionType: billConnectionType,
+                billUsbDevice: billUsbDevice,
+                billSerialPort: billSerialPort,
+                // Bill font sizes
+                billHeader: parseInt(billHeader),
+                billContent: parseInt(billContent),
+                billTotal: parseInt(billTotal)
+            };
+        }
+    };
+
     // Render connection status and controls
     const renderConnectionControls = (printerType) => {
         const isLabel = printerType === 'label';
         const status = isLabel ? labelPrinterStatus : billPrinterStatus;
-        const isConnecting = isLabel ? isLabelConnecting : isBillConnecting;
+        const isTesting = isLabel ? isLabelTesting : isBillTesting;
         const settings = isLabel ? globalLabelSettings : globalBillSettings;
 
-        const connectFunction = isLabel ? connectLabelPrinter : connectBillPrinter;
-        const disconnectFunction = isLabel ? disconnectLabelPrinter : disconnectBillPrinter;
         const testFunction = isLabel ? testLabelPrinter : testBillPrinter;
 
         const getStatusColor = () => {
             switch (status) {
                 case 'connected': return '#4CAF50';
-                case 'connecting': return '#FF9800';
+                case 'testing': return '#FF9800';
                 case 'disconnected': return '#F44336';
+                case 'unknown': return '#9E9E9E';
                 default: return '#9E9E9E';
             }
         };
@@ -343,8 +372,9 @@ const PrinterSettingsModal = ({
         const getStatusText = () => {
             switch (status) {
                 case 'connected': return 'Đã kết nối';
-                case 'connecting': return 'Đang kết nối...';
+                case 'testing': return 'Đang kiểm tra...';
                 case 'disconnected': return 'Chưa kết nối';
+                case 'unknown': return 'Chưa kiểm tra';
                 default: return 'Không xác định';
             }
         };
@@ -365,27 +395,12 @@ const PrinterSettingsModal = ({
 
                 <View style={styles.connectionButtonsContainer}>
                     <TouchableOpacity
-                        style={[
-                            styles.connectionButton,
-                            styles.connectButton,
-                            status === 'connected' && styles.disconnectButton
-                        ]}
-                        onPress={status === 'connected' ? disconnectFunction : connectFunction}
-                        disabled={isConnecting}
-                    >
-                        <TextNormal style={styles.connectionButtonText}>
-                            {isConnecting ? 'Đang kết nối...' :
-                                status === 'connected' ? 'Ngắt kết nối' : 'Kết nối'}
-                        </TextNormal>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
                         style={[styles.connectionButton, styles.testButton]}
                         onPress={testFunction}
-                        disabled={isConnecting}
+                        disabled={isTesting}
                     >
                         <TextNormal style={styles.connectionButtonText}>
-                            Kiểm tra
+                            {isTesting ? 'Đang kiểm tra...' : 'Kiểm tra'}
                         </TextNormal>
                     </TouchableOpacity>
                 </View>

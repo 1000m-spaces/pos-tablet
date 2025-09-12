@@ -3,11 +3,11 @@ import { StyleSheet } from 'react-native';
 import Colors from 'theme/Colors';
 
 const styles = StyleSheet.create({
-  storeText: { fontSize: 20, marginBottom: 2, fontWeight: '600' },
+  storeText: { fontSize: 28, marginBottom: 2, fontWeight: '800' },
   searchHeader: {
     borderRadius: 8,
-    width: '55%',
-    height: 40,
+    width: 295,
+    height: 48,
     alignItems: 'center',
     backgroundColor: Colors.whiteColor,
     flexDirection: 'row',
@@ -19,23 +19,24 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    marginRight: 28,
   },
   timeText: { fontSize: 14, color: Colors.grayText },
   wrapperHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    // alignItems: 'center',
     // padding: 14,
   },
   containerHeader: {
-    paddingHorizontal: 14,
-    paddingTop: 12,
+    paddingLeft: 28,
     paddingBottom: 12,
     backgroundColor: Colors.bgInput,
     borderBottomWidth: 1,
     borderBottomColor: Colors.btnDisabled,
   },
   containerCateTab: {
+    // height: 36,
     paddingHorizontal: 10,
     paddingVertical: 6,
     justifyContent: 'center',

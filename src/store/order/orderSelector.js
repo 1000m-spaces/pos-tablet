@@ -1,6 +1,7 @@
 export const currentOrderSelector = state => state.order.currentOrder;
 export const onlineOrderSelector = state => state.order.onlineOrders;
 export const confirmOrderOnlineStatusSelector = state => state.order.statusConfirmOrderOnline;
+export const getStatusCreateOrder = state => state.order.statusCreateOrder;
 // New selectors
 export const shippingOrdersSelector = state => state.order.shippingOrders;
 export const shippingOrdersStatusSelector = state => state.order.statusGetOrderShipping;

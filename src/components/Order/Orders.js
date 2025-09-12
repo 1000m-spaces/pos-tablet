@@ -17,70 +17,13 @@ import Colors from 'theme/Colors';
 import OrderTable from './OrderTable';
 import PrinterSettingsModal from 'common/PrinterSettingsModal';
 import AsyncStorage from 'store/async_storage/index'
+import { usePrinter } from '../../services/PrinterService';
 
 const orderFilters = [
   { id: 1, name: 'Đơn mới' },
   { id: 2, name: 'Lịch sử' },
 ];
 
-// Function to transform new API response to match expected order structure
-const transformOrderOnlineNew = (apiOrder) => {
-  try {
-    // Parse the request_products JSON string
-    const requestProducts = apiOrder.request_products ? JSON.parse(apiOrder.request_products) : [];
-
-    // Transform products to itemInfo.items structure
-    const items = apiOrder.products?.map((product, index) => {
-      // Find corresponding request product for additional info
-      const requestProduct = requestProducts.find(req => req.pid == product.prod_id) || {};
-
-      // Transform extras to modifierGroups
-      const modifierGroups = product.extras?.map(extra => ({
-        modifierGroupName: extra.group_extra_name || 'Extras',
-        modifiers: [{
-          modifierName: extra.name,
-          modifierPrice: extra.paid_price || 0
-        }]
-      })) || [];
-
-      return {
-        name: product.prodname,
-        quantity: parseInt(product.quantity) || 1,
-        comment: requestProduct.note || '',
-        modifierGroups: modifierGroups,
-        fare: {
-          priceDisplay: product.paid_price ? parseInt(product.paid_price).toLocaleString('vi-VN') : '0',
-          currencySymbol: '₫'
-        }
-      };
-    }) || [];
-
-    // Transform the order to match expected structure
-    return {
-      displayID: apiOrder.id,
-      state: 'ORDER_CREATED', // Default state for new orders
-      orderValue: apiOrder.price_paid ? parseInt(apiOrder.price_paid).toLocaleString('vi-VN') : '0',
-      itemInfo: {
-        items: items
-      },
-      eater: {
-        name: apiOrder.order_name || 'Khách hàng',
-        mobileNumber: apiOrder.userphone || '',
-        comment: apiOrder.description || '',
-        address: {
-          address: apiOrder.address || ''
-        }
-      },
-      // Add service info from tableName
-      service: apiOrder.table_name || apiOrder.tableName || 'Unknown',
-      // Mark as online order from new API
-      source: 'online_new'
-    };
-  } catch (error) {
-    console.error('Error transforming order:', error);
-    return null;
-  }
-};
 
 const Orders = () => {
   const [data, setData] = useState([]);
@@ -91,6 +34,9 @@ const Orders = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [printerType, setPrinterType] = useState('label'); // 'label' or 'bill'
+
+  // Printer service
+  const { labelPrinterStatus, billPrinterStatus } = usePrinter();
 
   const formatDate = (date) => {
     return date.toLocaleDateString('en-GB', {
@@ -116,43 +62,20 @@ const Orders = () => {
 
     try {
       if (orderType === 1) {
-        // Fetch from both APIs and combine data
-        const [grabOrdersRes, onlineOrdersRes] = await Promise.all([
-          // Original GRAB orders
-          orderController.fetchOrder({
-            branch_id: userShop.id,
-            brand_id: userShop.partnerid,
-            merchant_id: userShop.partnerid,
-            service: "GRAB",
-          }),
-          // New online orders
-          orderController.fetchOrderOnlineNew({
-            rest_id: userShop.id
-          })
-        ]);
+        // Fetch GRAB orders only
+        const grabOrdersRes = await orderController.fetchOrder({
+          branch_id: userShop.id,
+          brand_id: userShop.partnerid,
+          merchant_id: userShop.partnerid,
+          service: "GRAB",
+        });
 
-        let combinedOrders = [];
-
-        // Process GRAB orders
         if (grabOrdersRes.success) {
-          combinedOrders = [...(grabOrdersRes?.data?.orders || [])];
-        }
-
-        // Process and transform new online orders
-        if (onlineOrdersRes.success && onlineOrdersRes.data?.status) {
-          const transformedOrders = onlineOrdersRes.data.data
-            .map(transformOrderOnlineNew)
-            .filter(order => order !== null); // Remove failed transformations
-
-          combinedOrders = [...combinedOrders, ...transformedOrders];
-        }
-
-        setData(combinedOrders);
-
-        if (!grabOrdersRes.success && !onlineOrdersRes.success) {
+          setData(grabOrdersRes?.data?.orders || []);
+        } else {
           Toast.show({
             type: 'error',
-            text1: 'Lỗi khi tải đơn hàng mới',
+            text1: 'Lỗi khi tải đơn hàng GRAB',
             position: 'bottom',
           });
         }
@@ -334,7 +257,7 @@ const Orders = () => {
                     }}
                     disabled={isLoading}
                   >
-                    <Svg name={'printer'} size={40} color={'transparent'} />
+                    <Svg name={labelPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} />
                     <TextNormal style={styles.actionButtonText}>In tem</TextNormal>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -347,7 +270,7 @@ const Orders = () => {
                     }}
                     disabled={isLoading}
                   >
-                    <Svg name={'printer'} size={40} color={'transparent'} />
+                    <Svg name={billPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} />
                     <TextNormal style={styles.actionButtonText}>In bill</TextNormal>
                   </TouchableOpacity>
                 </View>

@@ -14,6 +14,7 @@ import RNFS from 'react-native-fs';
 import { useDispatch } from 'react-redux';
 import { syncPendingOrdersAction } from 'store/sync/syncAction';
 import { usePrinter } from '../../services/PrinterService';
+import { getOrderIdentifierForPrinting } from '../../utils/orderUtils';
 
 const { width, height } = Dimensions.get("window");
 
@@ -51,7 +52,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [printingOrder, setPrintingOrder] = useState(null);
-    const [printedLabels, setPrintedLabels] = useState([]);
+    const [printedLabels, setPrintedLabelsState] = useState([]);
     const [printerInfo, setPrinterInfo] = useState(null);
     const viewTemShotRef = useRef();
     const viewBillShotRef = useRef();
@@ -65,8 +66,8 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
         billPrinterStatus,
         labelPrinterSettings,
         billPrinterSettings,
-        connectLabelPrinter,
-        connectBillPrinter
+        printWithLabelPrinter,
+        printWithBillPrinter
     } = usePrinter();
 
     const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Đồng bộ", "Thời gian"];
@@ -95,12 +96,12 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
     useEffect(() => {
         // Background job: sync offline orders every 1 minute
         const intervalId = setInterval(() => {
-            dispatch(syncPendingOrdersAction());
+            // dispatch(syncPendingOrdersAction());
             // Optionally refresh local data after dispatching sync action
             if (onRefresh) {
                 onRefresh();
             }
-        }, 60000); // 60,000 ms = 1 minute
+        }, 30000); // 60,000 ms = 1 minute
 
         // Cleanup interval on unmount
         return () => clearInterval(intervalId);
@@ -117,7 +118,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
     useEffect(() => {
         const loadPrintedLabels = async () => {
             const labels = await AsyncStorage.getPrintedLabels();
-            setPrintedLabels(labels);
+            setPrintedLabelsState(labels);
         };
         loadPrintedLabels();
     }, []);
@@ -259,28 +260,21 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
 
         setLoadingVisible(true);
         try {
-            // Check if label printer is connected
-            if (labelPrinterStatus !== 'connected') {
-                Toast.show({
-                    type: 'info',
-                    text1: 'Kết nối máy in tem...',
-                    text2: 'Đang thiết lập kết nối'
-                });
-
-                // Try to connect
-                const connected = await connectLabelPrinter();
-                if (!connected) {
-                    throw new Error('Không thể kết nối máy in tem');
-                }
-
-                // Wait for connection to stabilize
-                await new Promise(resolve => setTimeout(resolve, 1000));
+            // Check printer availability
+            if (labelPrinterStatus === 'disconnected') {
+                throw new Error('Máy in tem chưa kết nối. Vui lòng kiểm tra cài đặt.');
             }
 
             // Validate printer configuration
             if (!labelPrinterSettings || !labelPrinterSettings.sWidth || !labelPrinterSettings.sHeight) {
-                throw new Error('Printer settings not configured');
+                throw new Error('Cài đặt máy in tem chưa đầy đủ');
             }
+
+            Toast.show({
+                type: 'info',
+                text1: 'Đang in tem...',
+                text2: 'Vui lòng đợi'
+            });
 
             setPrintingOrder(order);
 
@@ -344,20 +338,30 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
                         const uri = await viewTemShotRef.current.capture();
                         const imageInfo = await Image.getSize(uri);
                         const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                        await labelPrinter.tsplPrintBitmap(
-                            Number(labelPrinterSettings.sWidth),
-                            Number(labelPrinterSettings.sHeight),
-                            base64,
-                            imageInfo.width
-                        );
+
+                        // Use the new print function that handles connection automatically
+                        const success = await printWithLabelPrinter(async (printer) => {
+                            await printer.tsplPrintBitmap(
+                                Number(labelPrinterSettings.sWidth),
+                                Number(labelPrinterSettings.sHeight),
+                                base64,
+                                imageInfo.width
+                            );
+                        });
+
+                        if (!success) {
+                            throw new Error('In tem thất bại');
+                        }
                         await new Promise(resolve => setTimeout(resolve, 500));
                         currentLabelIndex++;
                     }
                 }
             }
 
-            // Mark as printed
-            await AsyncStorage.setPrintedLabels(order.session);
+            // Mark as printed using consistent order identifier
+            const orderIdentifier = getOrderIdentifierForPrinting(order, true); // true for offline orders
+            await AsyncStorage.setPrintedLabels(orderIdentifier);
+            setPrintedLabelsState(prev => [...prev, orderIdentifier]);
 
             Toast.show({
                 type: 'success',
@@ -393,28 +397,21 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
 
         setLoadingVisible(true);
         try {
-            // Check if bill printer is connected
-            if (billPrinterStatus !== 'connected') {
-                Toast.show({
-                    type: 'info',
-                    text1: 'Kết nối máy in bill...',
-                    text2: 'Đang thiết lập kết nối'
-                });
-
-                // Try to connect
-                const connected = await connectBillPrinter();
-                if (!connected) {
-                    throw new Error('Không thể kết nối máy in bill');
-                }
-
-                // Wait for connection to stabilize
-                await new Promise(resolve => setTimeout(resolve, 1000));
+            // Check printer availability
+            if (billPrinterStatus === 'disconnected') {
+                throw new Error('Máy in bill chưa kết nối. Vui lòng kiểm tra cài đặt.');
             }
 
             // Validate bill printer configuration
             if (!billPrinterSettings) {
-                throw new Error('Printer settings not configured');
+                throw new Error('Cài đặt máy in bill chưa đầy đủ');
             }
+
+            Toast.show({
+                type: 'info',
+                text1: 'Đang in bill...',
+                text2: 'Vui lòng đợi'
+            });
 
             // Convert offline order to format compatible with BillTemplate
             const billOrder = {
@@ -454,7 +451,15 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
 
             const imageData = await viewBillShotRef.current.capture();
             const printerWidth = getThermalPrinterWidth(billPrinterSettings.billPaperSize);
-            await billPrinter.printBitmap(imageData, 1, printerWidth, 0);
+
+            // Use the new print function that handles connection automatically
+            const success = await printWithBillPrinter(async (printer) => {
+                await printer.printBitmap(imageData, 1, printerWidth, 0);
+            });
+
+            if (!success) {
+                throw new Error('In bill thất bại');
+            }
 
             Toast.show({
                 type: 'success',
@@ -520,7 +525,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
     };
 
     const tableData = filteredOrders.map((order, index) => [
-        order.session || `OFF-${index + 1}`,
+        order.session || `M-${index + 1}`,
         order.shopTableName || 'N/A',
         formatCurrency(order.total_amount || 0),
         getItemCount(order).toString(),
@@ -585,10 +590,13 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
                 options={{ format: "jpg", quality: 1.0 }}
                 style={{
                     position: 'absolute',
-                    left: printerInfo ? -mmToPixels(Number(printerInfo.sWidth)) : -mmToPixels(50),
-                    bottom: 0,
+                    left: -9999,
+                    top: -9999,
                     width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
                     backgroundColor: 'white',
+                    opacity: 0,
+                    zIndex: -1,
+                    pointerEvents: 'none',
                 }}>{printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}</ViewShot>
 
             <ViewShot
@@ -596,10 +604,13 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
                 options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
                 style={{
                     position: 'absolute',
-                    left: -400,
-                    bottom: 0,
+                    left: -9999,
+                    top: -9999,
                     width: 400,
                     backgroundColor: 'white',
+                    opacity: 0,
+                    zIndex: -1,
+                    pointerEvents: 'none',
                 }}
             >
                 {printingOrder && (
@@ -615,8 +626,8 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
                     setModalVisible(false);
                     setSelectedOrder(null);
                 }}
-                onPrintTem={() => printTem(selectedOrder)}
-                onPrintBill={() => printBill(selectedOrder)}
+                onPrintTem={printTem}
+                onPrintBill={printBill}
                 onStatusChange={handleStatusChange}
                 loadingVisible={loadingVisible}
                 isOfflineOrder={true}

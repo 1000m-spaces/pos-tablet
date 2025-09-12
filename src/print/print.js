@@ -27,20 +27,18 @@ const XPrinterOrderExample = () => {
         // Bill printer status and functions
         billPrinter,
         billPrinterStatus,
-        isBillConnecting,
+        isBillTesting,
         billPrinterSettings,
-        connectBillPrinter,
-        disconnectBillPrinter,
         testBillPrinter,
+        printWithBillPrinter,
 
         // Label printer status and functions
         labelPrinter,
         labelPrinterStatus,
-        isLabelConnecting,
+        isLabelTesting,
         labelPrinterSettings,
-        connectLabelPrinter,
-        disconnectLabelPrinter,
         testLabelPrinter,
+        printWithLabelPrinter,
 
         // Utility functions
         getConnectionDetails,
@@ -84,12 +82,12 @@ const XPrinterOrderExample = () => {
             return;
         }
 
-        // Check if bill printer is connected
-        if (billPrinterStatus !== 'connected') {
+        // Check if bill printer is available
+        if (billPrinterStatus === 'disconnected') {
             Toast.show({
                 type: 'error',
                 text1: 'Bill printer not connected',
-                text2: 'Please connect to bill printer first'
+                text2: 'Please check printer settings'
             });
             return;
         }
@@ -98,16 +96,26 @@ const XPrinterOrderExample = () => {
             // Get printer width based on paper size (default to 80mm)
             const printerWidth = getThermalPrinterWidth(billPrinterSettings?.billPaperSize || '80mm');
 
-            // Print the bitmap using the service's bill printer
-            await billPrinter.printBitmap(imageData, 1, printerWidth, 0);
-
-            // Show success message with connection details
-            const connectionDetails = getConnectionDetails(billPrinterSettings, 'bill');
-            Toast.show({
-                type: 'success',
-                text1: 'Print success',
-                text2: `Printed via ${connectionDetails}`
+            // Use the new print function that handles connection automatically
+            const success = await printWithBillPrinter(async (printer) => {
+                await printer.printBitmap(imageData, 1, printerWidth, 0);
             });
+
+            if (success) {
+                // Show success message with connection details
+                const connectionDetails = getConnectionDetails(billPrinterSettings, 'bill');
+                Toast.show({
+                    type: 'success',
+                    text1: 'Print success',
+                    text2: `Printed via ${connectionDetails}`
+                });
+            } else {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Print failed',
+                    text2: 'Could not print document'
+                });
+            }
 
         } catch (err) {
             console.error('Print error:', err);
@@ -159,17 +167,20 @@ const XPrinterOrderExample = () => {
                                 height: 10,
                                 borderRadius: 5,
                                 backgroundColor: billPrinterStatus === 'connected' ? '#34C759' :
-                                    billPrinterStatus === 'connecting' ? '#FF9500' : '#FF3B30',
+                                    billPrinterStatus === 'testing' ? '#FF9500' :
+                                        billPrinterStatus === 'disconnected' ? '#FF3B30' : '#9E9E9E',
                                 marginRight: 8
                             }} />
                             <Text style={{
                                 fontSize: 14,
                                 fontWeight: '600',
                                 color: billPrinterStatus === 'connected' ? '#34C759' :
-                                    billPrinterStatus === 'connecting' ? '#FF9500' : '#FF3B30'
+                                    billPrinterStatus === 'testing' ? '#FF9500' :
+                                        billPrinterStatus === 'disconnected' ? '#FF3B30' : '#9E9E9E'
                             }}>
                                 {billPrinterStatus === 'connected' ? 'Connected' :
-                                    billPrinterStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+                                    billPrinterStatus === 'testing' ? 'Testing...' :
+                                        billPrinterStatus === 'disconnected' ? 'Disconnected' : 'Unknown'}
                             </Text>
                         </View>
                         <Text style={{ fontSize: 12, color: '#666' }}>
@@ -186,17 +197,20 @@ const XPrinterOrderExample = () => {
                                 height: 10,
                                 borderRadius: 5,
                                 backgroundColor: labelPrinterStatus === 'connected' ? '#34C759' :
-                                    labelPrinterStatus === 'connecting' ? '#FF9500' : '#FF3B30',
+                                    labelPrinterStatus === 'testing' ? '#FF9500' :
+                                        labelPrinterStatus === 'disconnected' ? '#FF3B30' : '#9E9E9E',
                                 marginRight: 8
                             }} />
                             <Text style={{
                                 fontSize: 14,
                                 fontWeight: '600',
                                 color: labelPrinterStatus === 'connected' ? '#34C759' :
-                                    labelPrinterStatus === 'connecting' ? '#FF9500' : '#FF3B30'
+                                    labelPrinterStatus === 'testing' ? '#FF9500' :
+                                        labelPrinterStatus === 'disconnected' ? '#FF3B30' : '#9E9E9E'
                             }}>
                                 {labelPrinterStatus === 'connected' ? 'Connected' :
-                                    labelPrinterStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+                                    labelPrinterStatus === 'testing' ? 'Testing...' :
+                                        labelPrinterStatus === 'disconnected' ? 'Disconnected' : 'Unknown'}
                             </Text>
                         </View>
                         <Text style={{ fontSize: 12, color: '#666' }}>
@@ -221,75 +235,37 @@ const XPrinterOrderExample = () => {
                     {/* Second Row - Bill Printer Controls */}
                     <View style={{ marginBottom: 10 }}>
                         <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' }}>Bill Printer Controls</Text>
-                        <View style={{ flexDirection: 'row', gap: 8 }}>
-                            <TouchableOpacity
-                                onPress={billPrinterStatus === 'connected' ? disconnectBillPrinter : connectBillPrinter}
-                                disabled={isBillConnecting}
-                                style={{
-                                    backgroundColor: billPrinterStatus === 'connected' ? '#FF3B30' : '#34C759',
-                                    padding: 10,
-                                    borderRadius: 8,
-                                    flex: 1,
-                                    opacity: isBillConnecting ? 0.7 : 1
-                                }}>
-                                <Text style={{ color: 'white', textAlign: 'center', fontSize: 14, fontWeight: '500' }}>
-                                    {isBillConnecting ? 'Connecting...' :
-                                        billPrinterStatus === 'connected' ? 'Disconnect' : 'Connect'}
-                                </Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                onPress={testBillPrinter}
-                                disabled={isBillConnecting}
-                                style={{
-                                    backgroundColor: '#FF9500',
-                                    padding: 10,
-                                    borderRadius: 8,
-                                    flex: 1,
-                                    opacity: isBillConnecting ? 0.7 : 1
-                                }}>
-                                <Text style={{ color: 'white', textAlign: 'center', fontSize: 14, fontWeight: '500' }}>
-                                    Test Bill
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            onPress={testBillPrinter}
+                            disabled={isBillTesting}
+                            style={{
+                                backgroundColor: '#FF9500',
+                                padding: 12,
+                                borderRadius: 8,
+                                opacity: isBillTesting ? 0.7 : 1
+                            }}>
+                            <Text style={{ color: 'white', textAlign: 'center', fontSize: 14, fontWeight: '500' }}>
+                                {isBillTesting ? 'Testing...' : 'Test Bill Printer'}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Third Row - Label Printer Controls */}
                     <View>
                         <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' }}>Label Printer Controls</Text>
-                        <View style={{ flexDirection: 'row', gap: 8 }}>
-                            <TouchableOpacity
-                                onPress={labelPrinterStatus === 'connected' ? disconnectLabelPrinter : connectLabelPrinter}
-                                disabled={isLabelConnecting}
-                                style={{
-                                    backgroundColor: labelPrinterStatus === 'connected' ? '#FF3B30' : '#34C759',
-                                    padding: 10,
-                                    borderRadius: 8,
-                                    flex: 1,
-                                    opacity: isLabelConnecting ? 0.7 : 1
-                                }}>
-                                <Text style={{ color: 'white', textAlign: 'center', fontSize: 14, fontWeight: '500' }}>
-                                    {isLabelConnecting ? 'Connecting...' :
-                                        labelPrinterStatus === 'connected' ? 'Disconnect' : 'Connect'}
-                                </Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                onPress={testLabelPrinter}
-                                disabled={isLabelConnecting}
-                                style={{
-                                    backgroundColor: '#FF9500',
-                                    padding: 10,
-                                    borderRadius: 8,
-                                    flex: 1,
-                                    opacity: isLabelConnecting ? 0.7 : 1
-                                }}>
-                                <Text style={{ color: 'white', textAlign: 'center', fontSize: 14, fontWeight: '500' }}>
-                                    Test Label
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            onPress={testLabelPrinter}
+                            disabled={isLabelTesting}
+                            style={{
+                                backgroundColor: '#FF9500',
+                                padding: 12,
+                                borderRadius: 8,
+                                opacity: isLabelTesting ? 0.7 : 1
+                            }}>
+                            <Text style={{ color: 'white', textAlign: 'center', fontSize: 14, fontWeight: '500' }}>
+                                {isLabelTesting ? 'Testing...' : 'Test Label Printer'}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -313,18 +289,20 @@ const XPrinterOrderExample = () => {
                 {/* Print Button */}
                 <TouchableOpacity
                     onPress={captureAndPrint}
-                    disabled={billPrinterStatus !== 'connected' || isBillConnecting}
+                    disabled={billPrinterStatus === 'disconnected' || isBillTesting}
                     style={{
-                        backgroundColor: billPrinterStatus === 'connected' ? '#FF9500' : '#999999',
+                        backgroundColor: billPrinterStatus === 'connected' ? '#FF9500' :
+                            billPrinterStatus === 'unknown' ? '#FF9500' : '#999999',
                         padding: 15,
                         borderRadius: 8,
                         width: 250,
                         marginTop: 20,
                         marginBottom: 20,
-                        opacity: (billPrinterStatus !== 'connected' || isBillConnecting) ? 0.7 : 1
+                        opacity: (billPrinterStatus === 'disconnected' || isBillTesting) ? 0.7 : 1
                     }}>
                     <Text style={{ color: 'white', textAlign: 'center', fontSize: 18, fontWeight: 'bold' }}>
-                        {billPrinterStatus === 'connected' ? 'Print Bill' : 'Connect Bill Printer to Print'}
+                        {isBillTesting ? 'Testing...' :
+                            billPrinterStatus === 'disconnected' ? 'Printer Disconnected' : 'Print Bill'}
                     </Text>
                 </TouchableOpacity>
 

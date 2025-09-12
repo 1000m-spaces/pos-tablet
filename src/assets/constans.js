@@ -1,4 +1,4 @@
-import {Dimensions, Platform} from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 // import {heightDevices, widthDevices} from '../app';
 export const heightDevice = Dimensions.get('window').height;
@@ -22,8 +22,8 @@ export function formatMoney(x) {
 // POS APPLICATION
 export const background_login = require('./background/background_login.png');
 export const orderTypes = [
-  {id: 1, name: 'Dùng tại quán'},
-  {id: 2, name: 'Mang đi'},
-  {id: 3, name: 'Grab Food'},
-  {id: 4, name: 'Shopee Food'},
+  { id: 1, name: 'Dùng tại quán' },
+  { id: 2, name: 'Mang đi' },
+  { id: 3, name: 'Grab Food' },
+  { id: 4, name: 'Shopee Food' },
 ];

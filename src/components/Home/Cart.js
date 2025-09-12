@@ -18,7 +18,9 @@ import Colors from 'theme/Colors';
 import PaymentCart from './PaymentCart';
 import FastImage from 'react-native-fast-image';
 import { setOrderAction } from 'store/actions';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const Cart = ({ showTable }) => {
+  const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const currentOrder = useSelector(state => currentOrderSelector(state));
   const orderChannels = useSelector(state => getOrderChannelsSelector(state));
@@ -169,7 +171,7 @@ const Cart = ({ showTable }) => {
   // If no order type is selected, show order type selection in the middle
   if (!orderType) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { borderTopLeftRadius: 12, marginBottom: insets.bottom }]}>
         <View style={styles.orderTypeSelectionContainer}>
           <FlatList
             key="order-type-selection"
@@ -188,7 +190,7 @@ const Cart = ({ showTable }) => {
 
   // Normal layout when order type is selected
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { borderTopLeftRadius: 12, marginBottom: insets.bottom }]}>
       <View
         style={{
           borderBottomColor: Colors.btnDisabled,
@@ -226,7 +228,7 @@ const Cart = ({ showTable }) => {
           paddingVertical: 10,
         }}
       />
-      {currentOrder.products.length > 0 && <PaymentCart />}
+      {currentOrder.products.length > 0 && <PaymentCart currentOrder={currentOrder} />}
     </View>
   );
 };
@@ -238,7 +240,7 @@ const styles = StyleSheet.create({
   wrapperProductInfo: { paddingLeft: 6, flex: 1 },
   container: {
     backgroundColor: Colors.whiteColor,
-    flex: 0.6,
+    width: widthDevice * 0.3299072,
     paddingTop: 14, // Add top padding to align with header
     borderLeftWidth: 1,
     borderLeftColor: Colors.btnDisabled,
@@ -319,7 +321,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   centerOrderTypeButton: {
-    paddingVertical: 16,
+    paddingVertical: 7,
     paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: Colors.primary,

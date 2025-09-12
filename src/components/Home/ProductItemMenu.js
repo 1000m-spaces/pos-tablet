@@ -1,5 +1,5 @@
 import { TextNormalSemiBold, TextSmallMedium } from 'common/Text/TextFont';
-import { IMAGE_URL } from 'assets/constans';
+import { IMAGE_URL, widthDevice } from 'assets/constans';
 import React, { memo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { formatMoney } from 'assets/constans';
@@ -70,11 +70,11 @@ const styles = StyleSheet.create({
     // alignItems: 'center',
     backgroundColor: 'white',
     borderRadius: 12,
-    marginRight: 16,
-    height: 248,
+    marginRight: widthDevice * 0.02,
+    height: widthDevice * 0.2378,
     marginBottom: 24,
     // flex: 1,
-    width: '30%',
+    width: widthDevice * 0.16136,
   },
   content: {
     // justifyContent: 'space-between',
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   image: {
-    height: 142,
+    height: widthDevice * 0.16136,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },
@@ -93,6 +93,7 @@ const styles = StyleSheet.create({
   textName: {
     fontSize: 16,
     textAlign: 'center',
+    fontWeight: '500',
     // backgroundColor: 'red',
   },
   quantityNumber: {
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
   },
   priceText: {
     color: Colors.primary,
-    fontWeight: '700',
+    fontWeight: '500',
     textAlign: 'center',
     fontSize: 16,
     paddingTop: 8,
