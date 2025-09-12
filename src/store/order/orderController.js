@@ -14,6 +14,8 @@ class OrderController {
   getOrderShipping = async payload => {
     try {
       const { data } = await HttpClient.post(UrlApi.getOrderShipping, payload);
+      console.log('getOrderShipping', data);
+      console.log('getOrderShipping payload', payload);
       return { success: true, data };
     } catch (error) {
       return { success: false, error: error.message };

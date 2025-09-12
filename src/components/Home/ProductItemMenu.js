@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     marginRight: widthDevice * 0.02,
-    height: 248,
+    height: widthDevice * 0.2378,
     marginBottom: 24,
     // flex: 1,
     width: widthDevice * 0.16136,
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   image: {
-    height: 142,
+    height: widthDevice * 0.16136,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },
