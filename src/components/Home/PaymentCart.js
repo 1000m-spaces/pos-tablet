@@ -246,41 +246,16 @@ const PaymentCart = () => {
         orderStatus: "Paymented", // Default to Paymented for cash orders
         tableId: currentOrder.tableId || null, // Store tableId for blocking
         created_at: new Date().toISOString(),
-        syncStatus: 'synced' // Add sync status field
+        syncStatus: 'pending' // Initially pending, will be updated to 'synced' in saga if API succeeds
       };
       console.log('Final order data to create:', orderData);
       setIsOrderDataSaved(orderData); // Save order data to state for retry if needed
       dispatch(createOrder(orderData));
 
-      // Save to local storage as last order and add to pending orders queue
-      // await AsyncStorage.setLastOrder(orderData);
-      // await AsyncStorage.addPendingOrder(orderData);
+      // Note: Successful orders are now saved to local storage in orderSaga
+      // Failed orders will be saved in the useEffect below with 'pending' syncStatus
 
-      console.log('Order saved to local storage:', orderData);
-
-      // Show success message
-      // Alert.alert(
-      //   'Thành công',
-      //   'Đơn hàng hoàn tất',
-      //   [
-      //     {
-      //       text: 'OK',
-      //       onPress: () => {
-      //         // Reset cart after successful payment
-      //         dispatch(setOrderAction({
-      //           take_away: false,
-      //           products: [],
-      //           applied_products: [],
-      //           table: '',
-      //           tableId: '',
-      //           note: '',
-      //           delivery: null,
-      //           orderType: null,
-      //         }));
-      //       }
-      //     }
-      //   ]
-      // );
+      console.log('Order dispatched for processing:', orderData);
       setIsModalOrderStatus(true);
 
     } catch (error) {
@@ -292,15 +267,15 @@ const PaymentCart = () => {
   useEffect(() => {
     (async () => {
       if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
-        await AsyncStorage.setLastOrder(orderData);
-        await AsyncStorage.addPendingOrder(orderData);
+        // Order is already saved in orderSaga for successful API calls
+        console.log('Order successfully processed and saved via API');
       } else if (isStatusCreateOrder === Status.ERROR && isOrderDataSaved) {
-        // Save to local storage as last order and add to pending orders queue
-        let data = isOrderDataSaved;
+        // Save failed order to local storage for retry
+        let data = { ...isOrderDataSaved };
         data.syncStatus = 'pending'; // Update sync status to pending for retry
         console.log('Saving failed order to local storage for retry');
-        await AsyncStorage.setLastOrder(isOrderDataSaved);
-        await AsyncStorage.addPendingOrder(isOrderDataSaved);
+        await AsyncStorage.setLastOrder(data);
+        await AsyncStorage.addPendingOrder(data);
         dispatch(resetCreateOrder());
       }
     })();
