@@ -1,13 +1,16 @@
 import { formatMoney, heightDevice, widthDevice } from 'assets/constans';
 import Svg from 'common/Svg/Svg';
 import { TextNormal } from 'common/Text/TextFont';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Keyboard,
   StyleSheet,
   TouchableOpacity,
   View,
   Alert,
+  Platform,
+  Dimensions,
+  PixelRatio,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -27,6 +30,29 @@ import VoucherModal from './VoucherModal';
 import PaymentMethodModal from './PaymentMethodModal';
 import ConfirmationModal from 'common/ConfirmationModal/ConfirmationModal';
 import Status from 'common/Status/Status';
+import printingService from '../../services/PrintingService';
+import ViewShot from 'react-native-view-shot';
+import PrintTemplate from '../Order/TemTemplate';
+import BillTemplate from '../Order/BillTemplate';
+
+// Helper functions for printing dimensions
+const { width, height } = Dimensions.get("window");
+
+// Convert mm to pixels using device's actual DPI, optimized for tablets
+const mmToPixels = (mm) => {
+  const { width, height } = Dimensions.get('window');
+  const screenWidth = Math.max(width, height); // Use the larger dimension for tablets
+  const screenHeight = Math.min(width, height);
+
+  // Get physical dimensions in inches (assuming standard tablet sizes)
+  // Most tablets are around 10-12 inches diagonally
+  const diagonalInches = Math.sqrt(Math.pow(screenWidth / PixelRatio.get(), 2) + Math.pow(screenHeight / PixelRatio.get(), 2)) / 160;
+
+  // Calculate actual DPI based on physical screen size
+  const actualDpi = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / diagonalInches;
+
+  return Math.round((mm * actualDpi) / 25.4); // 25.4mm = 1 inch
+};
 
 const PaymentCart = () => {
   const dispatch = useDispatch();
@@ -42,6 +68,12 @@ const PaymentCart = () => {
   const [isOrderDataSaved, setIsOrderDataSaved] = useState(null);
 
   const [modal, setModal] = useState(false);
+
+  // Printing related state and refs
+  const [printingOrder, setPrintingOrder] = useState(null);
+  const [printerInfo, setPrinterInfo] = useState(null);
+  const viewTemShotRef = useRef();
+  const viewBillShotRef = useRef();
 
   useEffect(() => {
     let numOfProduct = 0;
@@ -74,6 +106,66 @@ const PaymentCart = () => {
       setSelectedPaymentMethod(defaultMethod);
     }
   }, [paymentChannels, selectedPaymentMethod]);
+
+  // Initialize printing service and load printer info
+  useEffect(() => {
+    const initializePrinting = async () => {
+      try {
+        printingService.initialize();
+        const info = await AsyncStorage.getLabelPrinterInfo();
+        setPrinterInfo(info);
+      } catch (error) {
+        console.error('Error initializing printing service:', error);
+      }
+    };
+
+    initializePrinting();
+
+    // Cleanup on unmount
+    return () => {
+      printingService.dispose();
+    };
+  }, []);
+
+  // Monitor order creation status and trigger auto-printing on success
+  useEffect(() => {
+    const handleOrderSuccess = async () => {
+      if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
+        console.log('Order created successfully, starting auto print...');
+
+        try {
+          // Create ViewShot wrapper objects that the printing service expects
+          const labelViewShotWrapper = {
+            setPrintingOrder: setPrintingOrder,
+            current: viewTemShotRef.current
+          };
+
+          const billViewShotWrapper = {
+            setPrintingOrder: setPrintingOrder,
+            current: viewBillShotRef.current
+          };
+
+          // Trigger auto-printing
+          await printingService.autoPrintOrder(
+            isOrderDataSaved,
+            labelViewShotWrapper,
+            billViewShotWrapper
+          );
+        } catch (error) {
+          console.error('Auto print failed:', error);
+        } finally {
+          // Reset printing order
+          setPrintingOrder(null);
+        }
+
+        // Reset the order creation status and saved data
+        dispatch(resetCreateOrder());
+        setIsOrderDataSaved(null);
+      }
+    };
+
+    handleOrderSuccess();
+  }, [isStatusCreateOrder, isOrderDataSaved, dispatch]);
 
   const fetchVoucher = () => {
     const items = Array.from(currentOrder.products, val => {
@@ -250,13 +342,8 @@ const PaymentCart = () => {
       console.log('Final order data to create:', orderData);
       setIsOrderDataSaved(orderData); // Save order data to state for retry if needed
       dispatch(createOrder(orderData));
-
-      // Note: Successful orders are now saved to local storage in orderSaga
-      // Failed orders will be saved in the useEffect below with 'pending' syncStatus
-
       console.log('Order dispatched for processing:', orderData);
       setIsModalOrderStatus(true);
-
     } catch (error) {
       console.error('Error processing payment:', error);
       Alert.alert('Lỗi', 'Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.');
@@ -401,6 +488,43 @@ const PaymentCart = () => {
       >
         <Svg name={'success'} size={80} style={{ alignSelf: 'center', marginBottom: 20 }} />
       </ConfirmationModal>
+
+      {/* Hidden ViewShot components for printing */}
+      <ViewShot
+        ref={viewTemShotRef}
+        options={{ format: "jpg", quality: 1.0 }}
+        style={{
+          position: 'absolute',
+          left: -9999,
+          top: -9999,
+          width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
+          backgroundColor: 'white',
+          opacity: 0,
+          zIndex: -1,
+          pointerEvents: 'none',
+        }}
+      >
+        {printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}
+      </ViewShot>
+
+      <ViewShot
+        ref={viewBillShotRef}
+        options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
+        style={{
+          position: 'absolute',
+          left: -9999,
+          top: -9999,
+          width: 400,
+          backgroundColor: 'white',
+          opacity: 0,
+          zIndex: -1,
+          pointerEvents: 'none',
+        }}
+      >
+        {printingOrder && (
+          <BillTemplate selectedOrder={printingOrder} />
+        )}
+      </ViewShot>
     </View>
   );
 };

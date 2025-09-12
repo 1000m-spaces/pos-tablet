@@ -587,10 +587,13 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
                 options={{ format: "jpg", quality: 1.0 }}
                 style={{
                     position: 'absolute',
-                    left: printerInfo ? -mmToPixels(Number(printerInfo.sWidth)) : -mmToPixels(50),
-                    bottom: 0,
+                    left: -9999,
+                    top: -9999,
                     width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
                     backgroundColor: 'white',
+                    opacity: 0,
+                    zIndex: -1,
+                    pointerEvents: 'none',
                 }}>{printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}</ViewShot>
 
             <ViewShot
@@ -598,10 +601,13 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate }) => {
                 options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
                 style={{
                     position: 'absolute',
-                    left: -400,
-                    bottom: 0,
+                    left: -9999,
+                    top: -9999,
                     width: 400,
                     backgroundColor: 'white',
+                    opacity: 0,
+                    zIndex: -1,
+                    pointerEvents: 'none',
                 }}
             >
                 {printingOrder && (
