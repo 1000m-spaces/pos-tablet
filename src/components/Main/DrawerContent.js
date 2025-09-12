@@ -19,8 +19,8 @@ import { NAVIGATION_LOGIN } from 'navigation/routes';
 import { widthDevice } from 'assets/constans';
 const DrawerList = [
   { icon: 'menu_pos', label: 'Menu', navigateTo: NAVIGATION_HOME },
-  { icon: 'order_pos', label: 'Đơn online', navigateTo: NAVIGATION_ORDER },
-  { icon: 'invoice_pos', label: 'Đơn app', navigateTo: NAVIGATION_APP_ORDER },
+  { icon: 'order_pos', label: 'FoodApp', navigateTo: NAVIGATION_ORDER },
+  { icon: 'invoice_pos', label: 'Đơn online', navigateTo: NAVIGATION_APP_ORDER },
   { icon: 'invoice_pos', label: 'Hóa Đơn', navigateTo: NAVIGATION_INVOICE },
   { icon: 'account_pos', label: 'Tài khoản', navigateTo: NAVIGATION_PROFILE },
 ];
