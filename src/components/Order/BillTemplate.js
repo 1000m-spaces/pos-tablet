@@ -45,15 +45,15 @@ const BillTemplate = ({ selectedOrder }) => {
                 const user = await AsyncStorage.getUser();
                 if (user && user.shops) {
                     setUserInfos({
-                        partnerid: user.partnerid || '',
-                        shopid: user.shopid || ''
+                        partnerid: user.partnerid || user.shops.partnerid || '',
+                        shopid: user.shopid || user.shops.id || ''
                     });
                     // Update shopInfo with user's shop data - following same pattern as Orders.js
                     const shopData = await AsyncStorage.getShopInfo?.() || {};
                     setShopInfo({
                         name: user.shops.name_vn || shopData.name || 'NEOCAFE',
-                        address: user.shops.address || shopData.address || '',
-                        phone: user.shops.phone || shopData.phone || '',
+                        address: user.shops.addr || shopData.address || '',
+                        phone: user.shops.mobile || shopData.phone || '',
                         wifi_name: shopData.wifi_name || 'NEOCAFE_WIFI',
                         wifi_pass: shopData.wifi_pass || '12345678',
                         id: user.shops.id || user.shopid || ''
@@ -115,7 +115,7 @@ const BillTemplate = ({ selectedOrder }) => {
     const generateQRUrl = () => {
         try {
             // Get order data
-            const orderId = selectedOrder?.displayID || selectedOrder?.session || selectedOrder?.id || '';
+            const orderId = selectedOrder?.displayID || selectedOrder?.session || selectedOrder?.id || 'unknown';
 
             // Get dataOrderTime (try various possible order time fields)
             const dataOrderTime = selectedOrder?.createdAt ||
@@ -134,13 +134,19 @@ const BillTemplate = ({ selectedOrder }) => {
             // Lấy giá trị số (timestamp)
             const timestamp = date.getTime();
 
-            // Generate QR URL
-            const qrUrl = `https://invoice.1000m.vn?shopId=${shopInfo.id}&partnerId=${userInfos.partnerid}&orderId=${orderId}&expireAt=${timestamp}`;
+            // Ensure we have required data
+            const shopId = shopInfo.id || 'unknown';
+            const partnerId = userInfos.partnerid || 'unknown';
 
+            // Generate QR URL
+            const qrUrl = `https://invoice.1000m.vn?shopId=${shopId}&partnerId=${partnerId}&orderId=${orderId}&expireAt=${timestamp}`;
+
+            console.log('Generated QR URL:', qrUrl);
             return qrUrl;
         } catch (error) {
             console.error('Error generating QR URL:', error);
-            return '';
+            // Return a fallback URL to prevent QR code crashes
+            return 'https://invoice.1000m.vn?shopId=unknown&partnerId=unknown&orderId=unknown&expireAt=0';
         }
     };
 

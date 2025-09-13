@@ -504,7 +504,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
             setPrintingOrder(billOrder);
 
             // Wait for the ViewShot to be ready
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             // Attempt to connect to printer before printing
             try {
