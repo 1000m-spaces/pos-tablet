@@ -35,10 +35,7 @@ const OrderItemRow = ({ item, isOfflineOrder }) => (
         <View style={styles.itemQuantity}>
             <Text style={styles.quantityText}>x{item.quantity}</Text>
             <Text style={styles.itemPrice}>
-                {isOfflineOrder ?
-                    formatPrice(item.price) :
-                    `${item.price}${item.currencySymbol || ''}`
-                }
+                {formatPrice(item.price)}
             </Text>
         </View>
     </View>

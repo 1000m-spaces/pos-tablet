@@ -86,10 +86,18 @@ const BillTemplate = ({ selectedOrder }) => {
     const calculateSubTotal = () => {
         if (!selectedOrder?.itemInfo?.items) return 0;
         return selectedOrder.itemInfo.items.reduce((total, item) => {
-            const itemPrice = item.fare?.priceDisplay ?
-                parseInt(item.fare.priceDisplay.replace(/[^\d]/g, '')) :
-                (item.price || 0);
-            return total + (itemPrice * (item.quantity || 1));
+            // Extract numeric price more robustly
+            let itemPrice = 0;
+            if (item.fare?.priceDisplay) {
+                // Handle formatted string prices like "25,000"
+                const priceStr = item.fare.priceDisplay.toString().replace(/[^\d]/g, '');
+                itemPrice = parseInt(priceStr) || 0;
+            } else if (item.price) {
+                itemPrice = typeof item.price === 'number' ? item.price : parseInt(item.price) || 0;
+            } else if (item.amount) {
+                itemPrice = typeof item.amount === 'number' ? item.amount : parseInt(item.amount) || 0;
+            }
+            return total + (itemPrice * (item.quantity || item.quanlity || 1));
         }, 0);
     };
 
@@ -191,9 +199,18 @@ const BillTemplate = ({ selectedOrder }) => {
             {/* Products List */}
             <View style={styles.productsList}>
                 {selectedOrder?.itemInfo?.items?.map((item, index) => {
-                    const itemPrice = item.fare?.priceDisplay ?
-                        parseInt(item.fare.priceDisplay.replace(/[^\d]/g, '')) :
-                        (item.price || 0);
+                    // Extract numeric price more robustly
+                    let itemPrice = 0;
+                    if (item.fare?.priceDisplay) {
+                        // Handle formatted string prices like "25,000"
+                        const priceStr = item.fare.priceDisplay.toString().replace(/[^\d]/g, '');
+                        itemPrice = parseInt(priceStr) || 0;
+                    } else if (item.price) {
+                        itemPrice = typeof item.price === 'number' ? item.price : parseInt(item.price) || 0;
+                    } else if (item.amount) {
+                        itemPrice = typeof item.amount === 'number' ? item.amount : parseInt(item.amount) || 0;
+                    }
+
                     const quantity = item.quantity || item.quanlity || 1;
                     const totalPrice = itemPrice * quantity;
 

@@ -114,8 +114,21 @@ export const getOrderStatusDisplay = (order, isOfflineOrder) => {
  * Format price with Vietnamese currency
  */
 export const formatPrice = (price) => {
-    if (!price && price !== 0) return 'N/A';
-    return `${price.toLocaleString('vi-VN')}₫`;
+    // Handle null, undefined, empty string, and non-numeric values
+    if (price === null || price === undefined || price === '' || isNaN(price)) {
+        return '0₫';
+    }
+
+    // Convert to number if it's a string
+    const numericPrice = typeof price === 'string' ? parseFloat(price) : price;
+
+    // Handle invalid numeric conversions
+    if (isNaN(numericPrice)) {
+        return '0₫';
+    }
+
+    // Format with Vietnamese locale
+    return `${Math.round(numericPrice).toLocaleString('vi-VN')}₫`;
 };
 
 /**
@@ -133,21 +146,33 @@ export const getOrderItems = (order, isOfflineOrder) => {
         return order?.products?.map((product, index) => ({
             id: index,
             name: product.name,
-            quantity: product.quanlity || 1,
-            price: product.price,
+            quantity: product.quanlity || product.quantity || 1,
+            price: product.price || product.amount || 0, // Handle different price field names
             note: product.note,
             extras: product.extras || [],
         })) || [];
     } else {
-        return order?.itemInfo?.items?.map((item, index) => ({
-            id: index,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.fare?.priceDisplay,
-            currencySymbol: item.fare?.currencySymbol,
-            note: item.comment,
-            modifierGroups: item.modifierGroups || [],
-        })) || [];
+        return order?.itemInfo?.items?.map((item, index) => {
+            // For online orders, extract numeric price from formatted string if needed
+            let numericPrice = 0;
+            if (item.fare?.priceDisplay) {
+                // If priceDisplay is a formatted string like "25,000", extract the number
+                const priceStr = item.fare.priceDisplay.toString().replace(/[^\d]/g, '');
+                numericPrice = parseInt(priceStr) || 0;
+            } else if (item.price) {
+                numericPrice = typeof item.price === 'number' ? item.price : parseInt(item.price) || 0;
+            }
+
+            return {
+                id: index,
+                name: item.name,
+                quantity: item.quantity || 1,
+                price: numericPrice, // Always store as numeric value
+                currencySymbol: item.fare?.currencySymbol || '₫',
+                note: item.comment,
+                modifierGroups: item.modifierGroups || [],
+            };
+        }) || [];
     }
 };
 
