@@ -456,6 +456,27 @@ const getBillPrinterInfo = async () => {
   };
 };
 
+// Offline Order Counter Management
+const setOfflineOrderCounter = async (counterData) => {
+  try {
+    await AsyncStorage.setItem('offlineOrderCounter', JSON.stringify(counterData));
+  } catch (error) {
+    console.error('Error setting offline order counter:', error);
+  }
+};
+
+const getOfflineOrderCounter = async () => {
+  try {
+    const value = await AsyncStorage.getItem('offlineOrderCounter');
+    if (value !== null) {
+      return JSON.parse(value);
+    }
+  } catch (error) {
+    console.error('Error getting offline order counter:', error);
+  }
+  return null;
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -490,4 +511,6 @@ export default {
   releaseTable,
   isTableBlocked,
   getTableStatus,
+  setOfflineOrderCounter,
+  getOfflineOrderCounter,
 };

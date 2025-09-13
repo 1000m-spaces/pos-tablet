@@ -333,37 +333,50 @@ const PaymentCart = () => {
       // Calculate totals
       const subPrice = transformedProducts.reduce((sum, product) => sum + product.amount, 0);
 
-      // Generate 6-character sorted order ID for offline orders
-      const generateOfflineOrderId = () => {
+      // Generate auto-increment order ID by date (format: 4-digit counter only)
+      const generateOfflineOrderId = async () => {
         const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const year = String(now.getFullYear()).slice(-2); // Last 2 digits of year
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const currentDateKey = `${year}${month}${day}`;
 
-        // Create base from time: HHMMSS
-        const timeBase = hours + minutes + seconds;
+        try {
+          // Get stored counter data
+          const counterData = await AsyncStorage.getOfflineOrderCounter();
+          let counter = 1;
 
-        // Alternative: Use date + sequence for better sorting
-        const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
-        const dayStr = String(dayOfYear).padStart(3, '0'); // Day of year (001-366)
-        const hourMinute = String(now.getHours() * 60 + now.getMinutes()).padStart(4, '0'); // Minutes since midnight
+          if (counterData) {
+            const { lastDate, lastCounter } = counterData;
 
-        // Option 1: Time-based 6 chars (HHMMSS)
-        const timeOrderId = timeBase;
+            // If same date, increment counter; if different date, reset to 1
+            if (lastDate === currentDateKey) {
+              counter = lastCounter + 1;
+            } else {
+              counter = 1; // Reset counter for new date
+            }
+          }
 
-        // Option 2: Day + time-based 6 chars (DDDHHH where DDD=day of year, HHH=hour*10+minute/6)
-        const dayTimeOrderId = dayStr.slice(-3) + String(Math.floor((now.getHours() * 60 + now.getMinutes()) / 100)).padStart(3, '0');
+          // Store updated counter
+          await AsyncStorage.setOfflineOrderCounter({
+            lastDate: currentDateKey,
+            lastCounter: counter
+          });
 
-        // Option 3: Sequential with date prefix (use last 2 digits of day + 4 digit sequence)
-        const datePrefix = String(now.getDate()).padStart(2, '0');
-        const timeSequence = String(now.getHours() * 100 + now.getMinutes()).slice(-4);
-        const sequentialOrderId = datePrefix + timeSequence;
+          // Format: 4-digit counter only (e.g., 0001, 0002, 0003...)
+          const paddedCounter = String(counter).padStart(4, '0');
 
-        // Return time-based ID for better chronological sorting
-        return timeOrderId;
+          return paddedCounter;
+
+        } catch (error) {
+          console.error('Error generating auto-increment order ID:', error);
+          // Fallback to 4-digit random number if AsyncStorage fails
+          const fallbackId = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+          return fallbackId;
+        }
       };
 
-      const offlineOrderId = generateOfflineOrderId();
+      const offlineOrderId = await generateOfflineOrderId();
       const session = `M-${offlineOrderId}`;
 
       // Create order object
@@ -385,8 +398,8 @@ const PaymentCart = () => {
         fix_discount: 0,
         perDiscount: 0,
         session: session,
-        offlineOrderId: offlineOrderId, // 6-character sorted order ID
-        offline_code: offlineOrderId, // 6-character sorted order ID
+        offlineOrderId: session,
+        offline_code: session,
         shopid: user?.shops?.id || user?.shopid || "246",
         userid: user?.userid || "1752",
         roleid: user?.roleid || "4",
