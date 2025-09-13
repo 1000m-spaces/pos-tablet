@@ -286,7 +286,7 @@ const Invoice = () => {
                             <TextNormal style={styles.loadingText}>Đang tải đơn offline...</TextNormal>
                         </View>
                     ) : (
-                        <OfflineOrderTable orders={data} onRefresh={fetchOfflineOrders} onConfirmOrder={handleConfirmOrder} />
+                        <OfflineOrderTable orders={data} onRefresh={fetchOfflineOrders} onConfirmOrder={handleConfirmOrder} showSettingPrinter={() => setPrinterModalVisible(true)} />
                     )}
                 </View>
             </SafeAreaView>

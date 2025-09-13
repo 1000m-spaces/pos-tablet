@@ -685,8 +685,12 @@ export const PrinterProvider = ({ children }) => {
             // Connect to printer
             await connectToPrinter(printPrinter, settings, 'bill');
 
-            // Print content
-            await printPrinter.printText(printContent);
+            // Execute print commands (could be function or text content)
+            if (typeof printContent === 'function') {
+                await printContent(printPrinter);
+            } else {
+                await printPrinter.printText(printContent);
+            }
 
             // Close connection immediately
             printPrinter.closeConnection();
