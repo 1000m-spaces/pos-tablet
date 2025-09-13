@@ -1,27 +1,31 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
   ScrollView,
   StatusBar,
   StyleSheet,
   View,
+  TextInput,
 } from 'react-native';
 import Modal from 'react-native-modal';
 
 import Options from './Options';
-import {useDispatch, useSelector} from 'react-redux';
-import {productSelector} from 'store/selectors';
-import {addProductCart, setProductAction} from 'store/actions';
+import { useDispatch, useSelector } from 'react-redux';
+import { productSelector } from 'store/selectors';
+import { addProductCart, setProductAction } from 'store/actions';
 import ProductSection from './ProductSection';
 import ExtraSection from './ExtraSection';
 import QuantityProduct from './QuantityProduct';
-import {heightDevice, widthDevice} from 'assets/constans';
-const DetailProduct = ({isVisiable, close}) => {
+import { heightDevice, widthDevice } from 'assets/constans';
+import { TextNormal } from 'common/Text/TextFont';
+import Colors from 'theme/Colors';
+const DetailProduct = ({ isVisiable, close }) => {
   const dispatch = useDispatch();
   const detailProduct = useSelector(state => productSelector(state));
   const [options, setOptions] = useState([]);
   const [topping, setTopping] = useState([]);
   const [quantity, setQuantity] = useState(1);
+  const [note, setNote] = useState('');
   const setupOption = () => {
     if (detailProduct?.options === false) {
       return;
@@ -49,7 +53,7 @@ const DetailProduct = ({isVisiable, close}) => {
     );
     const tempMapExtra = new Map();
     detailProduct?.extras[0].map(item => {
-      tempMapExtra.set(item?.id, {...item, value: false});
+      tempMapExtra.set(item?.id, { ...item, value: false });
       if (mapSubTypes.has(item?.group_type)) {
         mapSubTypes.get(item?.group_type)?.data.push({
           ...item,
@@ -77,7 +81,7 @@ const DetailProduct = ({isVisiable, close}) => {
       }
     });
     opt !== -1 &&
-      dispatch(setProductAction({...detailProduct, option_item: opt}));
+      dispatch(setProductAction({ ...detailProduct, option_item: opt }));
   };
   useEffect(() => {
     updateOptionProduct();
@@ -153,6 +157,7 @@ const DetailProduct = ({isVisiable, close}) => {
         ...detailProduct,
         quantity,
         total_price,
+        note: note.trim(),
       }),
     );
     close();
@@ -177,7 +182,23 @@ const DetailProduct = ({isVisiable, close}) => {
         )}
 
         <ExtraSection topping={topping} onSelectTopping={onSelectTopping} />
-        <View style={{height: 96}} />
+
+        {/* NOTE SECTION */}
+        <View style={styles.noteSection}>
+          <TextNormal style={styles.noteLabel}>Ghi chú cho món này</TextNormal>
+          <TextInput
+            style={styles.noteInput}
+            placeholder="Thêm ghi chú (ví dụ: ít đá, nhiều đường...)"
+            value={note}
+            onChangeText={setNote}
+            multiline={true}
+            numberOfLines={3}
+            textAlignVertical={'top'}
+            placeholderTextColor={Colors.placeholder}
+          />
+        </View>
+
+        <View style={{ height: 96 }} />
       </ScrollView>
       <QuantityProduct
         detailProduct={detailProduct}
@@ -192,7 +213,7 @@ const DetailProduct = ({isVisiable, close}) => {
 export default DetailProduct;
 
 const styles = StyleSheet.create({
-  containerView: {borderRadius: 16, paddingVertical: 24},
+  containerView: { borderRadius: 16, paddingVertical: 24 },
   containerModal: {
     width: heightDevice > widthDevice ? heightDevice * 0.5 : widthDevice * 0.5,
     height: heightDevice > widthDevice ? widthDevice * 0.75 : heightDevice * 0.75,
@@ -203,5 +224,26 @@ const styles = StyleSheet.create({
     left: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
     margin: 10,
   },
-  line: {height: 6, backgroundColor: '#F5F5F5'},
+  line: { height: 6, backgroundColor: '#F5F5F5' },
+  noteSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    backgroundColor: 'white',
+  },
+  noteLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textColor,
+    marginBottom: 8,
+  },
+  noteInput: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 80,
+    fontSize: 14,
+    color: Colors.textColor,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
 });

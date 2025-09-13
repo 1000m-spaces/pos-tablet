@@ -219,6 +219,12 @@ const BillTemplate = ({ selectedOrder }) => {
                                         {extra.name}
                                     </Text>
                                 ))}
+                                {/* Show item note */}
+                                {item.note && item.note.trim() !== '' && (
+                                    <View style={styles.noteContainer}>
+                                        <Text style={[styles.noteText, { fontSize: fontSizes.content - 2 }]}>📝 {item.note}</Text>
+                                    </View>
+                                )}
                             </View>
                             <View style={styles.productPriceColumn}>
                                 <Text style={[styles.productText, { fontSize: fontSizes.content }]}>
@@ -539,6 +545,20 @@ const styles = StyleSheet.create({
     qrText: {
         color: '#666',
         fontWeight: 'bold',
+    },
+
+    // Note styles
+    noteContainer: {
+        marginTop: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        backgroundColor: '#FFF8F0',
+        borderRadius: 3,
+        alignSelf: 'flex-start',
+    },
+    noteText: {
+        color: '#8B4513',
+        fontStyle: 'italic',
     },
 });
 
