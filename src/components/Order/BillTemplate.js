@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import AsyncStorage from 'store/async_storage/index';
+import QRCode from 'react-native-qrcode-svg';
 
 const BillTemplate = ({ selectedOrder }) => {
     const [fontSizes, setFontSizes] = useState({
@@ -14,7 +15,13 @@ const BillTemplate = ({ selectedOrder }) => {
         address: '',
         phone: '',
         wifi_name: '',
-        wifi_pass: ''
+        wifi_pass: '',
+        id: ''
+    });
+
+    const [userInfos, setUserInfos] = useState({
+        partnerid: '',
+        shopid: ''
     });
 
     useEffect(() => {
@@ -33,31 +40,53 @@ const BillTemplate = ({ selectedOrder }) => {
             }
         };
 
-        const loadShopInfo = async () => {
+        const loadUserInfo = async () => {
             try {
-                // Try to get shop info from AsyncStorage or use defaults
-                const shopData = await AsyncStorage.getShopInfo?.() || {};
-                setShopInfo({
-                    name: shopData.name || 'NEOCAFE',
-                    address: shopData.address || '',
-                    phone: shopData.phone || '',
-                    wifi_name: shopData.wifi_name || 'NEOCAFE_WIFI',
-                    wifi_pass: shopData.wifi_pass || '12345678'
-                });
+                const user = await AsyncStorage.getUser();
+                if (user && user.shops) {
+                    setUserInfos({
+                        partnerid: user.partnerid || '',
+                        shopid: user.shopid || ''
+                    });
+                    // Update shopInfo with user's shop data - following same pattern as Orders.js
+                    const shopData = await AsyncStorage.getShopInfo?.() || {};
+                    setShopInfo({
+                        name: user.shops.name_vn || shopData.name || 'NEOCAFE',
+                        address: user.shops.address || shopData.address || '',
+                        phone: user.shops.phone || shopData.phone || '',
+                        wifi_name: shopData.wifi_name || 'NEOCAFE_WIFI',
+                        wifi_pass: shopData.wifi_pass || '12345678',
+                        id: user.shops.id || user.shopid || ''
+                    });
+                    console.log('BillTemplate: User shop loaded:', user.shops);
+                } else {
+                    console.log('BillTemplate: No user shop data found');
+                    // Fallback if no user data
+                    const shopData = await AsyncStorage.getShopInfo?.() || {};
+                    setShopInfo({
+                        name: shopData.name || 'NEOCAFE',
+                        address: shopData.address || '',
+                        phone: shopData.phone || '',
+                        wifi_name: shopData.wifi_name || 'NEOCAFE_WIFI',
+                        wifi_pass: shopData.wifi_pass || '12345678',
+                        id: shopData.id || ''
+                    });
+                }
             } catch (error) {
-                console.error('Error loading shop info:', error);
+                console.error('Error loading user/shop info:', error);
                 setShopInfo({
                     name: 'NEOCAFE',
                     address: '',
                     phone: '',
                     wifi_name: 'NEOCAFE_WIFI',
-                    wifi_pass: '12345678'
+                    wifi_pass: '12345678',
+                    id: ''
                 });
             }
         };
 
         loadBillPrinterSettings();
-        loadShopInfo();
+        loadUserInfo();
     }, []);
 
     const formatCurrency = (amount) => {
@@ -80,6 +109,38 @@ const BillTemplate = ({ selectedOrder }) => {
             });
         } catch (error) {
             return new Date().toLocaleString();
+        }
+    };
+
+    const generateQRUrl = () => {
+        try {
+            // Get order data
+            const orderId = selectedOrder?.displayID || selectedOrder?.session || selectedOrder?.id || '';
+
+            // Get dataOrderTime (try various possible order time fields)
+            const dataOrderTime = selectedOrder?.createdAt ||
+                selectedOrder?.created_at ||
+                selectedOrder?.updatedAt ||
+                selectedOrder?.updated_at ||
+                selectedOrder?.orderTime ||
+                new Date().toISOString();
+
+            // Calculate timestamp as per user requirements
+            const timeString = dataOrderTime;
+            // Chuyển sang định dạng ISO hợp lệ
+            const isoString = timeString.replace(' ', 'T');
+            // Tạo đối tượng Date
+            const date = new Date(isoString);
+            // Lấy giá trị số (timestamp)
+            const timestamp = date.getTime();
+
+            // Generate QR URL
+            const qrUrl = `https://invoice.1000m.vn?shopId=${shopInfo.id}&partnerId=${userInfos.partnerid}&orderId=${orderId}&expireAt=${timestamp}`;
+
+            return qrUrl;
+        } catch (error) {
+            console.error('Error generating QR URL:', error);
+            return '';
         }
     };
 
@@ -323,12 +384,16 @@ const BillTemplate = ({ selectedOrder }) => {
                     Powered by Neo Cafe
                 </Text>
             </View>
-
-            {/* QR Code Placeholder */}
             <View style={styles.qrSection}>
-                <View style={styles.qrPlaceholder}>
-                    <Text style={[styles.qrText, { fontSize: fontSizes.content - 4 }]}>QR CODE</Text>
-                </View>
+                <QRCode
+                    value={generateQRUrl()}
+                    size={120}
+                    color="black"
+                    backgroundColor="white"
+                />
+                <Text style={[styles.qrLabel, { fontSize: fontSizes.content - 4 }]}>
+                    Quét mã để xem hóa đơn điện tử
+                </Text>
             </View>
         </View>
     )
@@ -562,6 +627,12 @@ const styles = StyleSheet.create({
     qrText: {
         color: '#666',
         fontWeight: 'bold',
+    },
+    qrLabel: {
+        color: '#666',
+        marginTop: 8,
+        textAlign: 'center',
+        fontStyle: 'italic',
     },
 
     // Note styles

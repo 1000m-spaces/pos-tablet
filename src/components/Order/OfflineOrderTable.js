@@ -664,12 +664,12 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                 options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
                 style={{
                     position: 'absolute',
-                    left: -9999,
-                    top: -9999,
+                    // left: -9999,
+                    // top: -9999,
                     width: 400,
                     backgroundColor: 'white',
-                    opacity: 0,
-                    zIndex: -1,
+                    // opacity: 0,
+                    // zIndex: -1,
                     pointerEvents: 'none',
                 }}
             >

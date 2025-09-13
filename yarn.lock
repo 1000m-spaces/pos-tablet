@@ -3544,6 +3544,11 @@ diff-sequences@^29.6.3:
   resolved "https://registry.npmjs.org/diff-sequences/-/diff-sequences-29.6.3.tgz"
   integrity sha512-EjePK1srD3P08o2j4f0ExnylqRs5B9tJjcp9t1krH2qRi8CCdsYfwe9JgSLurFBWwq4uOlipzfk5fHNvwFKr8Q==
 
+dijkstrajs@^1.0.1:
+  version "1.0.3"
+  resolved "https://registry.npmjs.org/dijkstrajs/-/dijkstrajs-1.0.3.tgz"
+  integrity sha512-qiSlmBq9+BCdCA/L46dw8Uy93mloxsPSbwnm5yrKn2vMPiy8KyAskTF6zuV/j5BMsmOGZDPs7KjU+mjb670kfA==
+
 dir-glob@^3.0.1:
   version "3.0.1"
   resolved "https://registry.npmjs.org/dir-glob/-/dir-glob-3.0.1.tgz"
@@ -4242,7 +4247,7 @@ fs.realpath@^1.0.0:
 
 fsevents@^2.3.2:
   version "2.3.3"
-  resolved "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz"
+  resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.3.3.tgz#cac6407785d03675a2a5e1a5305c697b347d90d6"
   integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
 
 function-bind@^1.1.2:
@@ -6314,6 +6319,11 @@ pkg-up@^3.1.0:
   dependencies:
     find-up "^3.0.0"
 
+pngjs@^5.0.0:
+  version "5.0.0"
+  resolved "https://registry.npmjs.org/pngjs/-/pngjs-5.0.0.tgz"
+  integrity sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw==
+
 possible-typed-array-names@^1.0.0:
   version "1.1.0"
   resolved "https://registry.npmjs.org/possible-typed-array-names/-/possible-typed-array-names-1.1.0.tgz"
@@ -6386,6 +6396,15 @@ pure-rand@^6.0.0:
   version "6.1.0"
   resolved "https://registry.npmjs.org/pure-rand/-/pure-rand-6.1.0.tgz"
   integrity sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==
+
+qrcode@^1.5.4:
+  version "1.5.4"
+  resolved "https://registry.npmjs.org/qrcode/-/qrcode-1.5.4.tgz"
+  integrity sha512-1ca71Zgiu6ORjHqFBDpnSMTR2ReToX4l1Au1VFLyVeBTFavzQnv5JxMFr3ukHVKpSrSA2MCk0lNJSykjUfz7Zg==
+  dependencies:
+    dijkstrajs "^1.0.1"
+    pngjs "^5.0.0"
+    yargs "^15.3.1"
 
 qs@6.13.0:
   version "6.13.0"
@@ -6584,6 +6603,15 @@ react-native-photo-manipulator@^1.9.2:
   integrity sha512-Q3Y3mGAIYTk0QhXYvCb1/m6amkFZ2ieUvkOkHaOa/zWECyGP5Pi+z0Z0PvtM2acdb2oBv7SZyeVg9W4g3ZggQw==
   dependencies:
     color-rgba "^3.0.0"
+
+react-native-qrcode-svg@^6.3.15:
+  version "6.3.15"
+  resolved "https://registry.yarnpkg.com/react-native-qrcode-svg/-/react-native-qrcode-svg-6.3.15.tgz#20d7a189dff5b7ee8a75222a1268a805497cac75"
+  integrity sha512-vLuNImGfstE8u+rlF4JfFpq65nPhmByuDG6XUPWh8yp8MgLQX11rN5eQ8nb/bf4OB+V8XoLTJB/AZF2g7jQSSQ==
+  dependencies:
+    prop-types "^15.8.0"
+    qrcode "^1.5.4"
+    text-encoding "^0.7.0"
 
 react-native-reanimated@^3.17.1:
   version "3.19.1"
@@ -6935,7 +6963,7 @@ rimraf@^3.0.2:
 
 rn-xprinter@^2.0.7:
   version "2.0.7"
-  resolved "https://registry.yarnpkg.com/rn-xprinter/-/rn-xprinter-2.0.7.tgz#95f45cb412909d863333972e10c6691361d5a922"
+  resolved "https://registry.npmjs.org/rn-xprinter/-/rn-xprinter-2.0.7.tgz"
   integrity sha512-LKFGrkS+XzyqtU15/zrfkyd7xsGjrSe961h75xEIFD0+W8JvcRA3T7XuuEuBwQYT+vb/Wl4uWe1oqGG5Mm7TKQ==
 
 run-parallel@^1.1.9:
@@ -7460,6 +7488,11 @@ text-encoding-polyfill@^0.6.7:
   resolved "https://registry.npmjs.org/text-encoding-polyfill/-/text-encoding-polyfill-0.6.7.tgz"
   integrity sha512-/DZ1XJqhbqRkCop6s9ZFu8JrFRwmVuHg4quIRm+ziFkR3N3ec6ck6yBvJ1GYeEQZhLVwRW0rZE+C3SSJpy0RTg==
 
+text-encoding@^0.7.0:
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/text-encoding/-/text-encoding-0.7.0.tgz"
+  integrity sha512-oJQ3f1hrOnbRLOcwKz0Liq2IcrvDeZRHXhd9RgLrsT+DjWY/nty1Hi7v3dtkaEYbPYe0mUoOfzRrMwfXXwgPUA==
+
 text-segmentation@^1.0.3:
   version "1.0.3"
   resolved "https://registry.npmjs.org/text-segmentation/-/text-segmentation-1.0.3.tgz"
@@ -7917,7 +7950,7 @@ yargs-parser@^21.1.1:
   resolved "https://registry.npmjs.org/yargs-parser/-/yargs-parser-21.1.1.tgz"
   integrity sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==
 
-yargs@^15.1.0:
+yargs@^15.1.0, yargs@^15.3.1:
   version "15.4.1"
   resolved "https://registry.npmjs.org/yargs/-/yargs-15.4.1.tgz"
   integrity sha512-aePbxDmcYW++PaqBsJ+HYUFwCdv4LVvdnhBy78E57PIor8/OVvhMrADFFEDh8DHDFRv/O9i3lPhsENjO7QX0+A==
