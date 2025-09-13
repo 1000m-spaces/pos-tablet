@@ -95,6 +95,11 @@ const Cart = ({ showTable }) => {
                 val => ` ${val.name_vn}`,
               ).toString()}
           </TextNormal>
+          {item?.note && item.note.trim() !== '' && (
+            <TextNormal style={styles.productNote} numberOfLines={2}>
+              {item.note}
+            </TextNormal>
+          )}
           <View style={styles.wrapperProduct}>
             <TextNormal style={styles.productPrice}>
               {formatMoney(item?.total_price) + 'đ'}
@@ -280,6 +285,13 @@ const styles = StyleSheet.create({
   },
   textQuantity: { paddingHorizontal: 12, fontSize: 14 },
   productTopping: { color: '#949494' },
+  productNote: {
+    color: '#666666',
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginTop: 2,
+    marginBottom: 2,
+  },
   productName: { fontSize: 16, marginBottom: 4 },
   productPrice: { color: Colors.primary, fontWeight: 'bold' },
   tableNumberContainer: {
