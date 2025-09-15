@@ -1,13 +1,18 @@
 import { formatMoney, heightDevice, widthDevice } from 'assets/constans';
 import Svg from 'common/Svg/Svg';
 import { TextNormal } from 'common/Text/TextFont';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Keyboard,
   StyleSheet,
   TouchableOpacity,
   View,
   Alert,
+  Platform,
+  Dimensions,
+  PixelRatio,
+  Animated,
+  BackHandler,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -15,29 +20,65 @@ import {
   getTablesSelector,
   userInfo,
   getPaymentChannelsSelector,
-  getPaymentChannelsLoadingSelector
+  getPaymentChannelsLoadingSelector,
+  getStatusCreateOrder
 } from 'store/selectors';
 import Colors from 'theme/Colors';
 import Modal from 'react-native-modal';
-import { getVoucherAction, setOrderAction, getPaymentChannelsAction } from 'store/actions';
+import { getVoucherAction, setOrderAction, getPaymentChannelsAction, createOrder, resetCreateOrder } from 'store/actions';
 import AsyncStorage from 'store/async_storage';
 import NoteModal from './NoteModal';
 import VoucherModal from './VoucherModal';
 import PaymentMethodModal from './PaymentMethodModal';
 import ConfirmationModal from 'common/ConfirmationModal/ConfirmationModal';
+import Status from 'common/Status/Status';
+import printingService from '../../services/PrintingService';
+import ViewShot from 'react-native-view-shot';
+import PrintTemplate from '../Order/TemTemplate';
+import BillTemplate from '../Order/BillTemplate';
+
+// Helper functions for printing dimensions
+const { width, height } = Dimensions.get("window");
+
+// Convert mm to pixels using device's actual DPI, optimized for tablets
+const mmToPixels = (mm) => {
+  const { width, height } = Dimensions.get('window');
+  const screenWidth = Math.max(width, height); // Use the larger dimension for tablets
+  const screenHeight = Math.min(width, height);
+
+  // Get physical dimensions in inches (assuming standard tablet sizes)
+  // Most tablets are around 10-12 inches diagonally
+  const diagonalInches = Math.sqrt(Math.pow(screenWidth / PixelRatio.get(), 2) + Math.pow(screenHeight / PixelRatio.get(), 2)) / 160;
+
+  // Calculate actual DPI based on physical screen size
+  const actualDpi = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / diagonalInches;
+
+  return Math.round((mm * actualDpi) / 25.4); // 25.4mm = 1 inch
+};
 
 const PaymentCart = () => {
   const dispatch = useDispatch();
   const currentOrder = useSelector(state => currentOrderSelector(state));
-  const tables = useSelector(state => getTablesSelector(state));
   const user = useSelector(state => userInfo(state));
   const paymentChannels = useSelector(state => getPaymentChannelsSelector(state));
   const paymentChannelsLoading = useSelector(state => getPaymentChannelsLoadingSelector(state));
+  const isStatusCreateOrder = useSelector(state => getStatusCreateOrder(state));
+
   const [payment, setPayment] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [isModalOrderStatus, setIsModalOrderStatus] = useState(false);
+  const [isOrderDataSaved, setIsOrderDataSaved] = useState(null);
 
   const [modal, setModal] = useState(false);
+
+  // Printing related state and refs
+  const [printingOrder, setPrintingOrder] = useState(null);
+  const [printerInfo, setPrinterInfo] = useState(null);
+  const [isAutoPrinting, setIsAutoPrinting] = useState(false);
+  const [autoPrintStatus, setAutoPrintStatus] = useState('');
+  const spinValue = useRef(new Animated.Value(0)).current;
+  const viewTemShotRef = useRef();
+  const viewBillShotRef = useRef();
 
   useEffect(() => {
     let numOfProduct = 0;
@@ -61,6 +102,24 @@ const PaymentCart = () => {
     dispatch(getPaymentChannelsAction());
   }, [dispatch]);
 
+  // Prevent back navigation during auto print
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isAutoPrinting) {
+        // Show a gentle reminder instead of allowing navigation
+        Alert.alert(
+          'Đang in đơn hàng',
+          'Vui lòng đợi quá trình in hoàn tất trước khi thoát',
+          [{ text: 'OK', style: 'default' }]
+        );
+        return true; // Prevent default back action
+      }
+      return false; // Allow default back action
+    });
+
+    return () => backHandler.remove();
+  }, [isAutoPrinting]);
+
   useEffect(() => {
     // Set default payment method when payment channels are loaded
     if (paymentChannels && paymentChannels.length > 0 && !selectedPaymentMethod) {
@@ -70,6 +129,100 @@ const PaymentCart = () => {
       setSelectedPaymentMethod(defaultMethod);
     }
   }, [paymentChannels, selectedPaymentMethod]);
+
+  // Initialize printing service and load printer info
+  useEffect(() => {
+    const initializePrinting = async () => {
+      try {
+        printingService.initialize();
+        const info = await AsyncStorage.getLabelPrinterInfo();
+        setPrinterInfo(info);
+      } catch (error) {
+        console.error('Error initializing printing service:', error);
+      }
+    };
+
+    initializePrinting();
+
+    // Cleanup on unmount
+    return () => {
+      printingService.dispose();
+    };
+  }, []);
+
+  // Monitor order creation status and trigger auto-printing on success
+  useEffect(() => {
+    const handleOrderSuccess = async () => {
+      if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
+        console.log('Order created successfully, starting auto print...');
+
+        // Show auto print loading
+        setIsAutoPrinting(true);
+        setAutoPrintStatus('Đang chuẩn bị in...');
+
+        // Start spinner animation
+        Animated.loop(
+          Animated.timing(spinValue, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          })
+        ).start();
+
+        try {
+          // Create ViewShot wrapper objects that the printing service expects
+          const labelViewShotWrapper = {
+            setPrintingOrder: setPrintingOrder,
+            current: viewTemShotRef.current
+          };
+
+          const billViewShotWrapper = {
+            setPrintingOrder: setPrintingOrder,
+            current: viewBillShotRef.current
+          };
+
+          // Trigger auto-printing with duplicate check and status updates
+          const printSuccess = await printingService.autoPrintOrderWithCheck(
+            isOrderDataSaved,
+            labelViewShotWrapper,
+            billViewShotWrapper,
+            null, // showSettingPrinter
+            false, // forcePrint
+            (status) => setAutoPrintStatus(status) // Real-time status updates
+          );
+
+          if (printSuccess) {
+            setAutoPrintStatus('In thành công!');
+            // Brief delay to show success message
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          } else {
+            setAutoPrintStatus('In không thành công');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+
+        } catch (error) {
+          console.error('Auto print failed:', error);
+          setAutoPrintStatus('Lỗi khi in!');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } finally {
+          // Stop spinner animation
+          spinValue.stopAnimation();
+          spinValue.setValue(0);
+
+          // Reset printing order and loading state
+          setPrintingOrder(null);
+          setIsAutoPrinting(false);
+          setAutoPrintStatus('');
+
+          // Reset the order creation status and saved data
+          dispatch(resetCreateOrder());
+          setIsOrderDataSaved(null);
+        }
+      }
+    };
+
+    handleOrderSuccess();
+  }, [isStatusCreateOrder, isOrderDataSaved, dispatch]);
 
   const fetchVoucher = () => {
     const items = Array.from(currentOrder.products, val => {
@@ -180,38 +333,51 @@ const PaymentCart = () => {
       // Calculate totals
       const subPrice = transformedProducts.reduce((sum, product) => sum + product.amount, 0);
 
-      // Generate 6-character sorted order ID for offline orders
-      const generateOfflineOrderId = () => {
+      // Generate auto-increment order ID by date (format: 4-digit counter only)
+      const generateOfflineOrderId = async () => {
         const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const year = String(now.getFullYear()).slice(-2); // Last 2 digits of year
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const currentDateKey = `${year}${month}${day}`;
 
-        // Create base from time: HHMMSS
-        const timeBase = hours + minutes + seconds;
+        try {
+          // Get stored counter data
+          const counterData = await AsyncStorage.getOfflineOrderCounter();
+          let counter = 1;
 
-        // Alternative: Use date + sequence for better sorting
-        const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
-        const dayStr = String(dayOfYear).padStart(3, '0'); // Day of year (001-366)
-        const hourMinute = String(now.getHours() * 60 + now.getMinutes()).padStart(4, '0'); // Minutes since midnight
+          if (counterData) {
+            const { lastDate, lastCounter } = counterData;
 
-        // Option 1: Time-based 6 chars (HHMMSS)
-        const timeOrderId = timeBase;
+            // If same date, increment counter; if different date, reset to 1
+            if (lastDate === currentDateKey) {
+              counter = lastCounter + 1;
+            } else {
+              counter = 1; // Reset counter for new date
+            }
+          }
 
-        // Option 2: Day + time-based 6 chars (DDDHHH where DDD=day of year, HHH=hour*10+minute/6)
-        const dayTimeOrderId = dayStr.slice(-3) + String(Math.floor((now.getHours() * 60 + now.getMinutes()) / 100)).padStart(3, '0');
+          // Store updated counter
+          await AsyncStorage.setOfflineOrderCounter({
+            lastDate: currentDateKey,
+            lastCounter: counter
+          });
 
-        // Option 3: Sequential with date prefix (use last 2 digits of day + 4 digit sequence)
-        const datePrefix = String(now.getDate()).padStart(2, '0');
-        const timeSequence = String(now.getHours() * 100 + now.getMinutes()).slice(-4);
-        const sequentialOrderId = datePrefix + timeSequence;
+          // Format: 4-digit counter only (e.g., 0001, 0002, 0003...)
+          const paddedCounter = String(counter).padStart(4, '0');
 
-        // Return time-based ID for better chronological sorting
-        return timeOrderId;
+          return paddedCounter;
+
+        } catch (error) {
+          console.error('Error generating auto-increment order ID:', error);
+          // Fallback to 4-digit random number if AsyncStorage fails
+          const fallbackId = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+          return fallbackId;
+        }
       };
 
-      const offlineOrderId = generateOfflineOrderId();
-      const session = `OFF-${offlineOrderId}`;
+      const offlineOrderId = await generateOfflineOrderId();
+      const session = `M-${offlineOrderId}`;
 
       // Create order object
       console.log('Selected payment method for order:', selectedPaymentMethod);
@@ -232,7 +398,8 @@ const PaymentCart = () => {
         fix_discount: 0,
         perDiscount: 0,
         session: session,
-        offlineOrderId: offlineOrderId, // 6-character sorted order ID
+        offlineOrderId: session,
+        offline_code: session,
         shopid: user?.shops?.id || user?.shopid || "246",
         userid: user?.userid || "1752",
         roleid: user?.roleid || "4",
@@ -241,45 +408,33 @@ const PaymentCart = () => {
         orderStatus: "Paymented", // Default to Paymented for cash orders
         tableId: currentOrder.tableId || null, // Store tableId for blocking
         created_at: new Date().toISOString(),
-        syncStatus: 'pending' // Add sync status field
+        syncStatus: 'pending' // Initially pending, will be updated to 'synced' in saga if API succeeds
       };
-
-      // Save to local storage as last order and add to pending orders queue
-      await AsyncStorage.setLastOrder(orderData);
-      await AsyncStorage.addPendingOrder(orderData);
-
-      console.log('Order saved to local storage:', orderData);
-
-      // Show success message
-      // Alert.alert(
-      //   'Thành công',
-      //   'Đơn hàng hoàn tất',
-      //   [
-      //     {
-      //       text: 'OK',
-      //       onPress: () => {
-      //         // Reset cart after successful payment
-      //         dispatch(setOrderAction({
-      //           take_away: false,
-      //           products: [],
-      //           applied_products: [],
-      //           table: '',
-      //           tableId: '',
-      //           note: '',
-      //           delivery: null,
-      //           orderType: null,
-      //         }));
-      //       }
-      //     }
-      //   ]
-      // );
+      console.log('Final order data to create:', orderData);
+      setIsOrderDataSaved(orderData); // Save order data to state for retry if needed
+      dispatch(createOrder(orderData));
+      console.log('Order dispatched for processing:', orderData);
       setIsModalOrderStatus(true);
-
     } catch (error) {
       console.error('Error processing payment:', error);
       Alert.alert('Lỗi', 'Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.');
     }
   };
+
+  useEffect(() => {
+    (async () => {
+      if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
+        // Order is already saved in orderSaga for successful API calls
+        console.log('Order successfully processed and saved via API');
+        dispatch(resetCreateOrder());
+      } else if (isStatusCreateOrder === Status.ERROR && isOrderDataSaved) {
+        // Failed orders are now saved directly in orderSaga for better consistency
+        // Just reset the order state here
+        console.log('Order failed - error handling and storage completed in saga');
+        dispatch(resetCreateOrder());
+      }
+    })();
+  }, [isStatusCreateOrder]);
 
   const onCancelModalOrderStatus = () => {
     dispatch(setOrderAction({
@@ -365,8 +520,20 @@ const PaymentCart = () => {
           {payment !== null && `${formatMoney(payment?.commitedTotal)}đ`}
         </TextNormal>
       </View>
-      <TouchableOpacity style={styles.orderBtn} onPress={handlePaymentClick}>
-        <TextNormal style={styles.orderBtnText}>{'Thanh toán'}</TextNormal>
+      <TouchableOpacity
+        style={[
+          styles.orderBtn,
+          isAutoPrinting && styles.orderBtnDisabled
+        ]}
+        onPress={handlePaymentClick}
+        disabled={isAutoPrinting}
+      >
+        <TextNormal style={[
+          styles.orderBtnText,
+          isAutoPrinting && styles.orderBtnTextDisabled
+        ]}>
+          {isAutoPrinting ? 'Đang xử lý...' : 'Thanh toán'}
+        </TextNormal>
       </TouchableOpacity>
       <Modal
         isVisible={modal > 0}
@@ -394,6 +561,7 @@ const PaymentCart = () => {
             loading={paymentChannelsLoading}
             onCloseModal={onCloseModal}
             onSelectPayment={onSelectPaymentMethod}
+            currentOrder={currentOrder}
           />
         )}
       </Modal>
@@ -403,6 +571,90 @@ const PaymentCart = () => {
       >
         <Svg name={'success'} size={80} style={{ alignSelf: 'center', marginBottom: 20 }} />
       </ConfirmationModal>
+
+      {/* Auto Print Loading Modal */}
+      <Modal
+        isVisible={isAutoPrinting}
+        animationType="fade"
+        backdropColor="rgba(0,0,0,0.7)"
+        backdropOpacity={0.7}
+        hasBackdrop={true}
+        onBackButtonPress={() => { }} // Prevent back button press during auto print
+        onBackdropPress={() => { }} // Prevent backdrop press during auto print
+        style={{
+          justifyContent: 'center',
+          alignItems: 'center',
+          margin: 0,
+        }}
+      >
+        <View style={styles.autoPrintModal}>
+          <View style={styles.autoPrintContent}>
+            {/* Loading Spinner */}
+            <View style={styles.loadingSpinner}>
+              <Animated.View
+                style={[
+                  styles.spinner,
+                  {
+                    transform: [{
+                      rotate: spinValue.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '360deg'],
+                      })
+                    }]
+                  }
+                ]}
+              />
+            </View>
+
+            {/* Status Text */}
+            <TextNormal style={styles.autoPrintTitle}>
+              {autoPrintStatus || 'Đang tự động in...'}
+            </TextNormal>
+
+            {/* Progress Description */}
+            <TextNormal style={styles.autoPrintDescription}>
+              Vui lòng đợi trong giây lát, đừng chuyển màn hình
+            </TextNormal>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Hidden ViewShot components for printing */}
+      <ViewShot
+        ref={viewTemShotRef}
+        options={{ format: "jpg", quality: 1.0 }}
+        style={{
+          position: 'absolute',
+          left: -9999,
+          top: -9999,
+          width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
+          backgroundColor: 'white',
+          opacity: 0,
+          zIndex: -1,
+          pointerEvents: 'none',
+        }}
+      >
+        {printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}
+      </ViewShot>
+
+      <ViewShot
+        ref={viewBillShotRef}
+        options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
+        style={{
+          position: 'absolute',
+          left: -9999,
+          top: -9999,
+          width: 400,
+          backgroundColor: 'white',
+          opacity: 0,
+          zIndex: -1,
+          pointerEvents: 'none',
+        }}
+      >
+        {printingOrder && (
+          <BillTemplate selectedOrder={printingOrder} />
+        )}
+      </ViewShot>
     </View>
   );
 };
@@ -418,6 +670,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 16,
     left: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
+    top: heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
     margin: 0,
   },
   orderBtnText: {
@@ -435,6 +688,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 18,
     alignSelf: 'center',
     marginVertical: 5,
+  },
+  orderBtnDisabled: {
+    backgroundColor: Colors.placeholder,
+    opacity: 0.7,
+  },
+  orderBtnTextDisabled: {
+    color: '#FFFFFF',
+    opacity: 0.8,
   },
   line: {
     width: '100%',
@@ -475,6 +736,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     justifyContent: 'space-between',
     paddingVertical: 8,
+  },
+  // Auto Print Modal Styles
+  autoPrintModal: {
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 20,
+    padding: 30,
+    minWidth: 300,
+    maxWidth: 400,
+    alignItems: 'center',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  autoPrintContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingSpinner: {
+    marginBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  spinner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 4,
+    borderColor: Colors.primary,
+    borderTopColor: 'transparent',
+  },
+  autoPrintTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.primary,
+    textAlign: 'center',
+    marginBottom: 10,
+    minHeight: 25,
+  },
+  autoPrintDescription: {
+    fontSize: 14,
+    color: Colors.placeholder,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 280,
   },
 
 });

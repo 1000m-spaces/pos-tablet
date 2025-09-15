@@ -11,15 +11,16 @@ import { TextNormal } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
 import Icons from 'common/Icons/Icons';
 import Colors from 'theme/Colors';
-import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_INVOICE, NAVIGATION_PROFILE } from 'navigation/routes';
+import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_APP_ORDER, NAVIGATION_INVOICE, NAVIGATION_PROFILE } from 'navigation/routes';
 import { useDispatch, useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
 import { setScreenAction, logout } from 'store/actions';
 import { NAVIGATION_LOGIN } from 'navigation/routes';
-import { widthDevice } from 'assets/constans';
+import { versionNameApp, versionSystem, widthDevice } from 'assets/constans';
 const DrawerList = [
   { icon: 'menu_pos', label: 'Menu', navigateTo: NAVIGATION_HOME },
-  { icon: 'order_pos', label: 'Đơn online', navigateTo: NAVIGATION_ORDER },
+  { icon: 'order_pos', label: 'FoodApp', navigateTo: NAVIGATION_ORDER },
+  { icon: 'invoice_pos', label: 'Đơn online', navigateTo: NAVIGATION_APP_ORDER },
   { icon: 'invoice_pos', label: 'Hóa Đơn', navigateTo: NAVIGATION_INVOICE },
   { icon: 'account_pos', label: 'Tài khoản', navigateTo: NAVIGATION_PROFILE },
 ];
@@ -66,6 +67,7 @@ const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation }) =>
             width: 70,
             height: 60,
             borderRadius: 12,
+            marginLeft: 30
           }}>
           <Svg
             name={icon}
@@ -83,7 +85,7 @@ const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation }) =>
           </TextNormal>
         </View>
       )}
-      label={label}
+      label={''}
       activeTintColor={Colors.whiteColor}
       inactiveTintColor={Colors.whiteColor}
       onPress={handlePress}
@@ -124,8 +126,8 @@ const DrawerContent = props => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#021526', width: widthDevice * 0.09 }}>
-      <DrawerContentScrollView {...props}>
+    <View style={{ flex: 1, backgroundColor: '#021526', width: widthDevice * 0.09, alignItems: 'center', justifyContent: 'center' }}>
+      <DrawerContentScrollView contentContainerStyle={{ width: widthDevice * 0.09, alignItems: 'center' }} {...props}>
         <View style={styles.drawerContent}>
           <TouchableOpacity activeOpacity={0.8}>
             <Svg name={'logo_menu'} size={60} />
@@ -138,7 +140,7 @@ const DrawerContent = props => {
       <View style={styles.bottomDrawerSection}>
         <DrawerItem
           icon={({ color, size }) => (
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginLeft: 20 }}>
               <Icons
                 type={'AntDesign'}
                 name={'close'}
@@ -154,6 +156,14 @@ const DrawerContent = props => {
           onPress={handleLogout}
         />
       </View>
+      <DrawerItem
+        icon={({ color, size }) => (
+          <View style={{ justifyContent: 'center', alignItems: 'center', marginLeft: 20 }}>
+            <TextNormal style={{ color: 'white' }}>Version: {versionNameApp}</TextNormal>
+          </View>
+        )}
+        label={''}
+      />
     </View>
   );
 };
@@ -164,6 +174,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingTop: 20,
+    width: widthDevice * 0.09,
   },
   userInfoSection: {
     paddingLeft: 20,
@@ -195,7 +206,7 @@ const styles = StyleSheet.create({
   },
   drawerSection: {
     marginTop: 10,
-    // alignItems: 'center',
+    alignItems: 'center',
     width: widthDevice * 0.09,
     justifyContent: 'center',
     // backgroundColor: 'red',

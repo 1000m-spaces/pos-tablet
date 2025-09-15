@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message'
 import XPrinter from 'rn-xprinter';
 import RNFS from 'react-native-fs';
 import OrderDetailDialog from './OrderDetailDialog';
+import { getOrderIdentifierForPrinting } from '../../utils/orderUtils';
 
 const { width, height } = Dimensions.get("window");
 
@@ -53,7 +54,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [printingOrder, setPrintingOrder] = useState(null);
-    const [printedLabels, setPrintedLabels] = useState([]);
+    const [printedLabels, setPrintedLabelsState] = useState([]);
     const [isAutoPrinting, setIsAutoPrinting] = useState(false);
     const [printerInfo, setPrinterInfo] = useState(null);
     const viewTemShotRef = useRef();
@@ -98,7 +99,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
     useEffect(() => {
         const loadPrintedLabels = async () => {
             const labels = await AsyncStorage.getPrintedLabels();
-            setPrintedLabels(labels);
+            setPrintedLabelsState(labels);
         };
         loadPrintedLabels();
     }, []);
@@ -191,7 +192,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
         setModalVisible(true);
     };
 
-    const printTem = async () => {
+    const printTem = async (order = selectedOrder) => {
         if (Platform.OS !== "android") {
             Toast.show({
                 type: 'error',
@@ -226,7 +227,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             }
 
             // Store the original order
-            const originalOrder = selectedOrder;
+            const originalOrder = order || selectedOrder;
             setPrintingOrder(originalOrder);
 
             // Calculate total number of labels to be printed
@@ -332,8 +333,9 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             setPrintingOrder(null);
 
             // Update print status after successful print
-            await AsyncStorage.setPrintedLabels(originalOrder.displayID);
-            setPrintedLabels(prev => [...prev, originalOrder.displayID]);
+            const orderIdentifier = getOrderIdentifierForPrinting(originalOrder, false); // false for online orders
+            await AsyncStorage.setPrintedLabels(orderIdentifier);
+            setPrintedLabelsState(prev => [...prev, orderIdentifier]);
 
             Toast.show({
                 type: 'success',
@@ -356,7 +358,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
         }
     };
 
-    const printBill = async () => {
+    const printBill = async (order = selectedOrder) => {
         if (Platform.OS !== "android") {
             Toast.show({
                 type: 'error',
@@ -383,10 +385,10 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             }
 
             // Set the order for printing
-            setPrintingOrder(selectedOrder);
+            setPrintingOrder(order || selectedOrder);
 
             // Wait for the ViewShot to be ready
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             // Attempt to connect to printer before printing
             try {
@@ -493,8 +495,9 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             setPrintingOrder(null);
 
             // Update print status
-            await AsyncStorage.setPrintedLabels(order.displayID);
-            setPrintedLabels(prev => [...prev, order.displayID]);
+            const orderIdentifier = getOrderIdentifierForPrinting(order, false); // false for online orders
+            await AsyncStorage.setPrintedLabels(orderIdentifier);
+            setPrintedLabelsState(prev => [...prev, orderIdentifier]);
 
             Toast.show({
                 type: 'success',
@@ -599,20 +602,26 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
                 options={{ format: "jpg", quality: 1.0 }}
                 style={{
                     position: 'absolute',
-                    left: printerInfo ? -mmToPixels(Number(printerInfo.sWidth)) : -mmToPixels(50),
-                    bottom: 0,
+                    left: -9999,
+                    top: -9999,
                     width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
                     backgroundColor: 'white',
+                    opacity: 0,
+                    zIndex: -1,
+                    pointerEvents: 'none',
                 }}>{printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}</ViewShot>
             <ViewShot
                 ref={viewBillShotRef}
                 options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
                 style={{
                     position: 'absolute',
-                    left: -400,
-                    bottom: 0,
+                    left: -9999,
+                    top: -9999,
                     width: 400,
                     backgroundColor: 'white',
+                    opacity: 0,
+                    zIndex: -1,
+                    pointerEvents: 'none',
                 }}
             >
                 {printingOrder && (

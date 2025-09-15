@@ -49,11 +49,11 @@ const Login = props => {
     }
 
     // Hash password using MD5
-    const hashedPassword = CryptoJS.MD5(password).toString();
+    // const hashedPassword = CryptoJS.MD5(password).toString();
 
     dispatch(loginInternal({
       username: username.trim(),
-      password: hashedPassword
+      password: password
     }));
   };
 

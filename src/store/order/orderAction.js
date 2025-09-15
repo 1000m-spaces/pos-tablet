@@ -4,6 +4,9 @@ export const createOrder = request => ({
   type: NEOCAFE.CREATE_ORDER_REQUEST,
   payload: request,
 });
+export const resetCreateOrder = () => ({
+  type: NEOCAFE.CREATE_ORDER_RESET,
+});
 export const addProductCart = payload => ({
   type: NEOCAFE.ADD_PRODUCT_CART_REQUEST,
   payload,

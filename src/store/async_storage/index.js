@@ -167,14 +167,23 @@ const setListRecommned = async listProduct => {
 
 const setPrintedLabels = async (orderId) => {
   try {
+    if (!orderId) {
+      console.warn('setPrintedLabels called with empty orderId');
+      return;
+    }
+
     const existingLabels = await AsyncStorage.getItem('printedLabels');
     const printedLabels = existingLabels ? JSON.parse(existingLabels) : [];
+
     if (!printedLabels.includes(orderId)) {
       printedLabels.push(orderId);
       await AsyncStorage.setItem('printedLabels', JSON.stringify(printedLabels));
+      console.log(`Marked labels as printed for order: ${orderId}`);
+    } else {
+      console.log(`Labels already marked as printed for order: ${orderId}`);
     }
   } catch (error) {
-    console.log(error);
+    console.error('Error setting printed labels:', error);
   }
 };
 
@@ -183,12 +192,39 @@ const getPrintedLabels = async () => {
     const printedLabels = await AsyncStorage.getItem('printedLabels');
     return printedLabels ? JSON.parse(printedLabels) : [];
   } catch (error) {
-    console.log(error);
+    console.error('Error getting printed labels:', error);
     return [];
   }
 };
 
+const clearPrintedLabels = async () => {
+  try {
+    await AsyncStorage.removeItem('printedLabels');
+    console.log('Cleared all printed labels');
+  } catch (error) {
+    console.error('Error clearing printed labels:', error);
+  }
+};
 
+const removePrintedLabel = async (orderId) => {
+  try {
+    if (!orderId) {
+      console.warn('removePrintedLabel called with empty orderId');
+      return;
+    }
+
+    const existingLabels = await AsyncStorage.getItem('printedLabels');
+    const printedLabels = existingLabels ? JSON.parse(existingLabels) : [];
+
+    const filteredLabels = printedLabels.filter(id => id !== orderId);
+    if (filteredLabels.length !== printedLabels.length) {
+      await AsyncStorage.setItem('printedLabels', JSON.stringify(filteredLabels));
+      console.log(`Removed printed label status for order: ${orderId}`);
+    }
+  } catch (error) {
+    console.error('Error removing printed label:', error);
+  }
+};
 
 const setPendingOrders = async (orders) => {
   try {
@@ -420,6 +456,27 @@ const getBillPrinterInfo = async () => {
   };
 };
 
+// Offline Order Counter Management
+const setOfflineOrderCounter = async (counterData) => {
+  try {
+    await AsyncStorage.setItem('offlineOrderCounter', JSON.stringify(counterData));
+  } catch (error) {
+    console.error('Error setting offline order counter:', error);
+  }
+};
+
+const getOfflineOrderCounter = async () => {
+  try {
+    const value = await AsyncStorage.getItem('offlineOrderCounter');
+    if (value !== null) {
+      return JSON.parse(value);
+    }
+  } catch (error) {
+    console.error('Error getting offline order counter:', error);
+  }
+  return null;
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -440,6 +497,8 @@ export default {
   getBillPrinterInfo,
   setPrintedLabels,
   getPrintedLabels,
+  clearPrintedLabels,
+  removePrintedLabel,
   setPendingOrders,
   getPendingOrders,
   addPendingOrder,
@@ -452,4 +511,6 @@ export default {
   releaseTable,
   isTableBlocked,
   getTableStatus,
+  setOfflineOrderCounter,
+  getOfflineOrderCounter,
 };

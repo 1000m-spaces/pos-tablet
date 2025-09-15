@@ -14,17 +14,21 @@ import { confirmOrderOnlineStatusSelector } from 'store/order/orderSelector';
 import { useIsFocused } from '@react-navigation/native';
 import FilterRow from './FilterRow';
 import PrinterSettingsModal from 'common/PrinterSettingsModal';
+import { usePrinter } from '../../services/PrinterService';
 
 const Invoice = () => {
     const dispatch = useDispatch();
     const [data, setData] = useState([]);
     const [userShop, setUserShop] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [printedLabels, setPrintedLabels] = useState([]);
+    const [printedLabels, setPrintedLabelsState] = useState([]);
     const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
     const [blockedTables, setBlockedTables] = useState({});
     const isFocused = useIsFocused();
     const [selectedDate, setSelectedDate] = useState(new Date());
+
+    // Printer service
+    const { labelPrinterStatus, billPrinterStatus } = usePrinter();
 
     // Printer settings state
     const [printerModalVisible, setPrinterModalVisible] = useState(false);
@@ -48,7 +52,7 @@ const Invoice = () => {
             const printedLabelsData = await AsyncStorage.getPrintedLabels();
             const blockedTablesData = await AsyncStorage.getBlockedTables();
 
-            setPrintedLabels(printedLabelsData);
+            setPrintedLabelsState(printedLabelsData);
             setBlockedTables(blockedTablesData);
 
             // Enhance orders with sync, print, and order status
@@ -74,10 +78,16 @@ const Invoice = () => {
                 return dateB - dateA;
             });
 
+            // Filter by date - only show orders from selected date
+            const selectedDateStr = selectedDate.toDateString();
+            let filteredOrders = sortedOrders.filter(order => {
+                const orderDate = new Date(order.created_at);
+                return orderDate.toDateString() === selectedDateStr;
+            });
+
             // Filter by status if a filter is selected
-            let filteredOrders = sortedOrders;
             if (selectedStatusFilter !== 'all') {
-                filteredOrders = sortedOrders.filter(order => order.orderStatus === selectedStatusFilter);
+                filteredOrders = filteredOrders.filter(order => order.orderStatus === selectedStatusFilter);
             }
 
             setData(filteredOrders);
@@ -91,7 +101,7 @@ const Invoice = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [selectedStatusFilter]);
+    }, [selectedStatusFilter, selectedDate]);
 
     const loadUserShop = async () => {
         const user = await AsyncStorage.getUser();
@@ -199,7 +209,7 @@ const Invoice = () => {
                                     }}
                                     disabled={isLoading || pendingSyncLoading}
                                 >
-                                    <Svg name={'printer'} size={24} color={Colors.primary} />
+                                    <Svg name={labelPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} color={Colors.primary} />
                                     <TextNormal style={[styles.actionText, { color: Colors.primary, fontWeight: '600' }]}>
                                         In tem
                                     </TextNormal>
@@ -214,7 +224,7 @@ const Invoice = () => {
                                     }}
                                     disabled={isLoading || pendingSyncLoading}
                                 >
-                                    <Svg name={'printer'} size={24} color={Colors.primary} />
+                                    <Svg name={billPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} color={Colors.primary} />
                                     <TextNormal style={[styles.actionText, { color: Colors.primary, fontWeight: '600' }]}>
                                         In bill
                                     </TextNormal>
@@ -276,7 +286,7 @@ const Invoice = () => {
                             <TextNormal style={styles.loadingText}>Đang tải đơn offline...</TextNormal>
                         </View>
                     ) : (
-                        <OfflineOrderTable orders={data} onRefresh={fetchOfflineOrders} onConfirmOrder={handleConfirmOrder} />
+                        <OfflineOrderTable orders={data} onRefresh={fetchOfflineOrders} onConfirmOrder={handleConfirmOrder} showSettingPrinter={() => setPrinterModalVisible(true)} />
                     )}
                 </View>
             </SafeAreaView>

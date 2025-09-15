@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, SafeAreaView, TouchableOpacity, View } from 'react-native';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { getMenuAction, setProductAction, getShopTablesAction } from 'store/actions';
+import { getMenuAction, setProductAction, getShopTablesAction, getPaymentChannelsAction } from 'store/actions';
 import { currentOrderSelector, productMenuSelector } from 'store/selectors';
 import ProductItemMenu from './ProductItemMenu';
 import Colors from 'theme/Colors';
@@ -16,6 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { widthDevice } from 'assets/constans';
 import { TextSmallTwelve } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
+import PrinterSettingsModal from 'common/PrinterSettingsModal';
+import { usePrinter } from '../../services/PrinterService';
 
 const Home = ({ navigation }) => {
   const insets = useSafeAreaInsets();
@@ -26,6 +28,13 @@ const Home = ({ navigation }) => {
   const [filteredProductMenu, setFilteredProductMenu] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const currentOrder = useSelector(state => currentOrderSelector(state));
+
+  // Printer service
+  const { labelPrinterStatus, billPrinterStatus } = usePrinter();
+
+  // Printer settings state
+  const [printerModalVisible, setPrinterModalVisible] = useState(false);
+  const [printerType, setPrinterType] = useState('label'); // 'label' or 'bill'
 
   useEffect(() => {
     // Orientation.lockToLandscape();
@@ -87,6 +96,16 @@ const Home = ({ navigation }) => {
 
   const onShowTable = () => setShowModal(2);
 
+  useEffect(() => {
+    dispatch(getPaymentChannelsAction());
+  }, [])
+
+  // Handle printer settings saved
+  const handlePrinterSettingsSaved = (printerSettings) => {
+    // Optional: Handle any additional logic when printer settings are saved
+    console.log('Printer settings saved:', printerSettings);
+  };
+
   return (
     <SafeAreaView
       style={{
@@ -94,12 +113,24 @@ const Home = ({ navigation }) => {
         backgroundColor: Colors.bgInput,
       }}>
       <View style={{ height: 42, flexDirection: 'row', width: widthDevice * 0.91, justifyContent: 'flex-end', alignItems: 'center', paddingRight: 24 }}>
-        <TouchableOpacity style={{ flexDirection: 'row', marginRight: 16 }}>
-          <Svg name={'icon_print'} size={24} />
+        <TouchableOpacity
+          style={{ flexDirection: 'row', marginRight: 16 }}
+          onPress={() => {
+            setPrinterType('label');
+            setPrinterModalVisible(true);
+          }}
+        >
+          <Svg name={labelPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} />
           <TextSmallTwelve style={{ marginLeft: 4 }}>In tem</TextSmallTwelve>
         </TouchableOpacity>
-        <TouchableOpacity style={{ flexDirection: 'row' }}>
-          <Svg name={'icon_print'} size={24} />
+        <TouchableOpacity
+          style={{ flexDirection: 'row' }}
+          onPress={() => {
+            setPrinterType('bill');
+            setPrinterModalVisible(true);
+          }}
+        >
+          <Svg name={billPrinterStatus === 'connected' ? 'icon_print' : 'icon_print_warning'} size={24} />
           <TextSmallTwelve style={{ marginLeft: 4 }}>In bill</TextSmallTwelve>
         </TouchableOpacity>
       </View>
@@ -143,6 +174,14 @@ const Home = ({ navigation }) => {
           />
         )}
       </View>
+
+      {/* Printer Settings Modal */}
+      <PrinterSettingsModal
+        visible={printerModalVisible}
+        onClose={() => setPrinterModalVisible(false)}
+        initialPrinterType={printerType}
+        onSettingsSaved={handlePrinterSettingsSaved}
+      />
     </SafeAreaView>
   );
 };

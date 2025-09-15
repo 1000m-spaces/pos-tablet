@@ -20,31 +20,30 @@ export const PrinterProvider = ({ children }) => {
     const billPrinterRef = useRef(null);
     const labelPrinterRef = useRef(null);
 
-    // Connection states
-    const [billPrinterStatus, setBillPrinterStatus] = useState('disconnected'); // 'disconnected', 'connecting', 'connected'
-    const [labelPrinterStatus, setLabelPrinterStatus] = useState('disconnected');
+    // Connection states (for UI display only - no persistent connections)
+    const [billPrinterStatus, setBillPrinterStatus] = useState('unknown'); // 'unknown', 'connected', 'disconnected', 'testing'
+    const [labelPrinterStatus, setLabelPrinterStatus] = useState('unknown');
 
     // Printer settings
     const [billPrinterSettings, setBillPrinterSettings] = useState(null);
     const [labelPrinterSettings, setLabelPrinterSettings] = useState(null);
 
     // Loading states
-    const [isBillConnecting, setIsBillConnecting] = useState(false);
-    const [isLabelConnecting, setIsLabelConnecting] = useState(false);
+    const [isBillTesting, setIsBillTesting] = useState(false);
+    const [isLabelTesting, setIsLabelTesting] = useState(false);
 
     // Initialize printer instances
     useEffect(() => {
         billPrinterRef.current = new XPrinter();
         labelPrinterRef.current = new XPrinter();
 
-        // Load printer settings on initialization
-        loadPrinterSettings();
+        // Load printer settings and test initial connections
+        loadPrinterSettingsAndTest();
 
         return () => {
             // Cleanup printer instances
             if (billPrinterRef.current) {
                 try {
-                    billPrinterRef.current.closeConnection();
                     billPrinterRef.current.dispose();
                 } catch (error) {
                     console.warn('Error cleaning up bill printer:', error);
@@ -53,7 +52,6 @@ export const PrinterProvider = ({ children }) => {
             }
             if (labelPrinterRef.current) {
                 try {
-                    labelPrinterRef.current.closeConnection();
                     labelPrinterRef.current.dispose();
                 } catch (error) {
                     console.warn('Error cleaning up label printer:', error);
@@ -63,8 +61,8 @@ export const PrinterProvider = ({ children }) => {
         };
     }, []);
 
-    // Load printer settings from storage
-    const loadPrinterSettings = async () => {
+    // Load printer settings from storage and test initial connections
+    const loadPrinterSettingsAndTest = async () => {
         try {
             const [billSettings, labelSettings] = await Promise.all([
                 AsyncStorage.getBillPrinterInfo(),
@@ -74,13 +72,34 @@ export const PrinterProvider = ({ children }) => {
             setBillPrinterSettings(billSettings);
             setLabelPrinterSettings(labelSettings);
 
-            // Auto-connect if settings are available
+            // Test connections to set initial status (no printing on startup)
             if (billSettings && isValidPrinterConfig(billSettings, 'bill')) {
-                setTimeout(() => connectBillPrinter(billSettings), 1000);
+                setTimeout(() => testBillPrinterConnectionOnly(billSettings), 1000);
+            } else {
+                setBillPrinterStatus('disconnected');
             }
             if (labelSettings && isValidPrinterConfig(labelSettings, 'label')) {
-                setTimeout(() => connectLabelPrinter(labelSettings), 1500);
+                setTimeout(() => testLabelPrinterConnectionOnly(labelSettings), 1500);
+            } else {
+                setLabelPrinterStatus('disconnected');
             }
+        } catch (error) {
+            console.error('Error loading printer settings:', error);
+            setBillPrinterStatus('disconnected');
+            setLabelPrinterStatus('disconnected');
+        }
+    };
+
+    // Load printer settings from storage (for manual refresh)
+    const loadPrinterSettings = async () => {
+        try {
+            const [billSettings, labelSettings] = await Promise.all([
+                AsyncStorage.getBillPrinterInfo(),
+                AsyncStorage.getLabelPrinterInfo()
+            ]);
+
+            setBillPrinterSettings(billSettings);
+            setLabelPrinterSettings(labelSettings);
         } catch (error) {
             console.error('Error loading printer settings:', error);
         }
@@ -127,7 +146,8 @@ export const PrinterProvider = ({ children }) => {
                         if (!printerConfig.billIP) {
                             throw new Error('IP address not configured for bill printer');
                         }
-                        return await printerInstance.netConnect(printerConfig.billIP);
+                        const billPort = printerConfig.billPort || 9100;
+                        return await printerInstance.netConnect(printerConfig.billIP, billPort);
                     case 'usb':
                         if (!printerConfig.billUsbDevice) {
                             throw new Error('USB device not selected for bill printer');
@@ -198,8 +218,446 @@ export const PrinterProvider = ({ children }) => {
         }
     };
 
-    // Connect Bill Printer
-    const connectBillPrinter = async (settings = billPrinterSettings) => {
+    // Test Bill Printer Connection Only (no printing - for startup/status checking)
+    const testBillPrinterConnectionOnly = async (settings = billPrinterSettings, showToast = false) => {
+        if (Platform.OS !== "android") {
+            if (showToast) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Print function only supported on Android',
+                    text2: 'This feature requires Android platform'
+                });
+            }
+            setBillPrinterStatus('disconnected');
+            return false;
+        }
+
+        // Prevent concurrent test attempts
+        if (isBillTesting) {
+            if (showToast) {
+                Toast.show({
+                    type: 'warning',
+                    text1: 'Test in progress',
+                    text2: 'Please wait for current test to complete'
+                });
+            }
+            return false;
+        }
+
+        if (!settings || !isValidPrinterConfig(settings, 'bill')) {
+            if (showToast) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Bill printer not configured',
+                    text2: 'Please configure bill printer settings first'
+                });
+            }
+            setBillPrinterStatus('disconnected');
+            return false;
+        }
+
+        setIsBillTesting(true);
+        setBillPrinterStatus('testing');
+
+        const connectionDetails = getConnectionDetails(settings, 'bill');
+        if (showToast) {
+            Toast.show({
+                type: 'info',
+                text1: 'Testing bill printer...',
+                text2: connectionDetails
+            });
+        }
+
+        try {
+            // Create a temporary printer instance for testing
+            const testPrinter = new XPrinter();
+
+            // Add timeout for connection
+            const connectionPromise = connectToPrinter(testPrinter, settings, 'bill');
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000);
+            });
+
+            await Promise.race([connectionPromise, timeoutPromise]);
+
+            // Just test connection - no printing
+            // Connection successful if we reach this point
+
+            // Close connection immediately
+            testPrinter.closeConnection();
+            testPrinter.dispose();
+
+            setBillPrinterStatus('connected');
+            if (showToast) {
+                Toast.show({
+                    type: 'success',
+                    text1: 'Bill printer test successful',
+                    text2: 'Printer is working correctly'
+                });
+            }
+            return true;
+        } catch (error) {
+            console.error('Bill printer test failed:', error);
+            setBillPrinterStatus('disconnected');
+
+            if (showToast) {
+                // Provide more specific error messages
+                let errorMessage = 'Could not connect to bill printer';
+                if (error.message.includes('timeout')) {
+                    errorMessage = 'Connection timed out - check printer network settings';
+                } else if (error.message.includes('IP address')) {
+                    errorMessage = 'Invalid IP address or printer not reachable';
+                } else if (error.message.includes('USB')) {
+                    errorMessage = 'USB device not found or access denied';
+                } else if (error.message.includes('Serial')) {
+                    errorMessage = 'Serial port not available or already in use';
+                }
+
+                Toast.show({
+                    type: 'error',
+                    text1: 'Bill printer test failed',
+                    text2: error.message || errorMessage
+                });
+            }
+            return false;
+        } finally {
+            setIsBillTesting(false);
+        }
+    };
+
+    // Test Label Printer Connection Only (no printing - for startup/status checking)
+    const testLabelPrinterConnectionOnly = async (settings = labelPrinterSettings, showToast = false) => {
+        if (Platform.OS !== "android") {
+            if (showToast) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Print function only supported on Android',
+                    text2: 'This feature requires Android platform'
+                });
+            }
+            setLabelPrinterStatus('disconnected');
+            return false;
+        }
+
+        // Prevent concurrent test attempts
+        if (isLabelTesting) {
+            if (showToast) {
+                Toast.show({
+                    type: 'warning',
+                    text1: 'Test in progress',
+                    text2: 'Please wait for current test to complete'
+                });
+            }
+            return false;
+        }
+
+        if (!settings || !isValidPrinterConfig(settings, 'label')) {
+            if (showToast) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Label printer not configured',
+                    text2: 'Please configure label printer settings first'
+                });
+            }
+            setLabelPrinterStatus('disconnected');
+            return false;
+        }
+
+        setIsLabelTesting(true);
+        setLabelPrinterStatus('testing');
+
+        const connectionDetails = getConnectionDetails(settings, 'label');
+        if (showToast) {
+            Toast.show({
+                type: 'info',
+                text1: 'Testing label printer...',
+                text2: connectionDetails
+            });
+        }
+
+        try {
+            // Create a temporary printer instance for testing
+            const testPrinter = new XPrinter();
+
+            // Add timeout for connection
+            const connectionPromise = connectToPrinter(testPrinter, settings, 'label');
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000);
+            });
+
+            await Promise.race([connectionPromise, timeoutPromise]);
+
+            // Just test connection - no printing
+            // Connection successful if we reach this point
+
+            // Close connection immediately
+            testPrinter.closeConnection();
+            testPrinter.dispose();
+
+            setLabelPrinterStatus('connected');
+            if (showToast) {
+                Toast.show({
+                    type: 'success',
+                    text1: 'Label printer test successful',
+                    text2: 'Printer is working correctly'
+                });
+            }
+            return true;
+        } catch (error) {
+            console.error('Label printer test failed:', error);
+            setLabelPrinterStatus('disconnected');
+
+            if (showToast) {
+                // Provide more specific error messages
+                let errorMessage = 'Could not connect to label printer';
+                if (error.message.includes('timeout')) {
+                    errorMessage = 'Connection timed out - check printer network settings';
+                } else if (error.message.includes('IP address')) {
+                    errorMessage = 'Invalid IP address or printer not reachable';
+                } else if (error.message.includes('USB')) {
+                    errorMessage = 'USB device not found or access denied';
+                } else if (error.message.includes('Serial')) {
+                    errorMessage = 'Serial port not available or already in use';
+                }
+
+                Toast.show({
+                    type: 'error',
+                    text1: 'Label printer test failed',
+                    text2: error.message || errorMessage
+                });
+            }
+            return false;
+        } finally {
+            setIsLabelTesting(false);
+        }
+    };
+
+    // Test Bill Printer Connection WITH printing (for UI test button)
+    const testBillPrinterConnection = async (settings = billPrinterSettings, showToast = false) => {
+        if (Platform.OS !== "android") {
+            if (showToast) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Print function only supported on Android',
+                    text2: 'This feature requires Android platform'
+                });
+            }
+            setBillPrinterStatus('disconnected');
+            return false;
+        }
+
+        // Prevent concurrent test attempts
+        if (isBillTesting) {
+            if (showToast) {
+                Toast.show({
+                    type: 'warning',
+                    text1: 'Test in progress',
+                    text2: 'Please wait for current test to complete'
+                });
+            }
+            return false;
+        }
+
+        if (!settings || !isValidPrinterConfig(settings, 'bill')) {
+            if (showToast) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Bill printer not configured',
+                    text2: 'Please configure bill printer settings first'
+                });
+            }
+            setBillPrinterStatus('disconnected');
+            return false;
+        }
+
+        setIsBillTesting(true);
+        setBillPrinterStatus('testing');
+
+        const connectionDetails = getConnectionDetails(settings, 'bill');
+        if (showToast) {
+            Toast.show({
+                type: 'info',
+                text1: 'Testing bill printer...',
+                text2: connectionDetails
+            });
+        }
+
+        try {
+            // Create a temporary printer instance for testing
+            const testPrinter = new XPrinter();
+
+            // Add timeout for connection
+            const connectionPromise = connectToPrinter(testPrinter, settings, 'bill');
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000);
+            });
+
+            await Promise.race([connectionPromise, timeoutPromise]);
+
+            // Test print with actual output
+            await testPrinter.printText('Bill Printer Test\nConnection OK\n\n');
+
+            // Close connection immediately
+            testPrinter.closeConnection();
+            testPrinter.dispose();
+
+            setBillPrinterStatus('connected');
+            if (showToast) {
+                Toast.show({
+                    type: 'success',
+                    text1: 'Bill printer test successful',
+                    text2: 'Printer is working correctly'
+                });
+            }
+            return true;
+        } catch (error) {
+            console.error('Bill printer test failed:', error);
+            setBillPrinterStatus('disconnected');
+
+            if (showToast) {
+                // Provide more specific error messages
+                let errorMessage = 'Could not connect to bill printer';
+                if (error.message.includes('timeout')) {
+                    errorMessage = 'Connection timed out - check printer network settings';
+                } else if (error.message.includes('IP address')) {
+                    errorMessage = 'Invalid IP address or printer not reachable';
+                } else if (error.message.includes('USB')) {
+                    errorMessage = 'USB device not found or access denied';
+                } else if (error.message.includes('Serial')) {
+                    errorMessage = 'Serial port not available or already in use';
+                }
+
+                Toast.show({
+                    type: 'error',
+                    text1: 'Bill printer test failed',
+                    text2: error.message || errorMessage
+                });
+            }
+            return false;
+        } finally {
+            setIsBillTesting(false);
+        }
+    };
+
+    // Test Label Printer Connection WITH printing (for UI test button)
+    const testLabelPrinterConnection = async (settings = labelPrinterSettings, showToast = false) => {
+        if (Platform.OS !== "android") {
+            if (showToast) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Print function only supported on Android',
+                    text2: 'This feature requires Android platform'
+                });
+            }
+            setLabelPrinterStatus('disconnected');
+            return false;
+        }
+
+        // Prevent concurrent test attempts
+        if (isLabelTesting) {
+            if (showToast) {
+                Toast.show({
+                    type: 'warning',
+                    text1: 'Test in progress',
+                    text2: 'Please wait for current test to complete'
+                });
+            }
+            return false;
+        }
+
+        if (!settings || !isValidPrinterConfig(settings, 'label')) {
+            if (showToast) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Label printer not configured',
+                    text2: 'Please configure label printer settings first'
+                });
+            }
+            setLabelPrinterStatus('disconnected');
+            return false;
+        }
+
+        setIsLabelTesting(true);
+        setLabelPrinterStatus('testing');
+
+        const connectionDetails = getConnectionDetails(settings, 'label');
+        if (showToast) {
+            Toast.show({
+                type: 'info',
+                text1: 'Testing label printer...',
+                text2: connectionDetails
+            });
+        }
+
+        try {
+            // Create a temporary printer instance for testing
+            const testPrinter = new XPrinter();
+
+            // Add timeout for connection
+            const connectionPromise = connectToPrinter(testPrinter, settings, 'label');
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Connection timeout after 15 seconds')), 15000);
+            });
+
+            await Promise.race([connectionPromise, timeoutPromise]);
+
+            // Test print using TSPL commands for label printer
+            await testPrinter.tsplPrintTest();
+
+            // Close connection immediately
+            testPrinter.closeConnection();
+            testPrinter.dispose();
+
+            setLabelPrinterStatus('connected');
+            if (showToast) {
+                Toast.show({
+                    type: 'success',
+                    text1: 'Label printer test successful',
+                    text2: 'Printer is working correctly'
+                });
+            }
+            return true;
+        } catch (error) {
+            console.error('Label printer test failed:', error);
+            setLabelPrinterStatus('disconnected');
+
+            if (showToast) {
+                // Provide more specific error messages
+                let errorMessage = 'Could not connect to label printer';
+                if (error.message.includes('timeout')) {
+                    errorMessage = 'Connection timed out - check printer network settings';
+                } else if (error.message.includes('IP address')) {
+                    errorMessage = 'Invalid IP address or printer not reachable';
+                } else if (error.message.includes('USB')) {
+                    errorMessage = 'USB device not found or access denied';
+                } else if (error.message.includes('Serial')) {
+                    errorMessage = 'Serial port not available or already in use';
+                }
+
+                Toast.show({
+                    type: 'error',
+                    text1: 'Label printer test failed',
+                    text2: error.message || errorMessage
+                });
+            }
+            return false;
+        } finally {
+            setIsLabelTesting(false);
+        }
+    };
+
+    // Test Bill Printer (wrapper for UI)
+    const testBillPrinter = async () => {
+        return await testBillPrinterConnection(billPrinterSettings, true);
+    };
+
+    // Test Label Printer (wrapper for UI)
+    const testLabelPrinter = async () => {
+        return await testLabelPrinterConnection(labelPrinterSettings, true);
+    };
+
+    // Connect and print with Bill Printer (for actual printing operations)
+    const printWithBillPrinter = async (printContent, settings = billPrinterSettings) => {
         if (Platform.OS !== "android") {
             Toast.show({
                 type: 'error',
@@ -207,10 +665,6 @@ export const PrinterProvider = ({ children }) => {
                 text2: 'This feature requires Android platform'
             });
             return false;
-        }
-
-        if (billPrinterStatus === 'connected' || isBillConnecting) {
-            return billPrinterStatus === 'connected';
         }
 
         if (!settings || !isValidPrinterConfig(settings, 'bill')) {
@@ -222,41 +676,43 @@ export const PrinterProvider = ({ children }) => {
             return false;
         }
 
-        setIsBillConnecting(true);
-        setBillPrinterStatus('connecting');
-
-        const connectionDetails = getConnectionDetails(settings, 'bill');
-        Toast.show({
-            type: 'info',
-            text1: 'Connecting bill printer...',
-            text2: connectionDetails
-        });
-
         try {
-            await connectToPrinter(billPrinterRef.current, settings, 'bill');
+            setBillPrinterStatus('testing'); // Show as busy during print
+
+            // Create a temporary printer instance for printing
+            const printPrinter = new XPrinter();
+
+            // Connect to printer
+            await connectToPrinter(printPrinter, settings, 'bill');
+
+            // Execute print commands (could be function or text content)
+            if (typeof printContent === 'function') {
+                await printContent(printPrinter);
+            } else {
+                await printPrinter.printText(printContent);
+            }
+
+            // Close connection immediately
+            printPrinter.closeConnection();
+            printPrinter.dispose();
+
             setBillPrinterStatus('connected');
-            Toast.show({
-                type: 'success',
-                text1: 'Bill printer connected',
-                text2: connectionDetails
-            });
             return true;
         } catch (error) {
-            console.error('Bill printer connection failed:', error);
+            console.error('Bill printer print failed:', error);
             setBillPrinterStatus('disconnected');
+
             Toast.show({
                 type: 'error',
-                text1: 'Bill printer connection failed',
-                text2: error.message || 'Could not connect to bill printer'
+                text1: 'Print failed',
+                text2: error.message || 'Could not print to bill printer'
             });
             return false;
-        } finally {
-            setIsBillConnecting(false);
         }
     };
 
-    // Connect Label Printer
-    const connectLabelPrinter = async (settings = labelPrinterSettings) => {
+    // Connect and print with Label Printer (for actual printing operations)  
+    const printWithLabelPrinter = async (printCommands, settings = labelPrinterSettings) => {
         if (Platform.OS !== "android") {
             Toast.show({
                 type: 'error',
@@ -264,10 +720,6 @@ export const PrinterProvider = ({ children }) => {
                 text2: 'This feature requires Android platform'
             });
             return false;
-        }
-
-        if (labelPrinterStatus === 'connected' || isLabelConnecting) {
-            return labelPrinterStatus === 'connected';
         }
 
         if (!settings || !isValidPrinterConfig(settings, 'label')) {
@@ -279,187 +731,36 @@ export const PrinterProvider = ({ children }) => {
             return false;
         }
 
-        setIsLabelConnecting(true);
-        setLabelPrinterStatus('connecting');
-
-        const connectionDetails = getConnectionDetails(settings, 'label');
-        Toast.show({
-            type: 'info',
-            text1: 'Connecting label printer...',
-            text2: connectionDetails
-        });
-
         try {
-            await connectToPrinter(labelPrinterRef.current, settings, 'label');
-            setLabelPrinterStatus('connected');
-            Toast.show({
-                type: 'success',
-                text1: 'Label printer connected',
-                text2: connectionDetails
-            });
-            return true;
-        } catch (error) {
-            console.error('Label printer connection failed:', error);
-            setLabelPrinterStatus('disconnected');
-            Toast.show({
-                type: 'error',
-                text1: 'Label printer connection failed',
-                text2: error.message || 'Could not connect to label printer'
-            });
-            return false;
-        } finally {
-            setIsLabelConnecting(false);
-        }
-    };
+            setLabelPrinterStatus('testing'); // Show as busy during print
 
-    // Disconnect Bill Printer
-    const disconnectBillPrinter = async () => {
-        if (billPrinterStatus === 'disconnected') {
-            return true;
-        }
+            // Create a temporary printer instance for printing
+            const printPrinter = new XPrinter();
 
-        try {
-            if (billPrinterRef.current) {
-                billPrinterRef.current.closeConnection();
-            }
-            setBillPrinterStatus('disconnected');
-            Toast.show({
-                type: 'success',
-                text1: 'Bill printer disconnected',
-                text2: 'Connection closed successfully'
-            });
-            return true;
-        } catch (error) {
-            console.warn('Error disconnecting bill printer:', error);
-            setBillPrinterStatus('disconnected');
-            Toast.show({
-                type: 'warning',
-                text1: 'Bill printer disconnected',
-                text2: 'Connection closed (with warning)'
-            });
-            return true;
-        }
-    };
+            // Connect to printer
+            await connectToPrinter(printPrinter, settings, 'label');
 
-    // Disconnect Label Printer
-    const disconnectLabelPrinter = async () => {
-        if (labelPrinterStatus === 'disconnected') {
-            return true;
-        }
-
-        try {
-            if (labelPrinterRef.current) {
-                labelPrinterRef.current.closeConnection();
-            }
-            setLabelPrinterStatus('disconnected');
-            Toast.show({
-                type: 'success',
-                text1: 'Label printer disconnected',
-                text2: 'Connection closed successfully'
-            });
-            return true;
-        } catch (error) {
-            console.warn('Error disconnecting label printer:', error);
-            setLabelPrinterStatus('disconnected');
-            Toast.show({
-                type: 'warning',
-                text1: 'Label printer disconnected',
-                text2: 'Connection closed (with warning)'
-            });
-            return true;
-        }
-    };
-
-    // Test Bill Printer
-    const testBillPrinter = async () => {
-        if (Platform.OS !== "android") {
-            Toast.show({
-                type: 'error',
-                text1: 'Test function only supported on Android'
-            });
-            return false;
-        }
-
-        try {
-            // Connect if not connected
-            if (billPrinterStatus !== 'connected') {
-                const connected = await connectBillPrinter();
-                if (!connected) return false;
-                // Wait a bit for connection to stabilize
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-
-            Toast.show({
-                type: 'info',
-                text1: 'Testing bill printer...',
-                text2: 'Sending test print'
-            });
-
-            await billPrinterRef.current.printText('Bill Printer Test\nConnection OK\n\n');
-
-            Toast.show({
-                type: 'success',
-                text1: 'Bill printer test successful',
-                text2: 'Printer is working correctly'
-            });
-            return true;
-        } catch (error) {
-            console.error('Bill printer test failed:', error);
-            setBillPrinterStatus('disconnected');
-            Toast.show({
-                type: 'error',
-                text1: 'Bill printer test failed',
-                text2: error.message || 'Could not test bill printer'
-            });
-            return false;
-        }
-    };
-
-    // Test Label Printer
-    const testLabelPrinter = async () => {
-        if (Platform.OS !== "android") {
-            Toast.show({
-                type: 'error',
-                text1: 'Test function only supported on Android'
-            });
-            return false;
-        }
-
-        try {
-            // Connect if not connected
-            if (labelPrinterStatus !== 'connected') {
-                const connected = await connectLabelPrinter();
-                if (!connected) return false;
-                // Wait a bit for connection to stabilize
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-
-            Toast.show({
-                type: 'info',
-                text1: 'Testing label printer...',
-                text2: 'Sending test print'
-            });
-
-            // Use TSPL commands for label printer test
-            if (labelPrinterSettings && labelPrinterSettings.sWidth && labelPrinterSettings.sHeight) {
-                await labelPrinterRef.current.tsplPrintTest();
+            // Execute print commands (could be TSPL commands for labels)
+            if (typeof printCommands === 'function') {
+                await printCommands(printPrinter);
             } else {
-                await labelPrinterRef.current.printText('Label Printer Test\nConnection OK\n\n');
+                await printPrinter.printText(printCommands);
             }
 
-            Toast.show({
-                type: 'success',
-                text1: 'Label printer test successful',
-                text2: 'Printer is working correctly'
-            });
+            // Close connection immediately
+            printPrinter.closeConnection();
+            printPrinter.dispose();
+
+            setLabelPrinterStatus('connected');
             return true;
         } catch (error) {
-            console.error('Label printer test failed:', error);
+            console.error('Label printer print failed:', error);
             setLabelPrinterStatus('disconnected');
+
             Toast.show({
                 type: 'error',
-                text1: 'Label printer test failed',
-                text2: error.message || 'Could not test label printer'
+                text1: 'Print failed',
+                text2: error.message || 'Could not print to label printer'
             });
             return false;
         }
@@ -470,16 +771,22 @@ export const PrinterProvider = ({ children }) => {
         await loadPrinterSettings();
     };
 
-    // Handle settings update (disconnect and reconnect)
+    // Handle settings update (test new connections)
     const handleSettingsUpdate = async () => {
-        // Disconnect both printers
-        await Promise.all([
-            disconnectBillPrinter(),
-            disconnectLabelPrinter()
-        ]);
-
         // Reload settings
         await refreshPrinterSettings();
+
+        // Test connections with new settings (no printing when settings change)
+        if (billPrinterSettings && isValidPrinterConfig(billPrinterSettings, 'bill')) {
+            setTimeout(() => testBillPrinterConnectionOnly(billPrinterSettings), 500);
+        } else {
+            setBillPrinterStatus('disconnected');
+        }
+        if (labelPrinterSettings && isValidPrinterConfig(labelPrinterSettings, 'label')) {
+            setTimeout(() => testLabelPrinterConnectionOnly(labelPrinterSettings), 1000);
+        } else {
+            setLabelPrinterStatus('disconnected');
+        }
     };
 
     const contextValue = {
@@ -490,22 +797,24 @@ export const PrinterProvider = ({ children }) => {
         // Connection status
         billPrinterStatus,
         labelPrinterStatus,
-        isBillConnecting,
-        isLabelConnecting,
+        isBillTesting,
+        isLabelTesting,
 
         // Settings
         billPrinterSettings,
         labelPrinterSettings,
 
-        // Connection functions
-        connectBillPrinter,
-        connectLabelPrinter,
-        disconnectBillPrinter,
-        disconnectLabelPrinter,
-
         // Test functions
         testBillPrinter,
         testLabelPrinter,
+        testBillPrinterConnection,
+        testLabelPrinterConnection,
+        testBillPrinterConnectionOnly,
+        testLabelPrinterConnectionOnly,
+
+        // Print functions
+        printWithBillPrinter,
+        printWithLabelPrinter,
 
         // Utility functions
         getConnectionDetails,
