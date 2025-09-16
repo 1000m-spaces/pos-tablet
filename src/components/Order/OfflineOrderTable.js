@@ -351,38 +351,128 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
 
                     // Print one label for each quantity of the product
                     for (let q = 0; q < quantity; q++) {
-                        // Create a temporary order with just this product
                         const tempOrder = {
                             ...originalOrder,
-                            // Convert offline order format to print template format
-                            displayID: originalOrder.session, // Use session as display ID for offline orders
-                            serviceType: 'offline', // Mark as offline order
-                            tableName: originalOrder.shopTableName, // Include table name
-                            orderNote: originalOrder.orderNote || '', // Include order note for printing
+                            // Basic order identification
+                            displayID: originalOrder.session,
+                            bill_id: originalOrder.session,
+                            session: originalOrder.session,
+
+                            // Service and location information
+                            serviceType: 'offline',
+                            tableName: originalOrder.shopTableName,
+                            table: originalOrder.shopTableName,
+                            shopTableName: originalOrder.shopTableName,
+                            shopTableid: originalOrder.shopTableid || "0",
+
+                            // Timing information
+                            date: originalOrder.created_at || originalOrder.timestamp || new Date().toISOString(),
+                            created_at: originalOrder.created_at || originalOrder.timestamp || new Date().toISOString(),
+                            timestamp: originalOrder.created_at || originalOrder.timestamp || new Date().toISOString(),
+
+                            // Order notes and metadata
+                            note: originalOrder.orderNote || originalOrder.note || '',
+                            orderNote: originalOrder.orderNote || originalOrder.note || '',
+
+                            // Shop and user information
+                            shopid: originalOrder.shopid || "246",
+                            userid: originalOrder.userid || "1752",
+                            roleid: originalOrder.roleid || "4",
+
+                            // Payment and pricing information
+                            subPrice: originalOrder.subPrice || originalOrder.total_amount || 0,
+                            total_amount: originalOrder.total_amount || 0,
+                            orderValue: originalOrder.total_amount || 0,
+                            transType: originalOrder.transType || "41",
+                            chanel_type_id: originalOrder.chanel_type_id || "1",
+
+                            // Channel information (for delivery apps)
+                            chanel_name: originalOrder.chanel_name || 'POS',
+                            foodapp_order_id: originalOrder.foodapp_order_id || '',
+                            package_id: originalOrder.package_id || 0,
+
+                            // Status information
+                            status: originalOrder.status || "pending",
+                            orderStatus: originalOrder.orderStatus || "Paymented",
+                            syncStatus: originalOrder.syncStatus || "pending",
+
+                            // Enhanced item information structure
                             itemInfo: {
                                 items: [{
                                     name: product.name,
+                                    item_name: product.name,
                                     quantity: 1, // Each label represents 1 item
+                                    amount: 1,
                                     fare: {
                                         priceDisplay: product.price ? product.price.toLocaleString('vi-VN') : '0',
-                                        currencySymbol: '₫'
+                                        currencySymbol: '₫',
+                                        price: product.price || 0
                                     },
+                                    price: product.price || 0,
                                     comment: product.note || '',
+                                    note_prod: product.note || '',
+                                    product_id: product.product_id || product.id,
+
+                                    // Enhanced modifier information
                                     modifierGroups: product.extras ? product.extras.map(extra => ({
                                         modifierGroupName: extra.group_extra_name || 'Extras',
+                                        groupName: extra.group_extra_name || 'Extras',
                                         modifiers: [{
                                             modifierName: extra.name,
-                                            price: extra.price || 0
+                                            name: extra.name,
+                                            price: extra.price || 0,
+                                            priceDisplay: extra.price ? extra.price.toLocaleString('vi-VN') : '0'
                                         }]
                                     })) : [],
+
+                                    // Flattened modifier strings for easier template access
+                                    stringName: product.extras ? product.extras.map(extra => extra.name).join(' / ') : '',
+                                    option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
+                                    extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
                                 }],
                                 itemIdx: currentLabelIndex,
                                 totalItems: totalLabels,
                             },
-                            // Add additional info for the template
+
+                            // Direct decals format for immediate template compatibility
+                            decals: [{
+                                item_name: product.name,
+                                amount: 1,
+                                note_prod: product.note || '',
+                                stringName: product.extras ? product.extras.map(extra => extra.name).join(' / ') : '',
+                                option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
+                                extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
+                                itemIdx: currentLabelIndex,
+                                totalItems: totalLabels,
+                                price: product.price || 0,
+                                priceDisplay: product.price ? product.price.toLocaleString('vi-VN') + '₫' : '0₫',
+                                product_id: product.product_id || product.id,
+                            }],
+
+                            // Customer and service information
                             customerInfo: {
                                 name: originalOrder.shopTableName || 'Khách hàng',
-                            }
+                                table: originalOrder.shopTableName,
+                                phone: originalOrder.customerPhone || '',
+                                address: originalOrder.customerAddress || '',
+                            },
+
+                            // Additional metadata for comprehensive printing
+                            products: originalOrder.products, // Keep full product array for reference
+                            offline_code: originalOrder.offline_code || originalOrder.session,
+                            offlineOrderId: originalOrder.offlineOrderId || originalOrder.session,
+
+                            // Fees and discounts
+                            svFee: originalOrder.svFee || "0",
+                            svFee_amount: originalOrder.svFee_amount || 0,
+                            phuthu: originalOrder.phuthu || 0,
+                            fix_discount: originalOrder.fix_discount || 0,
+                            perDiscount: originalOrder.perDiscount || 0,
+
+                            // Print tracking
+                            printStatus: originalOrder.printStatus || "not_printed",
+                            currentItemIndex: currentLabelIndex + 1,
+                            isPartialPrint: true, // Indicates this is one item from a multi-item order
                         };
 
                         // Update the ViewShot with the temporary order
@@ -652,7 +742,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                     position: 'absolute',
                     left: -9999,
                     top: -9999,
-                    width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
+                    width: printerInfo ? mmToPixels(Number(printerInfo.sWidth) - 2) : mmToPixels(50 - 2),
                     backgroundColor: 'white',
                     opacity: 0,
                     zIndex: -1,
@@ -664,12 +754,12 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                 options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
                 style={{
                     position: 'absolute',
-                    // left: -9999,
-                    // top: -9999,
+                    left: -9999,
+                    top: -9999,
                     width: 400,
                     backgroundColor: 'white',
-                    // opacity: 0,
-                    // zIndex: -1,
+                    opacity: 0,
+                    zIndex: -1,
                     pointerEvents: 'none',
                 }}
             >
