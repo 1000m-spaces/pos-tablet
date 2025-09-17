@@ -10,7 +10,7 @@ const mmToPixels = (mm) => {
 
     // Use a conservative fixed DPI that works well with actual printers
     // This is roughly equivalent to 72-96 DPI but optimized for label printing
-    const LABEL_PRINTER_DPI = 96; // Much more conservative DPI for actual printing
+    const LABEL_PRINTER_DPI = 72; // Much more conservative DPI for actual printing
 
     const pixelValue = Math.round((mm * LABEL_PRINTER_DPI) / 25.4);
     console.log(`mmToPixels: ${mm}mm -> ${pixelValue}px (using fixed ${LABEL_PRINTER_DPI} DPI for label printer)`);
