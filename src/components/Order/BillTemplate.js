@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import AsyncStorage from 'store/async_storage/index';
+import QRCode from 'react-native-qrcode-svg';
 
 const BillTemplate = ({ selectedOrder }) => {
     const [fontSizes, setFontSizes] = useState({
@@ -14,7 +15,13 @@ const BillTemplate = ({ selectedOrder }) => {
         address: '',
         phone: '',
         wifi_name: '',
-        wifi_pass: ''
+        wifi_pass: '',
+        id: ''
+    });
+
+    const [userInfos, setUserInfos] = useState({
+        partnerid: '',
+        shopid: ''
     });
 
     useEffect(() => {
@@ -33,31 +40,53 @@ const BillTemplate = ({ selectedOrder }) => {
             }
         };
 
-        const loadShopInfo = async () => {
+        const loadUserInfo = async () => {
             try {
-                // Try to get shop info from AsyncStorage or use defaults
-                const shopData = await AsyncStorage.getShopInfo?.() || {};
-                setShopInfo({
-                    name: shopData.name || 'NEOCAFE',
-                    address: shopData.address || '',
-                    phone: shopData.phone || '',
-                    wifi_name: shopData.wifi_name || 'NEOCAFE_WIFI',
-                    wifi_pass: shopData.wifi_pass || '12345678'
-                });
+                const user = await AsyncStorage.getUser();
+                if (user && user.shops) {
+                    setUserInfos({
+                        partnerid: user.partnerid || user.shops.partnerid || '',
+                        shopid: user.shopid || user.shops.id || ''
+                    });
+                    // Update shopInfo with user's shop data - following same pattern as Orders.js
+                    const shopData = await AsyncStorage.getShopInfo?.() || {};
+                    setShopInfo({
+                        name: user.shops.name_vn || shopData.name || 'NEOCAFE',
+                        address: user.shops.addr || shopData.address || '',
+                        phone: user.shops.mobile || shopData.phone || '',
+                        wifi_name: shopData.wifi_name || 'NEOCAFE_WIFI',
+                        wifi_pass: shopData.wifi_pass || '12345678',
+                        id: user.shops.id || user.shopid || ''
+                    });
+                    console.log('BillTemplate: User shop loaded:', user.shops);
+                } else {
+                    console.log('BillTemplate: No user shop data found');
+                    // Fallback if no user data
+                    const shopData = await AsyncStorage.getShopInfo?.() || {};
+                    setShopInfo({
+                        name: shopData.name || 'NEOCAFE',
+                        address: shopData.address || '',
+                        phone: shopData.phone || '',
+                        wifi_name: shopData.wifi_name || 'NEOCAFE_WIFI',
+                        wifi_pass: shopData.wifi_pass || '12345678',
+                        id: shopData.id || ''
+                    });
+                }
             } catch (error) {
-                console.error('Error loading shop info:', error);
+                console.error('Error loading user/shop info:', error);
                 setShopInfo({
                     name: 'NEOCAFE',
                     address: '',
                     phone: '',
                     wifi_name: 'NEOCAFE_WIFI',
-                    wifi_pass: '12345678'
+                    wifi_pass: '12345678',
+                    id: ''
                 });
             }
         };
 
         loadBillPrinterSettings();
-        loadShopInfo();
+        loadUserInfo();
     }, []);
 
     const formatCurrency = (amount) => {
@@ -83,13 +112,59 @@ const BillTemplate = ({ selectedOrder }) => {
         }
     };
 
+    const generateQRUrl = () => {
+        try {
+            // Get order data
+            const orderId = selectedOrder?.displayID || selectedOrder?.session || selectedOrder?.id || 'unknown';
+
+            // Get dataOrderTime (try various possible order time fields)
+            const dataOrderTime = selectedOrder?.createdAt ||
+                selectedOrder?.created_at ||
+                selectedOrder?.updatedAt ||
+                selectedOrder?.updated_at ||
+                selectedOrder?.orderTime ||
+                new Date().toISOString();
+
+            // Calculate timestamp as per user requirements
+            const timeString = dataOrderTime;
+            // Chuyển sang định dạng ISO hợp lệ
+            const isoString = timeString.replace(' ', 'T');
+            // Tạo đối tượng Date
+            const date = new Date(isoString);
+            // Lấy giá trị số (timestamp)
+            const timestamp = date.getTime();
+
+            // Ensure we have required data
+            const shopId = shopInfo.id || 'unknown';
+            const partnerId = userInfos.partnerid || 'unknown';
+
+            // Generate QR URL
+            const qrUrl = `https://invoice.1000m.vn?shopId=${shopId}&partnerId=${partnerId}&orderId=${orderId}&expireAt=${timestamp}`;
+
+            console.log('Generated QR URL:', qrUrl);
+            return qrUrl;
+        } catch (error) {
+            console.error('Error generating QR URL:', error);
+            // Return a fallback URL to prevent QR code crashes
+            return 'https://invoice.1000m.vn?shopId=unknown&partnerId=unknown&orderId=unknown&expireAt=0';
+        }
+    };
+
     const calculateSubTotal = () => {
         if (!selectedOrder?.itemInfo?.items) return 0;
         return selectedOrder.itemInfo.items.reduce((total, item) => {
-            const itemPrice = item.fare?.priceDisplay ?
-                parseInt(item.fare.priceDisplay.replace(/[^\d]/g, '')) :
-                (item.price || 0);
-            return total + (itemPrice * (item.quantity || 1));
+            // Extract numeric price more robustly
+            let itemPrice = 0;
+            if (item.fare?.priceDisplay) {
+                // Handle formatted string prices like "25,000"
+                const priceStr = item.fare.priceDisplay.toString().replace(/[^\d]/g, '');
+                itemPrice = parseInt(priceStr) || 0;
+            } else if (item.price) {
+                itemPrice = typeof item.price === 'number' ? item.price : parseInt(item.price) || 0;
+            } else if (item.amount) {
+                itemPrice = typeof item.amount === 'number' ? item.amount : parseInt(item.amount) || 0;
+            }
+            return total + (itemPrice * (item.quantity || item.quanlity || 1));
         }, 0);
     };
 
@@ -191,9 +266,18 @@ const BillTemplate = ({ selectedOrder }) => {
             {/* Products List */}
             <View style={styles.productsList}>
                 {selectedOrder?.itemInfo?.items?.map((item, index) => {
-                    const itemPrice = item.fare?.priceDisplay ?
-                        parseInt(item.fare.priceDisplay.replace(/[^\d]/g, '')) :
-                        (item.price || 0);
+                    // Extract numeric price more robustly
+                    let itemPrice = 0;
+                    if (item.fare?.priceDisplay) {
+                        // Handle formatted string prices like "25,000"
+                        const priceStr = item.fare.priceDisplay.toString().replace(/[^\d]/g, '');
+                        itemPrice = parseInt(priceStr) || 0;
+                    } else if (item.price) {
+                        itemPrice = typeof item.price === 'number' ? item.price : parseInt(item.price) || 0;
+                    } else if (item.amount) {
+                        itemPrice = typeof item.amount === 'number' ? item.amount : parseInt(item.amount) || 0;
+                    }
+
                     const quantity = item.quantity || item.quanlity || 1;
                     const totalPrice = itemPrice * quantity;
 
@@ -219,6 +303,12 @@ const BillTemplate = ({ selectedOrder }) => {
                                         {extra.name}
                                     </Text>
                                 ))}
+                                {/* Show item note */}
+                                {item.note && item.note.trim() !== '' && (
+                                    <View style={styles.noteContainer}>
+                                        <Text style={[styles.noteText, { fontSize: fontSizes.content - 2 }]}>📝 {item.note}</Text>
+                                    </View>
+                                )}
                             </View>
                             <View style={styles.productPriceColumn}>
                                 <Text style={[styles.productText, { fontSize: fontSizes.content }]}>
@@ -300,12 +390,16 @@ const BillTemplate = ({ selectedOrder }) => {
                     Powered by Neo Cafe
                 </Text>
             </View>
-
-            {/* QR Code Placeholder */}
             <View style={styles.qrSection}>
-                <View style={styles.qrPlaceholder}>
-                    <Text style={[styles.qrText, { fontSize: fontSizes.content - 4 }]}>QR CODE</Text>
-                </View>
+                <QRCode
+                    value={generateQRUrl()}
+                    size={120}
+                    color="black"
+                    backgroundColor="white"
+                />
+                <Text style={[styles.qrLabel, { fontSize: fontSizes.content - 4 }]}>
+                    Quét mã để xem hóa đơn điện tử
+                </Text>
             </View>
         </View>
     )
@@ -539,6 +633,26 @@ const styles = StyleSheet.create({
     qrText: {
         color: '#666',
         fontWeight: 'bold',
+    },
+    qrLabel: {
+        color: '#666',
+        marginTop: 8,
+        textAlign: 'center',
+        fontStyle: 'italic',
+    },
+
+    // Note styles
+    noteContainer: {
+        marginTop: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        backgroundColor: '#FFF8F0',
+        borderRadius: 3,
+        alignSelf: 'flex-start',
+    },
+    noteText: {
+        color: '#8B4513',
+        fontStyle: 'italic',
     },
 });
 

@@ -159,7 +159,7 @@ const DrawerContent = props => {
       <DrawerItem
         icon={({ color, size }) => (
           <View style={{ justifyContent: 'center', alignItems: 'center', marginLeft: 20 }}>
-            <TextNormal style={{ color: 'white' }}>Version: {versionNameApp}</TextNormal>
+            <TextNormal style={{ color: 'white' }}>Version: {versionNameApp} 17/9/2025</TextNormal>
           </View>
         )}
         label={''}

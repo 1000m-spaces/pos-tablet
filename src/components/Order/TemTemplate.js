@@ -192,28 +192,27 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                             <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
                             <Text style={styles.itemPrice}>{item.fare.priceDisplay}{item.fare.currencySymbol}</Text>
                         </View>
-                        {
-                            item.modifierGroups?.length > 0 && (
+                        {(() => {
+                            const modifiers = item.modifierGroups?.length > 0
+                                ? item.modifierGroups
+                                    ?.flatMap(modifierGroup =>
+                                        modifierGroup.modifiers?.map(modifier => modifier.modifierName) || []
+                                    )
+                                    .join('/')
+                                : '';
+                            const orderNote = orderPrint.orderNote?.trim() || '';
+                            const itemComment = item.comment?.trim() || '';
+                            const combinedText = [modifiers, orderNote, itemComment]
+                                .filter(text => text !== '')
+                                .join('/');
+                            return combinedText !== '' && (
                                 <View style={styles.modifiersContainer}>
-                                    {item.modifierGroups?.map((modifierGroup, idx) => (
-                                        modifierGroup.modifiers.map((modifier, idx) => (
-                                            <Text key={idx} style={styles.modifierText} numberOfLines={1}>• {modifier.modifierName}</Text>
-                                        ))
-                                    ))}
+                                    <Text style={styles.modifierText} numberOfLines={2}>
+                                        {combinedText}
+                                    </Text>
                                 </View>
-                            )}
-
-                        {orderPrint.orderNote?.trim() !== '' && (
-                            <View style={styles.noteContainer}>
-                                <Text style={styles.noteText} numberOfLines={2}>{orderPrint.orderNote}</Text>
-                            </View>
-                        )}
-
-                        {item.comment?.trim() !== '' && (
-                            <View style={styles.noteContainer}>
-                                <Text style={styles.noteText} numberOfLines={2}>{item.comment}</Text>
-                            </View>
-                        )}
+                            );
+                        })()}
                     </View>
                 </View>
             ))}
