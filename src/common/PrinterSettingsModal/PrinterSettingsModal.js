@@ -43,6 +43,9 @@ const PrinterSettingsModal = ({
     const [labelModifier, setLabelModifier] = useState(14);
     const [labelNote, setLabelNote] = useState(14);
 
+    // Label printer DPI setting
+    const [labelPrinterDPI, setLabelPrinterDPI] = useState(72);
+
     // Bill printer settings
     const [billIP, setBillIP] = useState("");
     const [billPort, setBillPort] = useState(9100);
@@ -106,6 +109,9 @@ const PrinterSettingsModal = ({
                 setLabelItemName(labelPrinterInfo.labelItemName || 15);
                 setLabelModifier(labelPrinterInfo.labelModifier || 14);
                 setLabelNote(labelPrinterInfo.labelNote || 14);
+
+                // Load label printer DPI
+                setLabelPrinterDPI(labelPrinterInfo.labelPrinterDPI || 72);
             }
 
             // Load bill printer settings
@@ -268,6 +274,9 @@ const PrinterSettingsModal = ({
                 labelModifier: parseInt(labelModifier),
                 labelNote: parseInt(labelNote),
 
+                // Label printer DPI
+                labelPrinterDPI: parseInt(labelPrinterDPI),
+
                 // Bill printer settings
                 billIP: billIP,
                 billPort: parseInt(billPort),
@@ -332,7 +341,9 @@ const PrinterSettingsModal = ({
                 labelOrderNumber: parseInt(labelOrderNumber),
                 labelItemName: parseInt(labelItemName),
                 labelModifier: parseInt(labelModifier),
-                labelNote: parseInt(labelNote)
+                labelNote: parseInt(labelNote),
+                // Label printer DPI
+                labelPrinterDPI: parseInt(labelPrinterDPI)
             };
         } else {
             return {
@@ -717,6 +728,23 @@ const PrinterSettingsModal = ({
                                         placeholderTextColor={Colors.textSecondary}
                                     />
                                 </View>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <TextNormal style={styles.label}>{"DPI máy in (Dots Per Inch)"}</TextNormal>
+                                <View style={styles.inputContainer}>
+                                    <TextInput
+                                        placeholder="72"
+                                        value={labelPrinterDPI.toString()}
+                                        onChangeText={(text) => setLabelPrinterDPI(text)}
+                                        style={styles.input}
+                                        keyboardType="numeric"
+                                        placeholderTextColor={Colors.textSecondary}
+                                    />
+                                </View>
+                                <Text style={styles.paperSizeDescription}>
+                                    Độ phân giải máy in (thường là 72, 96, 203, 300 DPI). Giá trị thấp hơn sẽ tạo tem nhỏ hơn.
+                                </Text>
                             </View>
                         </>
                     ) : (

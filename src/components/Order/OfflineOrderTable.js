@@ -430,7 +430,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                                     option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
                                     extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
                                 }],
-                                itemIdx: currentLabelIndex,
+                                itemIdx: currentLabelIndex + 1, // Use 1-based indexing for display
                                 totalItems: totalLabels,
                             },
 
@@ -442,7 +442,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                                 stringName: product.extras ? product.extras.map(extra => extra.name).join(' / ') : '',
                                 option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
                                 extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
-                                itemIdx: currentLabelIndex,
+                                itemIdx: currentLabelIndex + 1, // Use 1-based indexing for display
                                 totalItems: totalLabels,
                                 price: product.price || 0,
                                 priceDisplay: product.price ? product.price.toLocaleString('vi-VN') + '₫' : '0₫',

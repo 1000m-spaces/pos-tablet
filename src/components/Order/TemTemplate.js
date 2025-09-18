@@ -3,17 +3,16 @@ import { View, Text, StyleSheet, Dimensions, PixelRatio } from 'react-native';
 import AsyncStorage from 'store/async_storage/index'
 
 // Convert mm to pixels for actual label printer output
-const mmToPixels = (mm) => {
-    // For actual label printers, use a much lower and fixed DPI
+const mmToPixels = (mm, dpi = 72) => {
+    // For actual label printers, use a configurable DPI
     // Most thermal label printers work at 203 DPI (8 dots/mm) or similar
-    // But for React Native printing, we need even lower values to prevent oversized labels
+    // But for React Native printing, we can adjust based on user preferences
 
-    // Use a conservative fixed DPI that works well with actual printers
-    // This is roughly equivalent to 72-96 DPI but optimized for label printing
-    const LABEL_PRINTER_DPI = 72; // Much more conservative DPI for actual printing
+    // Use configurable DPI from printer settings
+    const LABEL_PRINTER_DPI = dpi; // Configurable DPI for actual printing
 
     const pixelValue = Math.round((mm * LABEL_PRINTER_DPI) / 25.4);
-    console.log(`mmToPixels: ${mm}mm -> ${pixelValue}px (using fixed ${LABEL_PRINTER_DPI} DPI for label printer)`);
+    console.log(`mmToPixels: ${mm}mm -> ${pixelValue}px (using ${LABEL_PRINTER_DPI} DPI for label printer)`);
 
     return pixelValue;
 };
@@ -32,10 +31,10 @@ const calculateDynamicFontSize = (baseSize) => {
     return Math.max(Math.round(baseSize * FONT_SCALE_FACTOR), 8); // Minimum font size of 8
 };
 
-// Default printer settings (50mm x 30mm at 96 DPI)
-const DEFAULT_SETTINGS = {
-    width: mmToPixels(50 - 4), // 50mm
-    height: mmToPixels(30 - 4), // 30mm
+// Default printer settings (50mm x 30mm at default DPI)
+const getDefaultSettings = (dpi = 72) => ({
+    width: mmToPixels(50 - 4, dpi), // 50mm
+    height: mmToPixels(30 - 4, dpi), // 30mm
     fontSize: {
         storeName: calculateDynamicFontSize(16),
         orderNumber: calculateDynamicFontSize(18),
@@ -50,7 +49,7 @@ const DEFAULT_SETTINGS = {
     },
     padding: 6,
     margin: 2
-};
+});
 
 const PrintTemplate = ({ orderPrint, settings = {} }) => {
     console.log("orderPrint", orderPrint);
@@ -60,9 +59,11 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             try {
                 const printerInfo = await AsyncStorage.getLabelPrinterInfo();
                 if (printerInfo && printerInfo.sWidth && printerInfo.sHeight) {
+                    const dpi = printerInfo.labelPrinterDPI || 72;
                     setPrinterSettings({
-                        width: mmToPixels(Number(printerInfo.sWidth) - 4),
-                        height: mmToPixels(Number(printerInfo.sHeight) - 4),
+                        width: mmToPixels(Number(printerInfo.sWidth) - 4, dpi),
+                        height: mmToPixels(Number(printerInfo.sHeight) - 4, dpi),
+                        dpi: dpi,
                         fontSize: {
                             storeName: calculateDynamicFontSize(printerInfo.labelStoreName || 16),
                             orderNumber: calculateDynamicFontSize(printerInfo.labelOrderNumber || 18),
@@ -84,6 +85,9 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
         loadPrinterSettings();
     }, []);
+
+    // Get default settings with appropriate DPI
+    const DEFAULT_SETTINGS = getDefaultSettings(printerSettings?.dpi || 72);
 
     // Merge default settings with provided settings and printer settings
     const config = {
