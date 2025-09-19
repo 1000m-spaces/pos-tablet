@@ -298,10 +298,10 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
                             ...originalOrder.itemInfo,
                             items: [{
                                 ...item,
-                                itemIdx: currentLabelIndex,
+                                itemIdx: currentLabelIndex + 1,
                                 totalItems: totalLabels,
                             }],
-                            itemIdx: currentLabelIndex,
+                            itemIdx: currentLabelIndex + 1,
                             totalItems: totalLabels,
                         }
                     };

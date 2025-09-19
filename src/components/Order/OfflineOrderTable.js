@@ -445,7 +445,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                                 itemIdx: currentLabelIndex + 1, // Use 1-based indexing for display
                                 totalItems: totalLabels,
                                 price: product.price || 0,
-                                priceDisplay: product.price ? product.price.toLocaleString('vi-VN') + '₫' : '0₫',
+                                priceDisplay: product.price ? product.price.toLocaleString('vi-VN') : '0₫',
                                 product_id: product.product_id || product.id,
                             }],
 
@@ -479,18 +479,18 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                         setPrintingOrder(tempOrder);
 
                         // Wait for the ViewShot to be ready
-                        await new Promise(resolve => setTimeout(resolve, 10000));
+                        await new Promise(resolve => setTimeout(resolve, 500));
 
                         // Capture and print the label
-                        // const uri = await viewTemShotRef.current.capture();
-                        // const imageInfo = await Image.getSize(uri);
-                        // const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                        // await labelPrinterRef.current.tsplPrintBitmap(
-                        //     Number(labelPrinterInfo.sWidth),
-                        //     Number(labelPrinterInfo.sHeight),
-                        //     base64,
-                        //     imageInfo.width
-                        // );
+                        const uri = await viewTemShotRef.current.capture();
+                        const imageInfo = await Image.getSize(uri);
+                        const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
+                        await labelPrinterRef.current.tsplPrintBitmap(
+                            Number(labelPrinterInfo.sWidth),
+                            Number(labelPrinterInfo.sHeight),
+                            base64,
+                            imageInfo.width
+                        );
 
                         // Add a small delay between prints
                         await new Promise(resolve => setTimeout(resolve, 500));
@@ -746,12 +746,12 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                 options={{ format: "jpg", quality: 1.0 }}
                 style={{
                     position: 'absolute',
-                    // left: -9999,
-                    // top: -9999,
+                    left: -9999,
+                    top: -9999,
                     width: printerInfo ? mmToPixels(Number(printerInfo.sWidth) - 2) : mmToPixels(50 - 2),
                     backgroundColor: 'white',
-                    // opacity: 0,
-                    zIndex: 999999,
+                    opacity: 0,
+                    zIndex: -1,
                     pointerEvents: 'none',
                 }}>{printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}</ViewShot>
 

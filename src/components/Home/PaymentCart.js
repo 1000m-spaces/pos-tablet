@@ -319,6 +319,7 @@ const PaymentCart = () => {
 
         return {
           prodid: product.prodid,
+          price: productPrice,
           prodprice: productPrice,
           rate_discount: 0,
           opt1: product.option_item ? product.option_item.id : null,

@@ -6,22 +6,9 @@ import { getOrderChannelsSelector } from 'store/selectors';
 
 // Convert mm to pixels for actual label printer output
 const mmToPixels = (mm, dpi = 72) => {
-    // For actual label printers, use a configurable DPI
-    // Most thermal label printers work at 203 DPI (8 dots/mm) or similar
-    // But for React Native printing, we can adjust based on user preferences
-
-    // Use configurable DPI from printer settings
     const LABEL_PRINTER_DPI = dpi; // Configurable DPI for actual printing
-
     const pixelValue = Math.round((mm * LABEL_PRINTER_DPI) / 25.4);
-    console.log(`mmToPixels: ${mm}mm -> ${pixelValue}px (using ${LABEL_PRINTER_DPI} DPI for label printer)`);
-
     return pixelValue;
-};
-
-// Convert px to dp
-const pxToDp = (px) => {
-    return px / PixelRatio.get();
 };
 
 // Calculate font size optimized for label printing
@@ -225,6 +212,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
     // Use decals array if available, otherwise fall back to itemInfo structure
     const itemsToRender = orderPrint?.decals || (orderPrint?.itemInfo?.items ?
         orderPrint.itemInfo.items.map((item, idx) => ({
+            ...item,
             item_name: item.name,
             stringName: item.modifierGroups?.flatMap(mg =>
                 mg.modifiers?.map(m => m.modifierName) || []
@@ -233,13 +221,14 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             extrastring: '',
             note_prod: item.comment || '',
             amount: item.quantity || 1,
-            itemIdx: idx,
-            totalItems: orderPrint.itemInfo.items.length
         })) : []);
 
     const getOrderTypeText = (order) => {
-        var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id) || { name_vn: 'Mang đi', name: 'Mang đi' }
-        return orderType?.name_vn || orderType?.name || 'Mang đi';
+        if (order.chanel_type_id) {
+            var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id) || { name_vn: 'Mang đi', name: 'Mang đi' }
+            return orderType?.name_vn || orderType?.name || 'Mang đi';
+        }
+        return order.service;
     };
 
     // Helper function to format price
@@ -265,7 +254,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                             /{orderPrint.table || '——'}
                         </Text>
                         <Text style={styles.pageCounter}>
-                            ({index + 1}/{itemsToRender.length})
+                            ({item.itemIdx}/{item.totalItems})
                         </Text>
                     </View>
 
@@ -310,7 +299,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                                 }) : ''}
                             </Text>
                             <Text style={styles.priceText}>
-                                {formatPrice(item.price || item.priceDisplay)}
+                                {formatPrice(item.price || item.priceDisplay || item.fare?.priceDisplay)}
                             </Text>
                         </View>
                     </View>
