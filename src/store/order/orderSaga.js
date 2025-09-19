@@ -5,6 +5,7 @@ import orderController from './orderController';
 // import {confirmOtpReset, loginPhoneReset, sendPhoneReset} from './authAction';
 import { asyncStorage } from 'store/index';
 import AsyncStorage from 'store/async_storage';
+import { syncPendingOrdersAction } from 'store/actions';
 
 function* createOrderSaga({ payload }) {
   // try {
@@ -91,11 +92,14 @@ function* createOrderSaga({ payload }) {
   // }
   // } catch (e) {
   // console.log('API call exception:', e);
+  yield put({
+    type: NEOCAFE.CREATE_ORDER_SUCCESS,
+  });
 
   // Save failed order to local storage for retry (consolidate error handling here)
   console.log('payloaDDDDDDDDDDDD:', payload);
   try {
-    const failedOrder = {
+    const orderForHistory = {
       ...payload,
       syncStatus: 'pending',
       error_reason: '',
@@ -104,9 +108,9 @@ function* createOrderSaga({ payload }) {
       updated_at: new Date().toISOString()
     };
 
-    yield call(AsyncStorage.setLastOrder, failedOrder);
-    yield call(AsyncStorage.addPendingOrder, failedOrder);
-    console.log('Failed order saved to local storage for retry due to exception:', failedOrder);
+    yield call(AsyncStorage.setLastOrder, orderForHistory);
+    yield call(AsyncStorage.addPendingOrder, orderForHistory);
+    console.log('order saved to local storage:', failedOrder);
   } catch (storageError) {
     console.log('Error saving failed order to local storage:', storageError);
   }
@@ -207,6 +211,14 @@ function* getOrderPaidSuccessSaga({ payload }) {
   try {
     const result = yield call(orderController.getOrderPaidSuccess, payload);
     if (result && result.success) {
+      console.log('AAAAAAAAAAA:', result)
+      const pendingOrders = yield call(AsyncStorage.getPendingOrders);
+      const pendingItems = pendingOrders.filter(item => item.syncStatus === "pending");
+      const dataSynced = [...pendingItems, ...result.data.data];
+      console.log('dataSynced:', dataSynced)
+      console.log('BBBBBBBBBBBBBB:', pendingItems, result.data)
+      yield call(AsyncStorage.setPendingOrders, dataSynced);
+      put(syncPendingOrdersAction());
       yield put({
         type: NEOCAFE.GET_ORDER_PAID_SUCCESS_SUCCESS,
         payload: result.data,
@@ -215,6 +227,7 @@ function* getOrderPaidSuccessSaga({ payload }) {
       yield put({ type: NEOCAFE.GET_ORDER_PAID_SUCCESS_ERROR });
     }
   } catch (error) {
+    console.log('error:', error)
     yield put({ type: NEOCAFE.GET_ORDER_PAID_SUCCESS_ERROR });
   }
 }

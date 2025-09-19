@@ -36,6 +36,7 @@ import printingService from '../../services/PrintingService';
 import ViewShot from 'react-native-view-shot';
 import PrintTemplate from '../Order/TemTemplate';
 import BillTemplate from '../Order/BillTemplate';
+import Toast from 'react-native-toast-message';
 
 // Helper functions for printing dimensions
 const { width, height } = Dimensions.get("window");
@@ -152,6 +153,7 @@ const PaymentCart = () => {
 
   // Monitor order creation status and trigger auto-printing on success
   useEffect(() => {
+    console.log('KKKKKKKKsStatusCreateOrder or isOrderDataSaved changed:', isStatusCreateOrder, isOrderDataSaved);
     const handleOrderSuccess = async () => {
       if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
         console.log('Order created successfully, starting auto print...');
@@ -417,7 +419,22 @@ const PaymentCart = () => {
       setIsOrderDataSaved(orderData); // Save order data to state for retry if needed
       dispatch(createOrder(orderData));
       console.log('Order dispatched for processing:', orderData);
-      setIsModalOrderStatus(true);
+      // setIsModalOrderStatus(true);
+      Toast.show({
+        type: 'success',
+        text1: 'Đơn hàng hoàn tất',
+        position: 'bottom',
+      });
+      dispatch(setOrderAction({
+        take_away: false,
+        products: [],
+        applied_products: [],
+        table: '',
+        tableId: '',
+        note: '',
+        delivery: null,
+        orderType: null,
+      }));
     } catch (error) {
       console.error('Error processing payment:', error);
       Alert.alert('Lỗi', 'Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.');
@@ -439,19 +456,19 @@ const PaymentCart = () => {
     })();
   }, [isStatusCreateOrder]);
 
-  const onCancelModalOrderStatus = () => {
-    dispatch(setOrderAction({
-      take_away: false,
-      products: [],
-      applied_products: [],
-      table: '',
-      tableId: '',
-      note: '',
-      delivery: null,
-      orderType: null,
-    }));
-    setIsModalOrderStatus(false);
-  };
+  // const onCancelModalOrderStatus = () => {
+  //   dispatch(setOrderAction({
+  //     take_away: false,
+  //     products: [],
+  //     applied_products: [],
+  //     table: '',
+  //     tableId: '',
+  //     note: '',
+  //     delivery: null,
+  //     orderType: null,
+  //   }));
+  //   setIsModalOrderStatus(false);
+  // };
 
   const onSelectPaymentMethod = (method) => {
     setSelectedPaymentMethod(method);
@@ -568,12 +585,12 @@ const PaymentCart = () => {
           />
         )}
       </Modal>
-      <ConfirmationModal isOpen={isModalOrderStatus} isWarning={true}
+      {/* <ConfirmationModal isOpen={isModalOrderStatus} isWarning={true}
         title={'       Thành công \n Đơn hàng hoàn tất'}
         onCancel={() => onCancelModalOrderStatus()}
       >
         <Svg name={'success'} size={80} style={{ alignSelf: 'center', marginBottom: 20 }} />
-      </ConfirmationModal>
+      </ConfirmationModal> */}
 
       {/* Auto Print Loading Modal */}
       <Modal

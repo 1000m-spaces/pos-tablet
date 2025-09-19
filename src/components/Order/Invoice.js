@@ -9,7 +9,7 @@ import { TextNormal } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
 import { syncPendingOrdersAction } from 'store/sync/syncAction';
 import { getPendingSyncLoadingSelector, getPendingSyncErrorSelector } from 'store/sync/syncSelector';
-import { confirmOrderOnline } from 'store/order/orderAction';
+import { confirmOrderOnline, getOrderPaidSuccess } from 'store/order/orderAction';
 import { confirmOrderOnlineStatusSelector } from 'store/order/orderSelector';
 import { useIsFocused } from '@react-navigation/native';
 import FilterRow from './FilterRow';
@@ -49,6 +49,7 @@ const Invoice = () => {
         setIsLoading(true);
         try {
             const pendingOrders = await AsyncStorage.getPendingOrders();
+            console.log('PendingOrders Data:', pendingOrders)
             const printedLabelsData = await AsyncStorage.getPrintedLabels();
             const blockedTablesData = await AsyncStorage.getBlockedTables();
 
@@ -122,12 +123,25 @@ const Invoice = () => {
     }, [isFocused, fetchOfflineOrders]);
 
     const handleSyncOfflineOrders = () => {
-        dispatch(syncPendingOrdersAction());
+        fetchDataOrderSuccess();
+        setTimeout(() => {
+            fetchOfflineOrders();
+        }, 2000);
+        // dispatch(syncPendingOrdersAction());
         Toast.show({
             type: 'info',
             text1: 'Đang đồng bộ đơn offline...',
             position: 'bottom',
         });
+    };
+
+    //get data order paid success on pos
+    const fetchDataOrderSuccess = async () => {
+        const user = await AsyncStorage.getUser();
+        await dispatch(getOrderPaidSuccess({
+            rest_id: user?.shops?.id,
+            is_online: 0
+        }));
     };
 
     const handleConfirmOrder = (orderId) => {
@@ -184,6 +198,7 @@ const Invoice = () => {
             });
         }
     }, [confirmOrderStatus, fetchOfflineOrders]);
+
 
     return (
         <>
