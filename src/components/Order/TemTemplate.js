@@ -39,11 +39,11 @@ const getDefaultSettings = (dpi = 72) => ({
     height: mmToPixels(30 - 4, dpi), // 30mm
     fontSize: {
         storeName: calculateDynamicFontSize(16),
-        orderNumber: calculateDynamicFontSize(18),
-        tableInfo: calculateDynamicFontSize(16),
+        orderNumber: calculateDynamicFontSize(16),
+        tableInfo: calculateDynamicFontSize(14),
         dateTime: calculateDynamicFontSize(8),
         priceText: calculateDynamicFontSize(8),
-        pageCounter: calculateDynamicFontSize(16),
+        pageCounter: calculateDynamicFontSize(14),
         itemName: calculateDynamicFontSize(16),
         modifier: calculateDynamicFontSize(14),
         note: calculateDynamicFontSize(14),
@@ -70,11 +70,11 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                         dpi: dpi,
                         fontSize: {
                             storeName: calculateDynamicFontSize(printerInfo.labelStoreName || 16),
-                            orderNumber: calculateDynamicFontSize(printerInfo.labelOrderNumber || 18),
-                            tableInfo: calculateDynamicFontSize(printerInfo.labelTableInfo || 16),
-                            dateTime: calculateDynamicFontSize(printerInfo.labelDateTime || 6),
+                            orderNumber: calculateDynamicFontSize(printerInfo.labelOrderNumber || 16),
+                            tableInfo: calculateDynamicFontSize(10),
+                            dateTime: calculateDynamicFontSize(printerInfo.labelDateTime || 8),
                             priceText: calculateDynamicFontSize(printerInfo.labelPriceText || 8),
-                            pageCounter: calculateDynamicFontSize(printerInfo.labelPageCounter || 16),
+                            pageCounter: calculateDynamicFontSize(printerInfo.labelPageCounter || 10),
                             itemName: calculateDynamicFontSize(printerInfo.labelItemName || 16),
                             modifier: calculateDynamicFontSize(printerInfo.labelModifier || 14),
                             note: calculateDynamicFontSize(printerInfo.labelNote || 14),
@@ -138,6 +138,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             fontSize: config.fontSize.pageCounter,
             fontWeight: '700',
             color: '#000',
+            marginLeft: 4,
         },
         spacerFlex: {
             flex: 1,
@@ -200,13 +201,14 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             maxWidth: config.width,
         },
         additionalOrderId: {
+            flex: 1,
             fontSize: config.fontSize.channelInfo,
             fontWeight: '700',
             color: '#000',
             textAlign: 'left',
         },
         dateTime: {
-            flex: 1,
+            flex: 1.5,
             fontSize: config.fontSize.dateTime,
             color: '#000',
             textAlign: 'center',
@@ -258,10 +260,10 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                         <Text style={styles.orderNumber}>
                             #{orderPrint.bill_id || orderPrint.displayID}
                         </Text>
+                        <View style={styles.spacerFlex} />
                         <Text style={styles.tableInfo}>
                             /{orderPrint.table || '——'}
                         </Text>
-                        <View style={styles.spacerFlex} />
                         <Text style={styles.pageCounter}>
                             ({index + 1}/{itemsToRender.length})
                         </Text>
@@ -269,7 +271,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
                     {/* Item Name */}
                     <View style={styles.itemNameSection}>
-                        <Text style={styles.itemName} numberOfLines={3}>
+                        <Text style={styles.itemName} numberOfLines={2} ellipsizeMode="tail">
                             {item.item_name}
                         </Text>
                     </View>
