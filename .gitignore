@@ -77,3 +77,6 @@ package-lock.json
 ios/tmp.xcconfig
 .cxx
 release/
+
+# Generated build info (will be regenerated at build time)
+src/generated/

@@ -72,6 +72,34 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+/**
+ * Generate version info at build time
+ */
+def generateBuildInfo() {
+    def rootDir = project.rootDir.parent
+    def command = ["node", "${rootDir}/scripts/generate-build-info.js"]
+    def proc = command.execute(null, file(rootDir))
+    proc.waitFor()
+    return proc.text
+}
+
+def getVersionCode() {
+    // Use current timestamp as version code to ensure it's always increasing
+    return (int)(System.currentTimeMillis() / 1000)
+}
+
+def getVersionName() {
+    // Generate build info and extract version name
+    def buildInfoOutput = generateBuildInfo()
+    def versionNameLine = buildInfoOutput.split('\n').find { it.startsWith('ANDROID_VERSION_NAME=') }
+    if (versionNameLine) {
+        return versionNameLine.split('=')[1]
+    }
+    // Fallback to package.json version
+    def packageJson = new groovy.json.JsonSlurper().parseText(file("${project.rootDir.parent}/package.json").text)
+    return packageJson.version
+}
+
 
 project.ext.envConfigFiles = [
     debug: ".env.dev",
@@ -90,8 +118,8 @@ android {
         applicationId "com.postablet"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        versionCode getVersionCode()
+        versionName getVersionName()
     }
     signingConfigs {
         debug {
