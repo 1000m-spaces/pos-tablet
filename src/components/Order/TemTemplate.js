@@ -274,31 +274,19 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                         </Text>
                     </View>
 
-                    {/* Modifiers/Options */}
-                    {(item.stringName || item.option || item.extrastring) && (
+                    {/* Modifiers/Options/Notes */}
+                    {(item.stringName || item.option || item.extrastring || item.note_prod || orderPrint.note) && (
                         <View style={styles.modifierSection}>
-                            <Text style={styles.modifierText} numberOfLines={3}>
-                                {[item.stringName, item.option, item.extrastring]
+                            <Text style={styles.modifierText} numberOfLines={2} ellipsizeMode="tail">
+                                {[
+                                    item.stringName,
+                                    item.option,
+                                    item.extrastring,
+                                    item.note_prod && item.note_prod.trim() !== '' ? `* ${item.note_prod}` : null,
+                                    orderPrint.note && orderPrint.note.trim() !== '' ? `** ${orderPrint.note}` : null
+                                ]
                                     .filter(text => text && text.trim() !== '')
                                     .join(' / ')}
-                            </Text>
-                        </View>
-                    )}
-
-                    {/* Item Note */}
-                    {item.note_prod && item.note_prod.trim() !== '' && (
-                        <View style={styles.itemNoteSection}>
-                            <Text style={styles.itemNoteText} numberOfLines={2}>
-                                * {item.note_prod}
-                            </Text>
-                        </View>
-                    )}
-
-                    {/* Order Note */}
-                    {orderPrint.note && orderPrint.note.trim() !== '' && (
-                        <View style={styles.orderNoteSection}>
-                            <Text style={styles.orderNoteText} numberOfLines={2}>
-                                ** {orderPrint.note}
                             </Text>
                         </View>
                     )}
