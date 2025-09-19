@@ -585,12 +585,6 @@ const PaymentCart = () => {
           />
         )}
       </Modal>
-      {/* <ConfirmationModal isOpen={isModalOrderStatus} isWarning={true}
-        title={'       Thành công \n Đơn hàng hoàn tất'}
-        onCancel={() => onCancelModalOrderStatus()}
-      >
-        <Svg name={'success'} size={80} style={{ alignSelf: 'center', marginBottom: 20 }} />
-      </ConfirmationModal> */}
 
       {/* Auto Print Loading Modal */}
       <Modal
