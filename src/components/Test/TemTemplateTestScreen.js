@@ -65,8 +65,190 @@ const TemTemplateTestScreen = () => {
 
     // State for UI controls
     const [showModifiers, setShowModifiers] = useState(true);
-    const [showNotes, setShowNotes] = useState(true);
+    const [jsonInput, setJsonInput] = useState('');
+    const [jsonError, setJsonError] = useState('');
     const [showShippingAddress, setShowShippingAddress] = useState(false);
+
+    // Sample JSON objects
+    const sampleJsonObjects = [
+        {
+            title: "Online Order (Object 1)",
+            json: `{
+    "displayID": "2660658",
+    "state": "ORDER_CREATED",
+    "orderValue": "39.000",
+    "itemInfo": {
+        "items": [
+            {
+                "name": "Trà Trái Cây",
+                "quantity": 1,
+                "comment": "",
+                "modifierGroups": [
+                    {
+                        "modifierGroupName": "Nhiệt độ",
+                        "modifiers": [
+                            {
+                                "modifierName": "Đá chung",
+                                "modifierPrice": "0"
+                            }
+                        ]
+                    }
+                ],
+                "fare": {
+                    "priceDisplay": "55.000",
+                    "currencySymbol": "₫"
+                }
+            },
+            {
+                "name": "Bơ Già Dừa Non",
+                "quantity": 1,
+                "comment": "",
+                "modifierGroups": [],
+                "fare": {
+                    "priceDisplay": "59.000",
+                    "currencySymbol": "₫"
+                }
+            }
+        ]
+    },
+    "eater": {
+        "name": "Đơn hàng Online-Shipping",
+        "mobileNumber": "+84898480926",
+        "comment": "",
+        "address": {
+            "address": ""
+        }
+    },
+    "service": "APP",
+    "source": "app_order"
+}`
+        },
+        {
+            title: "Offline Order (Object 2)",
+            json: `{
+    "subPrice": 276000,
+    "svFee": "0",
+    "svFee_amount": 0,
+    "shopTableid": "28685",
+    "shopTableName": "Bàn 15",
+    "orderNote": "",
+    "products": [
+        {
+            "prodid": 7849,
+            "price": 59000,
+            "prodprice": 59000,
+            "rate_discount": 0,
+            "opt1": 757,
+            "opt2": null,
+            "opt3": null,
+            "option": [
+                {
+                    "optdetailid": 757,
+                    "optdetailname": "100% ngọt",
+                    "stat": 1
+                }
+            ],
+            "extras": [
+                {
+                    "id": 7883,
+                    "quantity": 1,
+                    "name": "Đá chung",
+                    "idcha": 0,
+                    "isExtra": 1,
+                    "price": 0,
+                    "amount": 0,
+                    "group_extra_id": 4,
+                    "group_extra_name": "Nhiệt độ",
+                    "group_type": 1
+                },
+                {
+                    "id": 7939,
+                    "quantity": 1,
+                    "name": "Trân châu Hồng Sen + Trà Xanh",
+                    "idcha": 0,
+                    "isExtra": 1,
+                    "price": 10000,
+                    "amount": 10000,
+                    "group_extra_id": 6,
+                    "group_extra_name": "Topping (không áp dụng cho voucher đồng giá)",
+                    "group_type": 0
+                }
+            ],
+            "name": "Shan Vàng Kiều Mạch - 1000M Đổ Đèo",
+            "amount": 276000,
+            "note": "tesssss",
+            "typeOrder": "Tại quầy",
+            "quanlity": 4
+        }
+    ],
+    "cust_id": 0,
+    "transType": "41",
+    "chanel_type_id": "1",
+    "phuthu": 0,
+    "total_amount": 276000,
+    "fix_discount": 0,
+    "perDiscount": 0,
+    "session": "M-0001",
+    "offlineOrderId": "M-0001",
+    "offline_code": "M-0001",
+    "shopid": "248",
+    "userid": "1780",
+    "roleid": "4",
+    "timestamp": "2025-09-21T14:43:22.779Z",
+    "status": "pending",
+    "orderStatus": "Paymented",
+    "tableId": "28685",
+    "created_at": "2025-09-21T14:43:22.779Z",
+    "syncStatus": "synced",
+    "error_reason": "",
+    "failed_at": "2025-09-21T14:43:22.884Z",
+    "retry_count": 0,
+    "updated_at": "2025-09-21T14:43:32.050Z",
+    "synced_at": "2025-09-21T14:43:32.050Z",
+    "printStatus": "not_printed",
+    "displayID": "M-0001",
+    "orderValue": 276000,
+    "itemInfo": {
+        "items": [
+            {
+                "name": "Shan Vàng Kiều Mạch - 1000M Đổ Đèo",
+                "quantity": 4,
+                "fare": {
+                    "priceDisplay": "59.000",
+                    "currencySymbol": "₫"
+                },
+                "comment": "tesssss",
+                "modifierGroups": [
+                    {
+                        "modifierGroupName": "Nhiệt độ",
+                        "modifiers": [
+                            {
+                                "modifierName": "Đá chung",
+                                "price": 0
+                            }
+                        ]
+                    },
+                    {
+                        "modifierGroupName": "Topping (không áp dụng cho voucher đồng giá)",
+                        "modifiers": [
+                            {
+                                "modifierName": "Trân châu Hồng Sen + Trà Xanh",
+                                "price": 10000
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "customerInfo": {
+        "name": "Bàn 15"
+    },
+    "serviceType": "offline",
+    "tableName": "Bàn 15"
+}`
+        }
+    ];
 
     // Predefined test scenarios
     const testScenarios = [
@@ -138,6 +320,147 @@ const TemTemplateTestScreen = () => {
         setOrderData(prev => ({ ...prev, [field]: value }));
     };
 
+    // JSON parsing and normalization functions
+    const parsePrice = (priceStr) => {
+        if (typeof priceStr === 'number') return priceStr;
+        if (typeof priceStr === 'string') {
+            return parseInt(priceStr.replace(/[.,]/g, '')) || 0;
+        }
+        return 0;
+    };
+
+    const normalizeJsonToOrderData = (jsonObj) => {
+        let normalizedData = {
+            displayID: jsonObj.displayID || jsonObj.session,
+            session: jsonObj.session || jsonObj.displayID,
+            tableName: jsonObj.tableName || jsonObj.shopTableName || (jsonObj.customerInfo?.name),
+            createdAt: jsonObj.created_at || jsonObj.timestamp || new Date().toISOString(),
+            orderNote: jsonObj.orderNote || jsonObj.eater?.comment || "",
+            staff: "System Staff",
+            paymentMethod: "Tiền mặt",
+            service: jsonObj.service || jsonObj.serviceType || "POS",
+            shippingAddress: jsonObj.eater?.address?.address || "",
+            itemInfo: { items: [] }
+        };
+
+        // Handle different JSON structures
+        let items = [];
+
+        // Structure 1: Has itemInfo.items directly (online orders)
+        if (jsonObj.itemInfo?.items) {
+            items = jsonObj.itemInfo.items.map(item => {
+                const price = item.fare ? parsePrice(item.fare.priceDisplay) : parsePrice(item.price);
+                return {
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: price,
+                    note: item.comment || item.note || "",
+                    modifierGroups: item.modifierGroups?.map(group => ({
+                        modifierGroupName: group.modifierGroupName,
+                        modifiers: group.modifiers?.map(modifier => ({
+                            modifierName: modifier.modifierName,
+                            price: parsePrice(modifier.modifierPrice || modifier.price || 0)
+                        })) || []
+                    })) || []
+                };
+            });
+        }
+
+        // Structure 2: Has products array (offline orders)
+        else if (jsonObj.products) {
+            items = jsonObj.products.map(product => {
+                const modifierGroups = [];
+
+                // Handle extras as modifier groups
+                if (product.extras?.length > 0) {
+                    const groupedExtras = {};
+                    product.extras.forEach(extra => {
+                        if (!groupedExtras[extra.group_extra_name]) {
+                            groupedExtras[extra.group_extra_name] = [];
+                        }
+                        groupedExtras[extra.group_extra_name].push({
+                            modifierName: extra.name,
+                            price: extra.price || 0
+                        });
+                    });
+
+                    Object.keys(groupedExtras).forEach(groupName => {
+                        modifierGroups.push({
+                            modifierGroupName: groupName,
+                            modifiers: groupedExtras[groupName]
+                        });
+                    });
+                }
+
+                return {
+                    name: product.name,
+                    quantity: product.quanlity || product.quantity || 1,
+                    price: product.prodprice || product.price || 0,
+                    note: product.note || "",
+                    modifierGroups: modifierGroups
+                };
+            });
+        }
+
+        normalizedData.itemInfo.items = items;
+
+        // Calculate totals
+        const totalAmount = items.reduce((sum, item) => {
+            const itemTotal = (item.price * item.quantity);
+            const modifierTotal = item.modifierGroups?.reduce((modSum, group) =>
+                modSum + (group.modifiers?.reduce((modGroupSum, mod) =>
+                    modGroupSum + (mod.price || 0), 0) || 0), 0) || 0;
+            return sum + itemTotal + (modifierTotal * item.quantity);
+        }, 0);
+
+        normalizedData.total_amount = jsonObj.total_amount || jsonObj.orderValue ? parsePrice(jsonObj.orderValue) : totalAmount;
+        normalizedData.orderValue = normalizedData.total_amount;
+
+        // Set service info based on JSON structure
+        if (jsonObj.eater?.name) {
+            normalizedData.service = jsonObj.service === "APP" ? "Delivery" : "POS";
+            if (jsonObj.eater.address?.address) {
+                normalizedData.shippingAddress = jsonObj.eater.address.address;
+            }
+        }
+
+        return normalizedData;
+    };
+
+    const loadJsonData = () => {
+        setJsonError('');
+        if (!jsonInput.trim()) {
+            setJsonError('Please enter JSON data');
+            return;
+        }
+
+        try {
+            const jsonObj = JSON.parse(jsonInput);
+            const normalizedData = normalizeJsonToOrderData(jsonObj);
+            setOrderData(normalizedData);
+            console.log('Loaded JSON Data:', normalizedData);
+        } catch (error) {
+            setJsonError('Invalid JSON format: ' + error.message);
+        }
+    };
+
+    const loadSampleJson = (index) => {
+        if (sampleJsonObjects[index]) {
+            const jsonData = sampleJsonObjects[index].json;
+            setJsonInput(jsonData);
+            setJsonError('');
+
+            try {
+                const jsonObj = JSON.parse(jsonData);
+                const normalizedData = normalizeJsonToOrderData(jsonObj);
+                setOrderData(normalizedData);
+                console.log('Loaded Sample JSON Data:', normalizedData);
+            } catch (error) {
+                setJsonError('Invalid JSON format: ' + error.message);
+            }
+        }
+    };
+
     const loadTestScenario = (scenarioIndex) => {
         if (testScenarios[scenarioIndex]) {
             const scenario = testScenarios[scenarioIndex];
@@ -203,6 +526,61 @@ const TemTemplateTestScreen = () => {
                 {/* Left Panel - Controls */}
                 <View style={styles.leftPanel}>
                     <ScrollView showsVerticalScrollIndicator={false}>
+                        {/* JSON Input Section */}
+                        <View style={styles.controlSection}>
+                            <Text style={styles.controlTitle}>JSON Input</Text>
+
+                            {/* Sample JSON buttons */}
+                            <View style={styles.jsonSampleButtons}>
+                                {sampleJsonObjects.map((sample, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={styles.sampleJsonBtn}
+                                        onPress={() => loadSampleJson(index)}
+                                    >
+                                        <Text style={styles.sampleJsonBtnText}>
+                                            {sample.title}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {/* JSON input text area */}
+                            <TextInput
+                                style={styles.jsonTextInput}
+                                multiline={true}
+                                numberOfLines={8}
+                                value={jsonInput}
+                                onChangeText={setJsonInput}
+                                placeholder="Paste your JSON object here..."
+                                placeholderTextColor="#999"
+                            />
+
+                            {/* Load JSON button */}
+                            <TouchableOpacity
+                                style={styles.loadJsonBtn}
+                                onPress={loadJsonData}
+                            >
+                                <Text style={styles.loadJsonBtnText}>Load JSON Data</Text>
+                            </TouchableOpacity>
+
+                            {/* Error display */}
+                            {jsonError ? (
+                                <Text style={styles.jsonError}>{jsonError}</Text>
+                            ) : null}
+
+                            {/* Clear button */}
+                            <TouchableOpacity
+                                style={styles.clearJsonBtn}
+                                onPress={() => {
+                                    setJsonInput('');
+                                    setJsonError('');
+                                }}
+                            >
+                                <Text style={styles.clearJsonBtnText}>Clear JSON</Text>
+                            </TouchableOpacity>
+                        </View>
+
                         {/* Test Scenarios */}
                         <View style={styles.controlSection}>
                             <Text style={styles.controlTitle}>Quick Scenarios</Text>
@@ -476,6 +854,78 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 12,
+    },
+
+    // JSON Input Styles
+    jsonSampleButtons: {
+        flexDirection: 'column',
+        gap: 6,
+        marginBottom: 12,
+    },
+    sampleJsonBtn: {
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        backgroundColor: '#e8f4f8',
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#007AFF',
+    },
+    sampleJsonBtnText: {
+        fontSize: 12,
+        color: '#007AFF',
+        fontWeight: '500',
+        textAlign: 'center',
+    },
+    jsonTextInput: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        fontSize: 12,
+        backgroundColor: '#fff',
+        fontFamily: 'monospace',
+        textAlignVertical: 'top',
+        minHeight: 120,
+        marginBottom: 8,
+    },
+    loadJsonBtn: {
+        backgroundColor: '#007AFF',
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        borderRadius: 6,
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    loadJsonBtnText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    clearJsonBtn: {
+        backgroundColor: '#f8f9fa',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 6,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#dee2e6',
+    },
+    clearJsonBtnText: {
+        color: '#6c757d',
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    jsonError: {
+        color: '#dc3545',
+        fontSize: 12,
+        marginBottom: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        backgroundColor: '#f8d7da',
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: '#f5c6cb',
     },
 
     // Scenario Buttons

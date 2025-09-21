@@ -383,7 +383,6 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             } else if (billPrinterInfo.billConnectionType === 'serial' && !billPrinterInfo.billSerialPort) {
                 throw new Error('Printer settings not configured');
             }
-
             // Set the order for printing
             setPrintingOrder(order || selectedOrder);
 

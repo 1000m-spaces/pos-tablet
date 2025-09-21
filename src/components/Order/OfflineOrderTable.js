@@ -595,7 +595,6 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                 serviceType: 'offline',
                 tableName: order.shopTableName,
             };
-
             // Set the order for printing
             setPrintingOrder(billOrder);
 
