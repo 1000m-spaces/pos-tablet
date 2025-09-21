@@ -6,263 +6,123 @@ import {
     ScrollView,
     TouchableOpacity,
     SafeAreaView,
-    Dimensions
+    Dimensions,
+    TextInput,
+    Switch
 } from 'react-native';
-import TemTemplate from '../Order/TemTemplate';
+import BillTemplate from '../Order/BillTemplate';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const TemTemplateTestScreen = () => {
+    // State for controlling the bill template
     const [selectedScenario, setSelectedScenario] = useState(0);
+    const [orderData, setOrderData] = useState({
+        displayID: "TEST001",
+        session: "TEST001",
+        tableName: "T12",
+        createdAt: new Date().toISOString(),
+        orderNote: "Test order note",
+        staff: "Test Staff",
+        paymentMethod: "Tiền mặt",
+        service: "POS",
+        total_amount: 85000,
+        orderValue: 85000,
+        shippingAddress: "",
+        itemInfo: {
+            items: [
+                {
+                    name: "Cà Phê Sữa Đá",
+                    quantity: 2,
+                    price: 30000,
+                    note: "Ít đường",
+                    modifierGroups: [
+                        {
+                            modifiers: [
+                                { modifierName: "Size L" },
+                                { modifierName: "Đá ít" }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    name: "Bánh Mì Thịt Nướng",
+                    quantity: 1,
+                    price: 25000,
+                    note: "Không hành",
+                    modifierGroups: [
+                        {
+                            modifiers: [
+                                { modifierName: "Extra Mayo" },
+                                { modifierName: "Ít cay" }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    });
 
-    // Mock order data scenarios
-    const mockOrderScenarios = [
+    // State for UI controls
+    const [showModifiers, setShowModifiers] = useState(true);
+    const [showNotes, setShowNotes] = useState(true);
+    const [showShippingAddress, setShowShippingAddress] = useState(false);
+
+    // Predefined test scenarios
+    const testScenarios = [
         {
-            title: "Dine-in Order with Multiple Items",
+            title: "Simple Order",
             data: {
-                bill_id: "ORD001",
                 displayID: "ORD001",
-                table: "T12",
-                chanel_type_id: "dine-in",
-                date: new Date().toISOString(),
-                note: "Extra spicy, no onions",
-                decals: [
-                    {
-                        item_name: "Phở Bò Tái",
-                        stringName: "Large / Extra Beef / Extra Noodles",
-                        option: "Hot",
-                        extrastring: "Special Broth",
-                        note_prod: "Well done meat",
-                        amount: 2,
-                        price: 85000,
-                        itemIdx: 0,
-                        totalItems: 3
-                    },
-                    {
-                        item_name: "Bánh Mì Thịt Nướng",
-                        stringName: "Extra Mayo / No Cilantro",
-                        option: "Toasted",
-                        extrastring: "",
-                        note_prod: "Cut in half",
-                        amount: 1,
-                        price: 25000,
-                        itemIdx: 1,
-                        totalItems: 3
-                    },
-                    {
-                        item_name: "Cà Phê Sữa Đá",
-                        stringName: "Less Ice",
-                        option: "Strong",
-                        extrastring: "Extra Milk",
-                        note_prod: "",
-                        amount: 2,
-                        price: 15000,
-                        itemIdx: 2,
-                        totalItems: 3
-                    }
-                ]
+                tableName: "T12",
+                staff: "John Doe",
+                paymentMethod: "Tiền mặt",
+                service: "POS",
+                orderNote: "Test order",
+                itemInfo: {
+                    items: [
+                        { name: "Cà Phê Đen", quantity: 1, price: 15000 },
+                        { name: "Bánh Mì", quantity: 1, price: 20000 }
+                    ]
+                }
             }
         },
         {
-            title: "Delivery Order - Simple",
+            title: "Complex Order",
             data: {
-                bill_id: "DEL456",
-                displayID: "DEL456",
-                table: "——",
-                chanel_type_id: "delivery",
-                date: new Date().toISOString(),
-                note: "Ring doorbell twice",
-                decals: [
-                    {
-                        item_name: "Gà Rán KFC Style",
-                        stringName: "Original Recipe / 8 pieces",
-                        option: "",
-                        extrastring: "",
-                        note_prod: "Extra crispy",
-                        amount: 1,
-                        price: 120000,
-                        itemIdx: 0,
-                        totalItems: 2
-                    },
-                    {
-                        item_name: "Pepsi Cola",
-                        stringName: "Large",
-                        option: "Cold",
-                        extrastring: "",
-                        note_prod: "",
-                        amount: 2,
-                        price: 12000,
-                        itemIdx: 1,
-                        totalItems: 2
-                    }
-                ]
-            }
-        },
-        {
-            title: "Take-away Order - Complex Modifiers",
-            data: {
-                bill_id: "TO789",
-                displayID: "TO789",
-                table: "Counter",
-                chanel_type_id: "offline",
-                date: new Date().toISOString(),
-                note: "",
-                decals: [
-                    {
-                        item_name: "Pizza Margherita Supreme Ultra Deluxe With Extra Cheese",
-                        stringName: "Medium / Extra Cheese / Thin Crust / Mushrooms / Bell Peppers / Olives",
-                        option: "Half Spicy",
-                        extrastring: "No Garlic / Extra Sauce",
-                        note_prod: "Cut into 8 slices, well done crust, extra hot",
-                        amount: 1,
-                        price: 189000,
-                        itemIdx: 0,
-                        totalItems: 1
-                    }
-                ]
-            }
-        },
-        {
-            title: "Group Order - Many Items",
-            data: {
-                bill_id: "GRP123",
-                displayID: "GRP123",
-                table: "T08",
-                chanel_type_id: "dine-in",
-                date: new Date().toISOString(),
-                note: "Birthday celebration table",
-                decals: [
-                    {
-                        item_name: "Steak Wagyu A5",
-                        stringName: "Medium Rare / Garlic Butter",
-                        option: "Premium Cut",
-                        extrastring: "Side Vegetables",
-                        note_prod: "Birthday special",
-                        amount: 1,
-                        price: 450000,
-                        itemIdx: 0,
-                        totalItems: 6
-                    },
-                    {
-                        item_name: "Lobster Thermidor",
-                        stringName: "Grilled / Cheese Topping",
-                        option: "",
-                        extrastring: "",
-                        note_prod: "",
-                        amount: 2,
-                        price: 380000,
-                        itemIdx: 1,
-                        totalItems: 6
-                    },
-                    {
-                        item_name: "Wine Bordeaux Red",
-                        stringName: "Vintage 2018 / Decanted",
-                        option: "Room Temperature",
-                        extrastring: "",
-                        note_prod: "For celebration",
-                        amount: 1,
-                        price: 890000,
-                        itemIdx: 2,
-                        totalItems: 6
-                    },
-                    {
-                        item_name: "Caesar Salad",
-                        stringName: "Large / Extra Croutons / Parmesan",
-                        option: "Fresh",
-                        extrastring: "Chicken Strips",
-                        note_prod: "",
-                        amount: 3,
-                        price: 65000,
-                        itemIdx: 3,
-                        totalItems: 6
-                    },
-                    {
-                        item_name: "Tiramisu Cake",
-                        stringName: "Slice / Extra Cream",
-                        option: "Chilled",
-                        extrastring: "Birthday Candle",
-                        note_prod: "With sparkler",
-                        amount: 1,
-                        price: 75000,
-                        itemIdx: 4,
-                        totalItems: 6
-                    },
-                    {
-                        item_name: "Espresso Double Shot",
-                        stringName: "Strong / Sugar on Side",
-                        option: "Hot",
-                        extrastring: "",
-                        note_prod: "",
-                        amount: 4,
-                        price: 18000,
-                        itemIdx: 5,
-                        totalItems: 6
-                    }
-                ]
-            }
-        },
-        {
-            title: "Minimal Order - No Modifiers",
-            data: {
-                bill_id: "MIN999",
-                displayID: "MIN999",
-                table: "——",
-                chanel_type_id: "offline",
-                date: new Date().toISOString(),
-                note: "",
-                decals: [
-                    {
-                        item_name: "Water",
-                        stringName: "",
-                        option: "",
-                        extrastring: "",
-                        note_prod: "",
-                        amount: 1,
-                        price: 0,
-                        itemIdx: 0,
-                        totalItems: 1
-                    }
-                ]
-            }
-        },
-        {
-            title: "Legacy Format - itemInfo Structure",
-            data: {
-                bill_id: "LEG555",
-                displayID: "LEG555",
-                table: "T05",
-                chanel_type_id: "dine-in",
-                date: new Date().toISOString(),
-                note: "Old format test",
+                displayID: "ORD002",
+                tableName: "T08",
+                staff: "Jane Smith",
+                paymentMethod: "Chuyển khoản",
+                service: "Delivery",
+                orderNote: "Birthday party order",
+                shippingAddress: "123 Nguyễn Văn Linh, Q7, TP.HCM",
                 itemInfo: {
                     items: [
                         {
-                            name: "Burger Classic",
+                            name: "Pizza Margherita",
                             quantity: 2,
-                            comment: "No pickles",
+                            price: 150000,
+                            note: "Extra cheese",
                             modifierGroups: [
                                 {
                                     modifiers: [
-                                        { modifierName: "Extra Cheese" },
-                                        { modifierName: "Bacon" }
-                                    ]
-                                },
-                                {
-                                    modifiers: [
-                                        { modifierName: "Large Fries" }
+                                        { modifierName: "Large" },
+                                        { modifierName: "Thin crust" },
+                                        { modifierName: "Extra cheese" }
                                     ]
                                 }
                             ]
                         },
                         {
-                            name: "Soft Drink",
-                            quantity: 2,
-                            comment: "",
+                            name: "Coca Cola",
+                            quantity: 4,
+                            price: 12000,
                             modifierGroups: [
                                 {
                                     modifiers: [
-                                        { modifierName: "Coca Cola" },
-                                        { modifierName: "No Ice" }
+                                        { modifierName: "Large" },
+                                        { modifierName: "No ice" }
                                     ]
                                 }
                             ]
@@ -273,65 +133,294 @@ const TemTemplateTestScreen = () => {
         }
     ];
 
-    const currentOrder = mockOrderScenarios[selectedScenario];
+    // Helper functions
+    const updateOrderField = (field, value) => {
+        setOrderData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const loadTestScenario = (scenarioIndex) => {
+        if (testScenarios[scenarioIndex]) {
+            const scenario = testScenarios[scenarioIndex];
+            setOrderData(prev => ({
+                ...prev,
+                ...scenario.data,
+                createdAt: new Date().toISOString(),
+                orderValue: scenario.data.itemInfo.items.reduce((total, item) => total + (item.price * item.quantity), 0),
+                total_amount: scenario.data.itemInfo.items.reduce((total, item) => total + (item.price * item.quantity), 0)
+            }));
+        }
+    };
+
+    const addNewItem = () => {
+        const newItem = {
+            name: "New Item",
+            quantity: 1,
+            price: 10000,
+            note: "",
+            modifierGroups: []
+        };
+        setOrderData(prev => ({
+            ...prev,
+            itemInfo: {
+                ...prev.itemInfo,
+                items: [...prev.itemInfo.items, newItem]
+            }
+        }));
+    };
+
+    const removeItem = (index) => {
+        setOrderData(prev => ({
+            ...prev,
+            itemInfo: {
+                ...prev.itemInfo,
+                items: prev.itemInfo.items.filter((_, i) => i !== index)
+            }
+        }));
+    };
+
+    const updateItem = (index, field, value) => {
+        setOrderData(prev => ({
+            ...prev,
+            itemInfo: {
+                ...prev.itemInfo,
+                items: prev.itemInfo.items.map((item, i) =>
+                    i === index ? { ...item, [field]: value } : item
+                )
+            }
+        }));
+    };
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.title}>TemTemplate Test Screen</Text>
-                <Text style={styles.subtitle}>Testing different order scenarios</Text>
+                <Text style={styles.title}>BillTemplate Test Lab</Text>
+                <Text style={styles.subtitle}>Interactive testing environment</Text>
             </View>
 
-            {/* Scenario Selector */}
-            <View style={styles.scenarioSelector}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {mockOrderScenarios.map((scenario, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={[
-                                styles.scenarioButton,
-                                selectedScenario === index && styles.selectedScenarioButton
-                            ]}
-                            onPress={() => setSelectedScenario(index)}
-                        >
-                            <Text style={[
-                                styles.scenarioButtonText,
-                                selectedScenario === index && styles.selectedScenarioButtonText
-                            ]}>
-                                {scenario.title}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
-            </View>
+            {/* Main Content - Split Layout */}
+            <View style={styles.mainContent}>
+                {/* Left Panel - Controls */}
+                <View style={styles.leftPanel}>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {/* Test Scenarios */}
+                        <View style={styles.controlSection}>
+                            <Text style={styles.controlTitle}>Quick Scenarios</Text>
+                            {testScenarios.map((scenario, index) => (
+                                <TouchableOpacity
+                                    key={index}
+                                    style={[
+                                        styles.scenarioBtn,
+                                        selectedScenario === index && styles.selectedScenarioBtn
+                                    ]}
+                                    onPress={() => {
+                                        setSelectedScenario(index);
+                                        loadTestScenario(index);
+                                    }}
+                                >
+                                    <Text style={[
+                                        styles.scenarioBtnText,
+                                        selectedScenario === index && styles.selectedScenarioBtnText
+                                    ]}>
+                                        {scenario.title}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
 
-            {/* Current Scenario Info */}
-            <View style={styles.scenarioInfo}>
-                <Text style={styles.scenarioTitle}>{currentOrder.title}</Text>
-                <Text style={styles.scenarioDetails}>
-                    Order: {currentOrder.data.bill_id} |
-                    Table: {currentOrder.data.table} |
-                    Items: {currentOrder.data.decals?.length || currentOrder.data.itemInfo?.items?.length || 0}
-                </Text>
-            </View>
+                        {/* Order Information */}
+                        <View style={styles.controlSection}>
+                            <Text style={styles.controlTitle}>Order Information</Text>
 
-            {/* Template Preview */}
-            <ScrollView style={styles.previewContainer}>
-                <View style={styles.templateWrapper}>
-                    <TemTemplate orderPrint={currentOrder.data} />
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Order ID:</Text>
+                                <TextInput
+                                    style={styles.textInput}
+                                    value={orderData.displayID}
+                                    onChangeText={(text) => updateOrderField('displayID', text)}
+                                />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Table:</Text>
+                                <TextInput
+                                    style={styles.textInput}
+                                    value={orderData.tableName}
+                                    onChangeText={(text) => updateOrderField('tableName', text)}
+                                />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Staff:</Text>
+                                <TextInput
+                                    style={styles.textInput}
+                                    value={orderData.staff}
+                                    onChangeText={(text) => updateOrderField('staff', text)}
+                                />
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Payment Method:</Text>
+                                <View style={styles.paymentButtons}>
+                                    {["Tiền mặt", "Chuyển khoản", "Thẻ tín dụng"].map((method) => (
+                                        <TouchableOpacity
+                                            key={method}
+                                            style={[
+                                                styles.paymentBtn,
+                                                orderData.paymentMethod === method && styles.selectedPaymentBtn
+                                            ]}
+                                            onPress={() => updateOrderField('paymentMethod', method)}
+                                        >
+                                            <Text style={[
+                                                styles.paymentBtnText,
+                                                orderData.paymentMethod === method && styles.selectedPaymentBtnText
+                                            ]}>
+                                                {method}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Order Note:</Text>
+                                <TextInput
+                                    style={styles.textInput}
+                                    value={orderData.orderNote}
+                                    onChangeText={(text) => updateOrderField('orderNote', text)}
+                                    placeholder="Enter order note..."
+                                />
+                            </View>
+                        </View>
+
+                        {/* Display Options */}
+                        <View style={styles.controlSection}>
+                            <Text style={styles.controlTitle}>Display Options</Text>
+
+                            <View style={styles.switchGroup}>
+                                <Text style={styles.switchLabel}>Show Shipping Address</Text>
+                                <Switch
+                                    value={showShippingAddress}
+                                    onValueChange={(value) => {
+                                        setShowShippingAddress(value);
+                                        if (value && !orderData.shippingAddress) {
+                                            updateOrderField('shippingAddress', '123 Test Street, District 1, Ho Chi Minh City');
+                                        } else if (!value) {
+                                            updateOrderField('shippingAddress', '');
+                                        }
+                                    }}
+                                />
+                            </View>
+
+                            {showShippingAddress && (
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.inputLabel}>Shipping Address:</Text>
+                                    <TextInput
+                                        style={styles.textInput}
+                                        value={orderData.shippingAddress}
+                                        onChangeText={(text) => updateOrderField('shippingAddress', text)}
+                                        placeholder="Enter shipping address..."
+                                        multiline={true}
+                                        numberOfLines={2}
+                                    />
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Items Management */}
+                        <View style={styles.controlSection}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.controlTitle}>Items ({orderData.itemInfo.items.length})</Text>
+                                <TouchableOpacity
+                                    style={styles.addItemBtn}
+                                    onPress={addNewItem}
+                                >
+                                    <Text style={styles.addItemBtnText}>+ Add</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {orderData.itemInfo.items.map((item, index) => (
+                                <View key={index} style={styles.itemRow}>
+                                    <View style={styles.itemHeader}>
+                                        <TextInput
+                                            style={[styles.textInput, styles.itemNameInput]}
+                                            value={item.name}
+                                            onChangeText={(text) => updateItem(index, 'name', text)}
+                                            placeholder="Item name"
+                                        />
+                                        <TouchableOpacity
+                                            style={styles.removeItemBtn}
+                                            onPress={() => removeItem(index)}
+                                        >
+                                            <Text style={styles.removeItemBtnText}>×</Text>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <View style={styles.itemDetails}>
+                                        <View style={styles.itemDetailRow}>
+                                            <Text style={styles.itemDetailLabel}>Qty:</Text>
+                                            <TextInput
+                                                style={styles.smallInput}
+                                                value={String(item.quantity)}
+                                                onChangeText={(text) => updateItem(index, 'quantity', parseInt(text) || 1)}
+                                                keyboardType="numeric"
+                                            />
+                                            <Text style={styles.itemDetailLabel}>Price:</Text>
+                                            <TextInput
+                                                style={styles.smallInput}
+                                                value={String(item.price)}
+                                                onChangeText={(text) => updateItem(index, 'price', parseInt(text) || 0)}
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
+
+                                        {item.note !== undefined && (
+                                            <TextInput
+                                                style={styles.textInput}
+                                                value={item.note}
+                                                onChangeText={(text) => updateItem(index, 'note', text)}
+                                                placeholder="Item note..."
+                                            />
+                                        )}
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+
+                        {/* Debug */}
+                        <View style={styles.controlSection}>
+                            <TouchableOpacity
+                                style={styles.debugBtn}
+                                onPress={() => {
+                                    console.log('Current Order Data:', JSON.stringify(orderData, null, 2));
+                                }}
+                            >
+                                <Text style={styles.debugBtnText}>Log Order Data</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </ScrollView>
                 </View>
-            </ScrollView>
 
-            {/* Order Data Debug */}
-            <View style={styles.debugSection}>
-                <TouchableOpacity
-                    style={styles.debugToggle}
-                    onPress={() => console.log('Current Order Data:', JSON.stringify(currentOrder.data, null, 2))}
-                >
-                    <Text style={styles.debugText}>
-                        Tap to log order data to console
-                    </Text>
-                </TouchableOpacity>
+                {/* Right Panel - Bill Preview */}
+                <View style={styles.rightPanel}>
+                    <View style={styles.previewHeader}>
+                        <Text style={styles.previewTitle}>Live Preview</Text>
+                        <Text style={styles.previewSubtitle}>
+                            Total: {orderData.itemInfo.items.reduce((total, item) =>
+                                total + (item.price * item.quantity), 0).toLocaleString('vi-VN')}đ
+                        </Text>
+                    </View>
+
+                    <ScrollView
+                        style={styles.previewScrollView}
+                        contentContainerStyle={styles.previewContent}
+                        showsVerticalScrollIndicator={true}
+                    >
+                        <View style={styles.billWrapper}>
+                            <BillTemplate selectedOrder={orderData} />
+                        </View>
+                    </ScrollView>
+                </View>
             </View>
         </SafeAreaView>
     );
@@ -343,7 +432,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#f5f5f5',
     },
     header: {
-        padding: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 15,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
@@ -358,57 +448,225 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#666',
     },
-    scenarioSelector: {
+    mainContent: {
+        flex: 1,
+        flexDirection: 'row',
+    },
+
+    // Left Panel Styles
+    leftPanel: {
+        width: screenWidth * 0.4,
         backgroundColor: '#fff',
-        paddingVertical: 15,
+        borderRightWidth: 1,
+        borderRightColor: '#e0e0e0',
+    },
+    controlSection: {
+        padding: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderBottomColor: '#f0f0f0',
     },
-    scenarioButton: {
-        paddingHorizontal: 15,
+    controlTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 12,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+
+    // Scenario Buttons
+    scenarioBtn: {
         paddingVertical: 8,
-        marginHorizontal: 5,
+        paddingHorizontal: 12,
         backgroundColor: '#f0f0f0',
-        borderRadius: 20,
-        minWidth: 120,
+        borderRadius: 6,
+        marginBottom: 6,
     },
-    selectedScenarioButton: {
+    selectedScenarioBtn: {
         backgroundColor: '#007AFF',
     },
-    scenarioButtonText: {
-        fontSize: 12,
+    scenarioBtnText: {
+        fontSize: 14,
         color: '#333',
-        textAlign: 'center',
         fontWeight: '500',
     },
-    selectedScenarioButtonText: {
+    selectedScenarioBtnText: {
         color: '#fff',
         fontWeight: '600',
     },
-    scenarioInfo: {
+
+    // Input Styles
+    inputGroup: {
+        marginBottom: 12,
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#333',
+        marginBottom: 6,
+    },
+    textInput: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        fontSize: 14,
+        backgroundColor: '#fff',
+    },
+
+    // Payment Method Buttons
+    paymentButtons: {
+        flexDirection: 'column',
+        gap: 6,
+    },
+    paymentBtn: {
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 6,
+        alignItems: 'center',
+    },
+    selectedPaymentBtn: {
+        backgroundColor: '#007AFF',
+    },
+    paymentBtnText: {
+        fontSize: 12,
+        color: '#333',
+        fontWeight: '500',
+    },
+    selectedPaymentBtnText: {
+        color: '#fff',
+    },
+
+    // Switch Styles
+    switchGroup: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    switchLabel: {
+        fontSize: 14,
+        color: '#333',
+        fontWeight: '500',
+    },
+
+    // Item Management
+    addItemBtn: {
+        backgroundColor: '#28a745',
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 6,
+    },
+    addItemBtnText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    itemRow: {
+        backgroundColor: '#f8f9fa',
+        borderRadius: 6,
+        padding: 10,
+        marginBottom: 8,
+    },
+    itemHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    itemNameInput: {
+        flex: 1,
+        marginRight: 8,
+    },
+    removeItemBtn: {
+        backgroundColor: '#dc3545',
+        borderRadius: 4,
+        width: 24,
+        height: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    removeItemBtnText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    itemDetails: {
+        gap: 6,
+    },
+    itemDetailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    itemDetailLabel: {
+        fontSize: 12,
+        color: '#666',
+        fontWeight: '500',
+    },
+    smallInput: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        fontSize: 12,
+        width: 60,
+        backgroundColor: '#fff',
+        textAlign: 'center',
+    },
+
+    // Debug Button
+    debugBtn: {
+        backgroundColor: '#6c757d',
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        borderRadius: 6,
+        alignItems: 'center',
+    },
+    debugBtnText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+
+    // Right Panel Styles
+    rightPanel: {
+        flex: 1,
+        backgroundColor: '#f8f9fa',
+    },
+    previewHeader: {
         padding: 15,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
     },
-    scenarioTitle: {
+    previewTitle: {
         fontSize: 18,
         fontWeight: '600',
         color: '#333',
         marginBottom: 5,
     },
-    scenarioDetails: {
+    previewSubtitle: {
         fontSize: 14,
         color: '#666',
     },
-    previewContainer: {
+    previewScrollView: {
         flex: 1,
-        padding: 20,
     },
-    templateWrapper: {
+    previewContent: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    billWrapper: {
         backgroundColor: '#fff',
         borderRadius: 8,
-        padding: 10,
+        elevation: 3,
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
@@ -416,25 +674,6 @@ const styles = StyleSheet.create({
         },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
-    },
-    debugSection: {
-        padding: 15,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
-    },
-    debugToggle: {
-        padding: 10,
-        backgroundColor: '#f8f9fa',
-        borderRadius: 5,
-        borderWidth: 1,
-        borderColor: '#dee2e6',
-    },
-    debugText: {
-        fontSize: 12,
-        color: '#6c757d',
-        textAlign: 'center',
     },
 });
 

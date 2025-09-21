@@ -32,7 +32,7 @@ const TestAppSelector = () => {
                     onPress={() => setSelectedTest('template')}
                 >
                     <Text style={[styles.buttonText, selectedTest === 'template' && styles.selectedButtonText]}>
-                        Template Test
+                        Template Test Lab
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity

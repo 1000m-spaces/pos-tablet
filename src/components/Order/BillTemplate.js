@@ -179,10 +179,11 @@ const BillTemplate = ({ selectedOrder }) => {
             {/* Header with Logo and Shop Info */}
             <View style={styles.header}>
                 <View style={styles.logoSection}>
-                    {/* Logo would go here - using placeholder */}
-                    <View style={styles.logoPlaceholder}>
-                        <Text style={[styles.logoText, { fontSize: fontSizes.header }]}>LOGO</Text>
-                    </View>
+                    <Image
+                        source={require('../../assets/images/logo_1000m.jpg')}
+                        style={styles.logoImage}
+                        resizeMode="contain"
+                    />
                 </View>
                 <View style={styles.shopInfoSection}>
                     <Text style={[styles.shopName, { fontSize: fontSizes.header }]}>{shopInfo.name}</Text>
@@ -421,6 +422,11 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    logoImage: {
+        width: 80,
+        height: 80,
+        borderRadius: 5,
     },
     logoPlaceholder: {
         width: 80,
