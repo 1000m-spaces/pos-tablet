@@ -23,4 +23,4 @@ const PrinterTestApp = () => (
     </Provider>
 );
 
-AppRegistry.registerComponent(appName, () => App);
+AppRegistry.registerComponent(appName, () => PrinterTestApp);

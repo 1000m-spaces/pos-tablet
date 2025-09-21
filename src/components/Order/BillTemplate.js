@@ -21,10 +21,14 @@ const BillTemplate = ({ selectedOrder }) => {
 
     const [userInfos, setUserInfos] = useState({
         partnerid: '',
-        shopid: ''
+        shopid: '',
+        staffName: 'POS System'
     });
 
     useEffect(() => {
+        AsyncStorage.getUser().then(user => {
+            console.log('Main: User data:', user);
+        });
         const loadBillPrinterSettings = async () => {
             try {
                 const billPrinterInfo = await AsyncStorage.getBillPrinterInfo();
@@ -46,7 +50,8 @@ const BillTemplate = ({ selectedOrder }) => {
                 if (user && user.shops) {
                     setUserInfos({
                         partnerid: user.partnerid || user.shops.partnerid || '',
-                        shopid: user.shopid || user.shops.id || ''
+                        shopid: user.shopid || user.shops.id || '',
+                        staffName: user.username || 'POS System'
                     });
                     // Update shopInfo with user's shop data - following same pattern as Orders.js
                     const shopData = await AsyncStorage.getShopInfo?.() || {};
@@ -61,7 +66,14 @@ const BillTemplate = ({ selectedOrder }) => {
                     console.log('BillTemplate: User shop loaded:', user.shops);
                 } else {
                     console.log('BillTemplate: No user shop data found');
-                    // Fallback if no user data
+                    // If we have user data but no shop data, still set the staff name
+                    if (user && user.username) {
+                        setUserInfos(prevState => ({
+                            ...prevState,
+                            staffName: user.username
+                        }));
+                    }
+                    // Fallback if no user shop data
                     const shopData = await AsyncStorage.getShopInfo?.() || {};
                     setShopInfo({
                         name: shopData.name || 'NEOCAFE',
@@ -213,7 +225,7 @@ const BillTemplate = ({ selectedOrder }) => {
                 <View style={styles.orderDetailsRow}>
                     <View style={styles.orderDetailsLeft}>
                         <Text style={[styles.orderInfoText, { fontSize: fontSizes.content }]}>
-                            Nhân viên: {selectedOrder?.staff || 'POS System'}
+                            Nhân viên: {userInfos.staffName}
                         </Text>
                         <Text style={[styles.orderInfoText, { fontSize: fontSizes.content }]}>
                             HTTT: {selectedOrder?.paymentMethod || 'Tiền mặt'}
@@ -288,28 +300,35 @@ const BillTemplate = ({ selectedOrder }) => {
                                 <Text style={[styles.productText, { fontSize: fontSizes.content }]}>
                                     {item.name}
                                 </Text>
-                                {/* Show modifiers/extras */}
-                                {item.modifierGroups?.map((group, groupIndex) => (
-                                    <View key={groupIndex}>
-                                        {group.modifiers?.map((modifier, modIndex) => (
-                                            <Text key={modIndex} style={[styles.modifierText, { fontSize: fontSizes.content - 2 }]}>
-                                                {modifier.modifierName}
-                                            </Text>
-                                        ))}
-                                    </View>
-                                ))}
-                                {/* Show extras for offline orders */}
-                                {item.extras?.map((extra, extraIndex) => (
-                                    <Text key={extraIndex} style={[styles.modifierText, { fontSize: fontSizes.content - 2 }]}>
-                                        {extra.name}
-                                    </Text>
-                                ))}
-                                {/* Show item note */}
-                                {item.note && item.note.trim() !== '' && (
-                                    <View style={styles.noteContainer}>
-                                        <Text style={[styles.noteText, { fontSize: fontSizes.content - 2 }]}>📝 {item.note}</Text>
-                                    </View>
-                                )}
+                                {/* Show modifiers, extras and notes in one line */}
+                                {(() => {
+                                    const allOptions = [];
+
+                                    // Add modifiers
+                                    if (item.modifierGroups && item.modifierGroups.length > 0) {
+                                        item.modifierGroups.forEach(group => {
+                                            if (group.modifiers && group.modifiers.length > 0) {
+                                                allOptions.push(...group.modifiers.map(modifier => modifier.modifierName));
+                                            }
+                                        });
+                                    }
+
+                                    // Add extras
+                                    if (item.extras && item.extras.length > 0) {
+                                        allOptions.push(...item.extras.map(extra => extra.name));
+                                    }
+
+                                    // Add note
+                                    if (item.note && item.note.trim() !== '') {
+                                        allOptions.push(item.note.trim());
+                                    }
+
+                                    return allOptions.length > 0 && (
+                                        <Text style={[styles.modifierText, { fontSize: fontSizes.content - 2 }]}>
+                                            {allOptions.join(' / ')}
+                                        </Text>
+                                    );
+                                })()}
                             </View>
                             <View style={styles.productPriceColumn}>
                                 <Text style={[styles.productText, { fontSize: fontSizes.content }]}>
