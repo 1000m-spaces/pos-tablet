@@ -297,7 +297,11 @@ const BillTemplate = ({ selectedOrder }) => {
                     return (
                         <View key={index} style={styles.productItem}>
                             <View style={styles.productNameColumn}>
-                                <Text style={[styles.productText, { fontSize: fontSizes.content }]}>
+                                <Text
+                                    style={[styles.productText, { fontSize: fontSizes.content }]}
+                                    numberOfLines={2}
+                                    ellipsizeMode="tail"
+                                >
                                     {item.name}
                                 </Text>
                                 {/* Show modifiers, extras and notes in one line */}
@@ -324,7 +328,11 @@ const BillTemplate = ({ selectedOrder }) => {
                                     }
 
                                     return allOptions.length > 0 && (
-                                        <Text style={[styles.modifierText, { fontSize: fontSizes.content - 2 }]}>
+                                        <Text
+                                            style={[styles.modifierText, { fontSize: fontSizes.content - 2 }]}
+                                            numberOfLines={2}
+                                            ellipsizeMode="tail"
+                                        >
                                             {allOptions.join(' / ')}
                                         </Text>
                                     );
@@ -386,17 +394,17 @@ const BillTemplate = ({ selectedOrder }) => {
             </View>
 
             {/* Dotted Line */}
-            <View style={styles.dottedLine} />
+            {/* <View style={styles.dottedLine} /> */}
 
             {/* WiFi Information */}
-            <View style={styles.wifiSection}>
+            {/* <View style={styles.wifiSection}>
                 <Text style={[styles.wifiText, { fontSize: fontSizes.content }]}>
                     Wifi: {shopInfo.wifi_name}
                 </Text>
                 <Text style={[styles.wifiText, { fontSize: fontSizes.content }]}>
                     Pass: {shopInfo.wifi_pass}
                 </Text>
-            </View>
+            </View> */}
 
             {/* Dotted Line */}
             <View style={styles.dottedLine} />
@@ -562,6 +570,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         paddingVertical: 5,
         alignItems: 'flex-start',
+        minHeight: 45, // Ensure consistent height for each product item
     },
     productNameColumn: {
         flex: 2,
@@ -581,13 +590,14 @@ const styles = StyleSheet.create({
     },
     productText: {
         color: '#333',
-        lineHeight: 20,
+        lineHeight: 18,
     },
     modifierText: {
         color: '#666',
-        marginLeft: 10,
+        marginLeft: 2,
         fontStyle: 'italic',
-        lineHeight: 16,
+        lineHeight: 14,
+        marginTop: 2,
     },
 
     // Totals section styles
