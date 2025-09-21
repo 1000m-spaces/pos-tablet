@@ -1,14 +1,13 @@
 // import {heightDevice, widthDevice} from 'assets/constans';
-import {Dimensions, StyleSheet} from 'react-native';
+import { heightDevice, widthDevice } from 'assets/constans';
+import { Dimensions, StyleSheet } from 'react-native';
 import Colors from 'theme/Colors';
 
-const heightDevice = Dimensions.get('window').height;
-const widthDevice = Dimensions.get('window').width;
 console.log(widthDevice, heightDevice)
 const styles = StyleSheet.create({
-  titleLogin: {marginBottom: 32, fontSize: 40, fontWeight: '600'},
-  logoTea: {position: 'absolute', top: 32, left: 32},
-  hideText: {position: 'absolute', top: 13, right: 16, zIndex: 99},
+  titleLogin: { marginBottom: 32, fontSize: 40, fontWeight: '600' },
+  logoTea: { position: 'absolute', top: 32, left: 32 },
+  hideText: { position: 'absolute', top: 13, right: 16, zIndex: 99 },
   imgBackground: {
     flex: 1,
     justifyContent: 'center',
@@ -25,7 +24,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  textError: {color: Colors.error, textAlign: 'center'},
+  textError: { color: Colors.error, textAlign: 'center' },
   safeView: {
     flex: 1,
   },
@@ -52,8 +51,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     paddingVertical: 20,
   },
-  policyWrapper: {paddingHorizontal: 10, paddingVertical: 10},
-  checkboxSection: {flexDirection: 'row', paddingVertical: 15},
+  policyWrapper: { paddingHorizontal: 10, paddingVertical: 10 },
+  checkboxSection: { flexDirection: 'row', paddingVertical: 15 },
   linkText: {
     fontSize: 14,
     fontWeight: '700',

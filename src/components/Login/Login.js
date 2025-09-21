@@ -11,8 +11,6 @@ import {
 } from 'react-native';
 import CryptoJS from 'crypto-js';
 
-const heightDevice = Dimensions.get('window').height;
-const widthDevice = Dimensions.get('window').width;
 import {
   TextHighLightBold,
   TextNormal,
@@ -26,7 +24,7 @@ import { isErrorSendOtp, isStatusSendPhone } from 'store/selectors';
 
 import Svg from 'common/Svg/Svg';
 import Status from 'common/Status/Status';
-import { background_login } from 'assets/constans';
+import { background_login, heightDevice, widthDevice } from 'assets/constans';
 import Colors from 'theme/Colors';
 import { loginInternal, setScreenAction } from 'store/actions';
 import strings from 'localization/Localization';

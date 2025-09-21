@@ -1,79 +1,72 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, PixelRatio } from 'react-native';
+import { useSelector } from 'react-redux';
 import AsyncStorage from 'store/async_storage/index'
+import { getOrderChannelsSelector } from 'store/selectors';
 
 // Convert mm to pixels for actual label printer output
-const mmToPixels = (mm) => {
-    // For actual label printers, use a much lower and fixed DPI
-    // Most thermal label printers work at 203 DPI (8 dots/mm) or similar
-    // But for React Native printing, we need even lower values to prevent oversized labels
-
-    // Use a conservative fixed DPI that works well with actual printers
-    // This is roughly equivalent to 72-96 DPI but optimized for label printing
-    const LABEL_PRINTER_DPI = 72; // Much more conservative DPI for actual printing
-
+const mmToPixels = (mm, dpi = 72) => {
+    const LABEL_PRINTER_DPI = dpi; // Configurable DPI for actual printing
     const pixelValue = Math.round((mm * LABEL_PRINTER_DPI) / 25.4);
-    console.log(`mmToPixels: ${mm}mm -> ${pixelValue}px (using fixed ${LABEL_PRINTER_DPI} DPI for label printer)`);
-
     return pixelValue;
-};
-
-// Convert px to dp
-const pxToDp = (px) => {
-    return px / PixelRatio.get();
 };
 
 // Calculate font size optimized for label printing
 const calculateDynamicFontSize = (baseSize) => {
     // For label printing, use a much more conservative font scaling
     // Don't rely on screen pixel ratio as it makes labels too large
-    const FONT_SCALE_FACTOR = 0.9; // Reduce font sizes by 40% for label printing
+    const FONT_SCALE_FACTOR = 1; // Reduce font sizes by 40% for label printing
 
-    return Math.max(Math.round(baseSize * FONT_SCALE_FACTOR), 8); // Minimum font size of 8
+    return Math.max(Math.round(baseSize * FONT_SCALE_FACTOR), 5); // Minimum font size of 8
 };
 
-// Default printer settings (50mm x 30mm at 96 DPI)
-const DEFAULT_SETTINGS = {
-    width: mmToPixels(50 - 4), // 50mm
-    height: mmToPixels(30 - 4), // 30mm
+// Default printer settings (50mm x 30mm at default DPI)
+const getDefaultSettings = (dpi = 72) => ({
+    width: mmToPixels(50 - 4, dpi), // 50mm
+    height: mmToPixels(30 - 4, dpi), // 30mm
     fontSize: {
         storeName: calculateDynamicFontSize(16),
-        orderNumber: calculateDynamicFontSize(18),
-        tableInfo: calculateDynamicFontSize(16),
-        dateTime: calculateDynamicFontSize(12),
-        pageCounter: calculateDynamicFontSize(16),
+        orderNumber: calculateDynamicFontSize(16),
+        tableInfo: calculateDynamicFontSize(14),
+        dateTime: calculateDynamicFontSize(8),
+        priceText: calculateDynamicFontSize(8),
+        pageCounter: calculateDynamicFontSize(14),
         itemName: calculateDynamicFontSize(16),
         modifier: calculateDynamicFontSize(14),
         note: calculateDynamicFontSize(14),
         quantity: calculateDynamicFontSize(14),
-        channelInfo: calculateDynamicFontSize(12)
+        channelInfo: calculateDynamicFontSize(8)
     },
     padding: 6,
     margin: 2
-};
+});
 
 const PrintTemplate = ({ orderPrint, settings = {} }) => {
     console.log("orderPrint", orderPrint);
+    const orderChannels = useSelector(state => getOrderChannelsSelector(state));
     const [printerSettings, setPrinterSettings] = useState(null);
     useEffect(() => {
         const loadPrinterSettings = async () => {
             try {
                 const printerInfo = await AsyncStorage.getLabelPrinterInfo();
                 if (printerInfo && printerInfo.sWidth && printerInfo.sHeight) {
+                    const dpi = printerInfo.labelPrinterDPI || 72;
                     setPrinterSettings({
-                        width: mmToPixels(Number(printerInfo.sWidth) - 4),
-                        height: mmToPixels(Number(printerInfo.sHeight) - 4),
+                        width: mmToPixels(Number(printerInfo.sWidth) - 4, dpi),
+                        height: mmToPixels(Number(printerInfo.sHeight) - 4, dpi),
+                        dpi: dpi,
                         fontSize: {
                             storeName: calculateDynamicFontSize(printerInfo.labelStoreName || 16),
-                            orderNumber: calculateDynamicFontSize(printerInfo.labelOrderNumber || 18),
-                            tableInfo: calculateDynamicFontSize(printerInfo.labelTableInfo || 16),
-                            dateTime: calculateDynamicFontSize(printerInfo.labelDateTime || 12),
-                            pageCounter: calculateDynamicFontSize(printerInfo.labelPageCounter || 16),
+                            orderNumber: calculateDynamicFontSize(printerInfo.labelOrderNumber || 16),
+                            tableInfo: calculateDynamicFontSize(10),
+                            dateTime: calculateDynamicFontSize(printerInfo.labelDateTime || 8),
+                            priceText: calculateDynamicFontSize(printerInfo.labelPriceText || 8),
+                            pageCounter: calculateDynamicFontSize(printerInfo.labelPageCounter || 10),
                             itemName: calculateDynamicFontSize(printerInfo.labelItemName || 16),
                             modifier: calculateDynamicFontSize(printerInfo.labelModifier || 14),
                             note: calculateDynamicFontSize(printerInfo.labelNote || 14),
                             quantity: calculateDynamicFontSize(printerInfo.labelQuantity || 14),
-                            channelInfo: calculateDynamicFontSize(printerInfo.labelChannelInfo || 12)
+                            channelInfo: calculateDynamicFontSize(printerInfo.labelChannelInfo || 8)
                         }
                     });
                 }
@@ -84,6 +77,9 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
         loadPrinterSettings();
     }, []);
+
+    // Get default settings with appropriate DPI
+    const DEFAULT_SETTINGS = getDefaultSettings(printerSettings?.dpi || 72);
 
     // Merge default settings with provided settings and printer settings
     const config = {
@@ -129,6 +125,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             fontSize: config.fontSize.pageCounter,
             fontWeight: '700',
             color: '#000',
+            marginLeft: 4,
         },
         spacerFlex: {
             flex: 1,
@@ -188,28 +185,34 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         bottomRow: {
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            maxWidth: config.width,
         },
         additionalOrderId: {
+            flex: 1,
             fontSize: config.fontSize.channelInfo,
             fontWeight: '700',
             color: '#000',
+            textAlign: 'left',
         },
         dateTime: {
+            flex: 1.5,
             fontSize: config.fontSize.dateTime,
             color: '#000',
             textAlign: 'center',
         },
         priceText: {
-            fontSize: config.fontSize.quantity,
+            flex: 1,
+            fontSize: config.fontSize.priceText,
             fontWeight: '700',
             color: '#000',
+            textAlign: 'right',
         },
     });
 
     // Use decals array if available, otherwise fall back to itemInfo structure
     const itemsToRender = orderPrint?.decals || (orderPrint?.itemInfo?.items ?
         orderPrint.itemInfo.items.map((item, idx) => ({
+            ...item,
             item_name: item.name,
             stringName: item.modifierGroups?.flatMap(mg =>
                 mg.modifiers?.map(m => m.modifierName) || []
@@ -218,16 +221,14 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             extrastring: '',
             note_prod: item.comment || '',
             amount: item.quantity || 1,
-            itemIdx: idx,
-            totalItems: orderPrint.itemInfo.items.length
         })) : []);
 
-    // Helper function to get service type display text
-    const getServiceTypeText = (order) => {
-        if (order.serviceType === 'offline') return 'Mang đi';
-        if (order.serviceType === 'delivery') return 'Giao hàng';
-        if (order.serviceType === 'dine-in') return 'Tại chỗ';
-        return 'Mang đi'; // Default
+    const getOrderTypeText = (order) => {
+        if (order.chanel_type_id) {
+            var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id) || { name_vn: 'Mang đi', name: 'Mang đi' }
+            return orderType?.name_vn || orderType?.name || 'Mang đi';
+        }
+        return order.service;
     };
 
     // Helper function to format price
@@ -248,68 +249,46 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                         <Text style={styles.orderNumber}>
                             #{orderPrint.bill_id || orderPrint.displayID}
                         </Text>
+                        <View style={styles.spacerFlex} />
                         <Text style={styles.tableInfo}>
                             /{orderPrint.table || '——'}
                         </Text>
-                        <View style={styles.spacerFlex} />
                         <Text style={styles.pageCounter}>
-                            ({index + 1}/{itemsToRender.length})
+                            ({item.itemIdx}/{item.totalItems})
                         </Text>
                     </View>
 
                     {/* Item Name */}
                     <View style={styles.itemNameSection}>
-                        <Text style={styles.itemName} numberOfLines={3}>
+                        <Text style={styles.itemName} numberOfLines={2} ellipsizeMode="tail">
                             {item.item_name}
                         </Text>
                     </View>
 
-                    {/* Modifiers/Options */}
-                    {(item.stringName || item.option || item.extrastring) && (
+                    {/* Modifiers/Options/Notes */}
+                    {(item.stringName || item.option || item.extrastring || item.note_prod || orderPrint.note) && (
                         <View style={styles.modifierSection}>
-                            <Text style={styles.modifierText} numberOfLines={3}>
-                                {[item.stringName, item.option, item.extrastring]
+                            <Text style={styles.modifierText} numberOfLines={2} ellipsizeMode="tail">
+                                {[
+                                    item.stringName,
+                                    item.option,
+                                    item.extrastring,
+                                    item.note_prod && item.note_prod.trim() !== '' ? `* ${item.note_prod}` : null,
+                                    orderPrint.note && orderPrint.note.trim() !== '' ? `** ${orderPrint.note}` : null
+                                ]
                                     .filter(text => text && text.trim() !== '')
                                     .join(' / ')}
                             </Text>
                         </View>
                     )}
 
-                    {/* Item Note */}
-                    {item.note_prod && item.note_prod.trim() !== '' && (
-                        <View style={styles.itemNoteSection}>
-                            <Text style={styles.itemNoteText} numberOfLines={2}>
-                                * {item.note_prod}
-                            </Text>
-                        </View>
-                    )}
-
-                    {/* Order Note */}
-                    {orderPrint.note && orderPrint.note.trim() !== '' && (
-                        <View style={styles.orderNoteSection}>
-                            <Text style={styles.orderNoteText} numberOfLines={2}>
-                                ** {orderPrint.note}
-                            </Text>
-                        </View>
-                    )}
-
-                    {/* Service Type */}
-                    <View style={styles.serviceTypeSection}>
-                        <Text style={styles.serviceTypeText}>
-                            {getServiceTypeText(orderPrint)}
-                        </Text>
-                    </View>
-
                     {/* Bottom section with additional order info, date/time, and price */}
                     <View style={styles.bottomSection}>
                         <View style={styles.bottomRow}>
-                            {/* Additional order identifier (like GF-248) */}
-                            {orderPrint.foodapp_order_id && orderPrint.foodapp_order_id !== orderPrint.displayID && (
-                                <Text style={styles.additionalOrderId}>
-                                    {orderPrint.foodapp_order_id}
-                                </Text>
-                            )}
-                            <View style={styles.spacerFlex} />
+                            {/* Additional order identifier (like GF-248) - always render for consistent layout */}
+                            <Text style={styles.additionalOrderId}>
+                                {getOrderTypeText(orderPrint)}
+                            </Text>
                             <Text style={styles.dateTime}>
                                 {orderPrint.date ? new Date(orderPrint.date).toLocaleString('vi-VN', {
                                     day: '2-digit',
@@ -319,9 +298,8 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                                     minute: '2-digit'
                                 }) : ''}
                             </Text>
-                            <View style={styles.spacerFlex} />
                             <Text style={styles.priceText}>
-                                {formatPrice(item.price || item.priceDisplay)}
+                                {formatPrice(item.price || item.priceDisplay || item.fare?.priceDisplay)}
                             </Text>
                         </View>
                     </View>

@@ -16,7 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
 import { setScreenAction, logout } from 'store/actions';
 import { NAVIGATION_LOGIN } from 'navigation/routes';
-import { versionNameApp, versionSystem, widthDevice } from 'assets/constans';
+import { versionNameApp, versionDisplayApp, versionSystem, widthDevice } from 'assets/constans';
 const DrawerList = [
   { icon: 'menu_pos', label: 'Menu', navigateTo: NAVIGATION_HOME },
   { icon: 'order_pos', label: 'FoodApp', navigateTo: NAVIGATION_ORDER },
@@ -159,7 +159,7 @@ const DrawerContent = props => {
       <DrawerItem
         icon={({ color, size }) => (
           <View style={{ justifyContent: 'center', alignItems: 'center', marginLeft: 20 }}>
-            <TextNormal style={{ color: 'white' }}>Version: {versionNameApp}</TextNormal>
+            <TextNormal style={{ color: 'white' }}>Version: {versionDisplayApp}</TextNormal>
           </View>
         )}
         label={''}

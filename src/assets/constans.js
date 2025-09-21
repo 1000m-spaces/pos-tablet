@@ -1,11 +1,14 @@
 import { Dimensions, Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import { VERSION_DISPLAY, BUILD_DATE, APP_VERSION } from '../generated/build-info';
 // import {heightDevices, widthDevices} from '../app';
 export const heightDevice = Dimensions.get('window').height;
 export const widthDevice = Dimensions.get('window').width;
 
 export const versionSystem = DeviceInfo.getSystemVersion();
-export const versionNameApp = DeviceInfo.getVersion();
+export const versionNameApp = APP_VERSION;
+export const versionDisplayApp = VERSION_DISPLAY;
+export const buildDate = BUILD_DATE;
 export const deviceId = DeviceInfo.getUniqueId();
 export const isAndroid = Platform.OS === 'ios' ? false : true;
 export const KEY_ONE_SIGNAL = 'c107840b-bc7d-416f-8567-fdc22d2f3719';

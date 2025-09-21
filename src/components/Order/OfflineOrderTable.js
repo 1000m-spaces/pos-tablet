@@ -430,7 +430,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                                     option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
                                     extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
                                 }],
-                                itemIdx: currentLabelIndex,
+                                itemIdx: currentLabelIndex + 1, // Use 1-based indexing for display
                                 totalItems: totalLabels,
                             },
 
@@ -442,10 +442,10 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                                 stringName: product.extras ? product.extras.map(extra => extra.name).join(' / ') : '',
                                 option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
                                 extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
-                                itemIdx: currentLabelIndex,
+                                itemIdx: currentLabelIndex + 1, // Use 1-based indexing for display
                                 totalItems: totalLabels,
                                 price: product.price || 0,
-                                priceDisplay: product.price ? product.price.toLocaleString('vi-VN') + '₫' : '0₫',
+                                priceDisplay: product.price ? product.price.toLocaleString('vi-VN') : '0₫',
                                 product_id: product.product_id || product.id,
                             }],
 
@@ -559,6 +559,12 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
             } else if (billPrinterInfo.billConnectionType === 'serial' && !billPrinterInfo.billSerialPort) {
                 throw new Error('Printer settings not configured');
             }
+
+            Toast.show({
+                type: 'info',
+                text1: 'Đang in bill...',
+                text2: 'Vui lòng đợi'
+            });
 
             // Convert offline order to format compatible with BillTemplate
             const billOrder = {

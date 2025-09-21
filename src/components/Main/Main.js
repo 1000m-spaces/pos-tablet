@@ -25,7 +25,7 @@ const Main = () => {
     const intervalId = setInterval(() => {
       dispatch(syncPendingOrdersAction());
       // Optionally refresh local data after dispatching sync action
-    }, 30000); // 60,000 ms = 1 minute
+    }, 120000); // 60,000 ms = 1 minute
 
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
