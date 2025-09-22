@@ -33,6 +33,7 @@ import PaymentMethodModal from './PaymentMethodModal';
 import ConfirmationModal from 'common/ConfirmationModal/ConfirmationModal';
 import Status from 'common/Status/Status';
 import printingService from '../../services/PrintingService';
+import printQueueService from '../../services/PrintQueueService';
 import ViewShot from 'react-native-view-shot';
 import PrintTemplate from '../Order/TemTemplate';
 import BillTemplate from '../Order/BillTemplate';
@@ -78,8 +79,6 @@ const PaymentCart = () => {
   const [isAutoPrinting, setIsAutoPrinting] = useState(false);
   const [autoPrintStatus, setAutoPrintStatus] = useState('');
   const spinValue = useRef(new Animated.Value(0)).current;
-  const viewTemShotRef = useRef();
-  const viewBillShotRef = useRef();
 
   useEffect(() => {
     let numOfProduct = 0;
@@ -150,81 +149,6 @@ const PaymentCart = () => {
       printingService.dispose();
     };
   }, []);
-
-  // Monitor order creation status and trigger auto-printing on success
-  useEffect(() => {
-    console.log('KKKKKKKKsStatusCreateOrder or isOrderDataSaved changed:', isStatusCreateOrder, isOrderDataSaved);
-    const handleOrderSuccess = async () => {
-      if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
-        console.log('Order created successfully, starting auto print...');
-
-        // Show auto print loading
-        setIsAutoPrinting(true);
-        setAutoPrintStatus('Đang chuẩn bị in...');
-
-        // Start spinner animation
-        Animated.loop(
-          Animated.timing(spinValue, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          })
-        ).start();
-
-        try {
-          // Create ViewShot wrapper objects that the printing service expects
-          const labelViewShotWrapper = {
-            setPrintingOrder: setPrintingOrder,
-            current: viewTemShotRef.current
-          };
-
-          const billViewShotWrapper = {
-            setPrintingOrder: setPrintingOrder,
-            current: viewBillShotRef.current
-          };
-
-          // Trigger auto-printing with duplicate check and status updates
-          const printSuccess = await printingService.autoPrintOrderWithCheck(
-            isOrderDataSaved,
-            labelViewShotWrapper,
-            billViewShotWrapper,
-            null, // showSettingPrinter
-            false, // forcePrint
-            (status) => setAutoPrintStatus(status) // Real-time status updates
-          );
-
-          if (printSuccess) {
-            setAutoPrintStatus('In thành công!');
-            // Brief delay to show success message
-            await new Promise(resolve => setTimeout(resolve, 1500));
-          } else {
-            setAutoPrintStatus('In không thành công');
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-
-        } catch (error) {
-          console.error('Auto print failed:', error);
-          setAutoPrintStatus('Lỗi khi in!');
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        } finally {
-          // Stop spinner animation
-          spinValue.stopAnimation();
-          spinValue.setValue(0);
-
-          // Reset printing order and loading state
-          setPrintingOrder(null);
-          setIsAutoPrinting(false);
-          setAutoPrintStatus('');
-
-          // Reset the order creation status and saved data
-          dispatch(resetCreateOrder());
-          setIsOrderDataSaved(null);
-        }
-      }
-    };
-
-    handleOrderSuccess();
-  }, [isStatusCreateOrder, isOrderDataSaved, dispatch]);
 
   const fetchVoucher = async () => {
     const user = await AsyncStorage.getUser();
@@ -447,6 +371,10 @@ const PaymentCart = () => {
       if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
         // Order is already saved in orderSaga for successful API calls
         console.log('Order successfully processed and saved via API');
+
+        // Trigger auto-print after successful order creation
+        await triggerAutoPrint(isOrderDataSaved);
+
         dispatch(resetCreateOrder());
       } else if (isStatusCreateOrder === Status.ERROR && isOrderDataSaved) {
         // Failed orders are now saved directly in orderSaga for better consistency
@@ -457,19 +385,33 @@ const PaymentCart = () => {
     })();
   }, [isStatusCreateOrder]);
 
-  // const onCancelModalOrderStatus = () => {
-  //   dispatch(setOrderAction({
-  //     take_away: false,
-  //     products: [],
-  //     applied_products: [],
-  //     table: '',
-  //     tableId: '',
-  //     note: '',
-  //     delivery: null,
-  //     orderType: null,
-  //   }));
-  //   setIsModalOrderStatus(false);
-  // };
+  // Trigger auto-print functionality
+  const triggerAutoPrint = async (orderData) => {
+    try {
+      // Check if auto-print is enabled
+      const printerInfo = await AsyncStorage.getLabelPrinterInfo();
+      console.log('Triggering auto-print for order:', orderData.session);
+
+      // Add print task to queue - print both label and bill
+      const taskId = printQueueService.addPrintTask({
+        type: 'both', // Print both label and bill
+        order: orderData,
+        printerInfo: printerInfo,
+        priority: 'high'
+      });
+
+      console.log('Auto-print task added to queue with ID:', taskId);
+
+    } catch (error) {
+      console.error('Error triggering auto-print:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi tự động in',
+        text2: 'Không thể tự động in đơn hàng. Vui lòng in thủ công.',
+        position: 'top',
+      });
+    }
+  };
 
   const onSelectPaymentMethod = (method) => {
     setSelectedPaymentMethod(method);
@@ -633,43 +575,6 @@ const PaymentCart = () => {
           </View>
         </View>
       </Modal>
-
-      {/* Hidden ViewShot components for printing */}
-      <ViewShot
-        ref={viewTemShotRef}
-        options={{ format: "jpg", quality: 1.0 }}
-        style={{
-          position: 'absolute',
-          left: -9999,
-          top: -9999,
-          width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
-          backgroundColor: 'white',
-          opacity: 0,
-          zIndex: -1,
-          pointerEvents: 'none',
-        }}
-      >
-        {printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}
-      </ViewShot>
-
-      <ViewShot
-        ref={viewBillShotRef}
-        options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
-        style={{
-          position: 'absolute',
-          left: -9999,
-          top: -9999,
-          width: 400,
-          backgroundColor: 'white',
-          opacity: 0,
-          zIndex: -1,
-          pointerEvents: 'none',
-        }}
-      >
-        {printingOrder && (
-          <BillTemplate selectedOrder={printingOrder} />
-        )}
-      </ViewShot>
     </View>
   );
 };

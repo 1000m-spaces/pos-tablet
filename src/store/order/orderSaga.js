@@ -110,7 +110,6 @@ function* createOrderSaga({ payload }) {
 
     yield call(AsyncStorage.setLastOrder, orderForHistory);
     yield call(AsyncStorage.addPendingOrder, orderForHistory);
-    console.log('order saved to local storage:', failedOrder);
   } catch (storageError) {
     console.log('Error saving failed order to local storage:', storageError);
   }

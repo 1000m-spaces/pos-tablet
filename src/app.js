@@ -15,7 +15,9 @@ const customTextProps = {
 
 export const heightDevices = Dimensions.get('window').height;
 export const widthDevices = Dimensions.get('window').width;
+
 const App = () => {
+
   useEffect(() => {
     Orientation.lockToLandscape();
     setCustomText(customTextProps);

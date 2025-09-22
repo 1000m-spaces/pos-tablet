@@ -481,6 +481,27 @@ const getOfflineOrderCounter = async () => {
   return null;
 };
 
+// Print Records Management for Print Queue
+const setPrintRecords = async (printRecords) => {
+  try {
+    await AsyncStorage.setItem('printRecords', JSON.stringify(printRecords));
+  } catch (error) {
+    console.error('Error setting print records:', error);
+  }
+};
+
+const getPrintRecords = async () => {
+  try {
+    const value = await AsyncStorage.getItem('printRecords');
+    if (value !== null) {
+      return JSON.parse(value);
+    }
+  } catch (error) {
+    console.error('Error getting print records:', error);
+  }
+  return [];
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -517,4 +538,6 @@ export default {
   getTableStatus,
   setOfflineOrderCounter,
   getOfflineOrderCounter,
+  setPrintRecords,
+  getPrintRecords,
 };

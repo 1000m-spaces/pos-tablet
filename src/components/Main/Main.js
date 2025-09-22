@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_APP_ORDER, NAVIGATION_INVOICE, NAVIGATION_PROFILE } from 'navigation/routes';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View, Dimensions, PixelRatio } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import * as Screens from 'components';
 const Drawer = createDrawerNavigator();
@@ -12,13 +12,19 @@ import { useDispatch, useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
 import { widthDevice } from 'assets/constans';
 import { syncPendingOrdersAction } from 'store/actions';
+import Toast from 'react-native-toast-message';
+
 
 const Main = () => {
   const dispatch = useDispatch();
   const currentScreen = useSelector(state => screenSelector(state));
   const [userShop, setUserShop] = useState(null);
 
+  // Print queue related state
+  const [printQueueStatus, setPrintQueueStatus] = useState('');
+
   console.log('Main: Current screen from selector:', currentScreen);
+
 
   useEffect(() => {
     // Background job: sync offline orders every 1 minute
@@ -42,6 +48,86 @@ const Main = () => {
     };
     loadUserShop();
   }, []);
+
+  // Initialize print queue listener
+  useEffect(() => {
+    const initializePrintQueue = async () => {
+      try {
+        // Set up print queue listener
+        const unsubscribe = printQueueService.addListener((event, data) => {
+          console.log('Print queue event:', event, data);
+
+          switch (event) {
+            case 'taskAdded':
+              setPrintQueueStatus('Đơn hàng đã được thêm vào hàng đợi in');
+              break;
+
+            case 'taskProcessing':
+              setPrintQueueStatus('Đang xử lý in đơn hàng...');
+              break;
+
+            case 'taskCompleted':
+              setPrintQueueStatus('In đơn hàng thành công');
+              Toast.show({
+                type: 'success',
+                text1: 'In thành công',
+                text2: `Đơn hàng ${data.order?.session || data.order?.offlineOrderId} đã được in`,
+                position: 'top',
+              });
+              // Clear status after a delay
+              setTimeout(() => {
+                setPrintQueueStatus('');
+              }, 2000);
+              break;
+
+            case 'taskFailed':
+              setPrintQueueStatus('In đơn hàng thất bại');
+              Toast.show({
+                type: 'error',
+                text1: 'In thất bại',
+                text2: `Lỗi: ${data.lastError || 'Không xác định'}`,
+                position: 'top',
+              });
+              // Clear status after a delay
+              setTimeout(() => {
+                setPrintQueueStatus('');
+              }, 3000);
+              break;
+
+            case 'taskRetrying':
+              setPrintQueueStatus(`Đang thử lại lần ${data.retries}/${printQueueService.maxRetries}...`);
+              break;
+
+            case 'processingStarted':
+              setPrintQueueStatus('Bắt đầu xử lý hàng đợi in');
+              break;
+
+            case 'processingCompleted':
+              setPrintQueueStatus('Hoàn thành xử lý hàng đợi in');
+              setTimeout(() => {
+                setPrintQueueStatus('');
+              }, 2000);
+              break;
+          }
+        });
+
+        // Return cleanup function
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error initializing print queue:', error);
+      }
+    };
+
+    const cleanup = initializePrintQueue();
+
+    // Cleanup on unmount
+    return () => {
+      if (cleanup && typeof cleanup === 'function') {
+        cleanup();
+      }
+    };
+  }, []);
+
 
   // Don't render anything until we have user shop data
   if (!userShop) {
@@ -107,6 +193,7 @@ const Main = () => {
           }}
         />
       </Drawer.Navigator>
+
     </>
   );
 };

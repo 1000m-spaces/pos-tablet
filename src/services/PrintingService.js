@@ -166,6 +166,7 @@ class PrintingService {
 
             // Transform order data to printing format
             const transformedOrder = this.transformOrderForPrinting(orderData);
+            console.log('Transformed Order:', transformedOrder, viewShotRef);
 
             // Print each item
             for (let i = 0; i < transformedOrder.itemInfo.items.length; i++) {
@@ -358,8 +359,6 @@ class PrintingService {
         }
 
         console.log('Starting auto print for order:', orderData.offlineOrderId);
-        if (onStatusUpdate) onStatusUpdate('Bắt đầu in đơn hàng...');
-
         let success = true;
         let labelsPrinted = false;
         let billPrinted = false;
@@ -369,25 +368,19 @@ class PrintingService {
 
         // Print labels
         try {
-            if (onStatusUpdate) onStatusUpdate('Đang in tem sản phẩm...');
-
             const labelSuccess = await this.printLabels(orderData, labelViewShotRef, showSettingPrinter);
             if (labelSuccess) {
                 labelsPrinted = true;
                 console.log(`Labels printed successfully for order: ${transformedOrder.displayID}`);
-                if (onStatusUpdate) onStatusUpdate('In tem thành công');
-
                 // Ensure printed labels status is updated (redundant but explicit)
                 const orderIdentifier = getOrderIdentifierForPrinting(orderData, true); // true for offline orders
                 await AsyncStorage.setPrintedLabels(orderIdentifier);
             } else {
                 success = false;
-                if (onStatusUpdate) onStatusUpdate('In tem thất bại');
             }
         } catch (error) {
             console.error('Auto print labels failed:', error);
             success = false;
-            if (onStatusUpdate) onStatusUpdate('Lỗi khi in tem');
         }
 
         // Small delay between prints
@@ -395,21 +388,16 @@ class PrintingService {
 
         // Print bill
         try {
-            if (onStatusUpdate) onStatusUpdate('Đang in hóa đơn...');
-
             const billSuccess = await this.printBill(orderData, billViewShotRef, showSettingPrinter);
             if (billSuccess) {
                 billPrinted = true;
                 console.log(`Bill printed successfully for order: ${transformedOrder.displayID}`);
-                if (onStatusUpdate) onStatusUpdate('In hóa đơn thành công');
             } else {
                 success = false;
-                if (onStatusUpdate) onStatusUpdate('In hóa đơn thất bại');
             }
         } catch (error) {
             console.error('Auto print bill failed:', error);
             success = false;
-            if (onStatusUpdate) onStatusUpdate('Lỗi khi in hóa đơn');
         }
 
         // Log final status
@@ -420,7 +408,6 @@ class PrintingService {
         });
 
         if (success) {
-            if (onStatusUpdate) onStatusUpdate('Hoàn tất in ấn!');
             Toast.show({
                 type: 'success',
                 text1: `Đã tự động in đơn hàng ${orderData.offlineOrderId}`,
@@ -429,25 +416,96 @@ class PrintingService {
         } else {
             // Show partial success message if only one type failed
             if (labelsPrinted && !billPrinted) {
-                if (onStatusUpdate) onStatusUpdate('In tem thành công, in hóa đơn thất bại');
                 Toast.show({
                     type: 'info',
                     text1: `Đơn hàng ${orderData.offlineOrderId}`,
                     text2: 'In tem thành công, in hoá đơn thất bại'
                 });
             } else if (!labelsPrinted && billPrinted) {
-                if (onStatusUpdate) onStatusUpdate('In hóa đơn thành công, in tem thất bại');
                 Toast.show({
                     type: 'info',
                     text1: `Đơn hàng ${orderData.offlineOrderId}`,
                     text2: 'In hoá đơn thành công, in tem thất bại'
                 });
             } else {
-                if (onStatusUpdate) onStatusUpdate('In ấn thất bại');
             }
         }
 
         return success;
+    }
+
+    // Print label using captured image URI (for PrintQueueService)
+    async printLabel(imageUri, printerInfo) {
+        if (Platform.OS !== "android") {
+            throw new Error('Label printing only supported on Android');
+        }
+
+        try {
+            this.initialize();
+
+            if (!printerInfo) {
+                throw new Error('Printer configuration not provided');
+            }
+
+            // Connect to printer
+            await this.connectToPrinter(this.labelPrinter, printerInfo);
+
+            // Get image info and convert to base64
+            const imageInfo = await Image.getSize(imageUri);
+            const base64 = await RNFS.readFile(imageUri.replace('file://', ''), 'base64');
+
+            // Print the label
+            await this.labelPrinter.tsplPrintBitmap(
+                Number(printerInfo.sWidth),
+                Number(printerInfo.sHeight),
+                base64,
+                imageInfo.width
+            );
+
+            console.log(`Label printed successfully using image URI: ${imageUri}`);
+            return true;
+
+        } catch (error) {
+            console.error('PrintLabel error:', error);
+            throw error;
+        }
+    }
+
+    // Print bill using base64 image data (for PrintQueueService)
+    async printBill(base64ImageData) {
+        if (Platform.OS !== "android") {
+            throw new Error('Bill printing only supported on Android');
+        }
+
+        try {
+            this.initialize();
+
+            const billPrinterInfo = await AsyncStorage.getBillPrinterInfo();
+
+            if (!billPrinterInfo) {
+                throw new Error('Bill printer not configured');
+            }
+
+            // Connect to bill printer
+            const billConfig = {
+                connectionType: billPrinterInfo.billConnectionType || 'network',
+                IP: billPrinterInfo.billIP,
+                usbDevice: billPrinterInfo.billUsbDevice,
+                serialPort: billPrinterInfo.billSerialPort
+            };
+            await this.connectToPrinter(this.billPrinter, billConfig);
+
+            // Print the bill
+            const printerWidth = this.getThermalPrinterWidth(billPrinterInfo.billPaperSize);
+            await this.billPrinter.printBitmap(base64ImageData, 1, printerWidth, 0);
+
+            console.log('Bill printed successfully using base64 data');
+            return true;
+
+        } catch (error) {
+            console.error('PrintBill error:', error);
+            throw error;
+        }
     }
 }
 

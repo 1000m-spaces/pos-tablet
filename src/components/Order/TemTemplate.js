@@ -28,14 +28,14 @@ const getDefaultSettings = (dpi = 72) => ({
         storeName: calculateDynamicFontSize(16),
         orderNumber: calculateDynamicFontSize(16),
         tableInfo: calculateDynamicFontSize(14),
-        dateTime: calculateDynamicFontSize(8),
-        priceText: calculateDynamicFontSize(8),
+        dateTime: calculateDynamicFontSize(10),
+        priceText: calculateDynamicFontSize(10),
         pageCounter: calculateDynamicFontSize(14),
         itemName: calculateDynamicFontSize(16),
         modifier: calculateDynamicFontSize(14),
         note: calculateDynamicFontSize(14),
         quantity: calculateDynamicFontSize(14),
-        channelInfo: calculateDynamicFontSize(8)
+        channelInfo: calculateDynamicFontSize(10)
     },
     padding: 6,
     margin: 2
@@ -59,14 +59,14 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                             storeName: calculateDynamicFontSize(printerInfo.labelStoreName || 16),
                             orderNumber: calculateDynamicFontSize(printerInfo.labelOrderNumber || 16),
                             tableInfo: calculateDynamicFontSize(10),
-                            dateTime: calculateDynamicFontSize(printerInfo.labelDateTime || 8),
-                            priceText: calculateDynamicFontSize(printerInfo.labelPriceText || 8),
+                            dateTime: calculateDynamicFontSize(printerInfo.labelDateTime || 10),
+                            priceText: calculateDynamicFontSize(printerInfo.labelPriceText || 10),
                             pageCounter: calculateDynamicFontSize(printerInfo.labelPageCounter || 10),
                             itemName: calculateDynamicFontSize(printerInfo.labelItemName || 16),
                             modifier: calculateDynamicFontSize(printerInfo.labelModifier || 14),
                             note: calculateDynamicFontSize(printerInfo.labelNote || 14),
                             quantity: calculateDynamicFontSize(printerInfo.labelQuantity || 14),
-                            channelInfo: calculateDynamicFontSize(printerInfo.labelChannelInfo || 8)
+                            channelInfo: calculateDynamicFontSize(printerInfo.labelChannelInfo || 10)
                         }
                     });
                 }
