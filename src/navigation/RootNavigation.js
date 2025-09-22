@@ -27,21 +27,199 @@ const HiddenViewShotComponents = () => {
   const viewTemShotRef = useRef(null);
   const viewBillShotRef = useRef(null);
 
+  // Helper function to transform order for label printing
+  const transformOrderForLabel = (originalOrder, productIndex = 0, labelIndex = 0, totalLabels = 1) => {
+    const product = originalOrder.products?.[productIndex];
+    if (!product) return originalOrder;
+
+    return {
+      ...originalOrder,
+      // Basic order identification
+      displayID: originalOrder.session,
+      bill_id: originalOrder.session,
+      session: originalOrder.session,
+
+      // Service and location information
+      serviceType: 'offline',
+      tableName: originalOrder.shopTableName,
+      table: originalOrder.shopTableName,
+      shopTableName: originalOrder.shopTableName,
+      shopTableid: originalOrder.shopTableid || "0",
+
+      // Timing information
+      date: originalOrder.created_at || originalOrder.timestamp || new Date().toISOString(),
+      created_at: originalOrder.created_at || originalOrder.timestamp || new Date().toISOString(),
+      timestamp: originalOrder.created_at || originalOrder.timestamp || new Date().toISOString(),
+
+      // Order notes and metadata
+      note: originalOrder.orderNote || originalOrder.note || '',
+      orderNote: originalOrder.orderNote || originalOrder.note || '',
+
+      // Shop and user information
+      shopid: originalOrder.shopid || "246",
+      userid: originalOrder.userid || "1752",
+      roleid: originalOrder.roleid || "4",
+
+      // Payment and pricing information
+      subPrice: originalOrder.subPrice || originalOrder.total_amount || 0,
+      total_amount: originalOrder.total_amount || 0,
+      orderValue: originalOrder.total_amount || 0,
+      transType: originalOrder.transType || "41",
+      chanel_type_id: originalOrder.chanel_type_id || "1",
+
+      // Channel information (for delivery apps)
+      chanel_name: originalOrder.chanel_name || 'POS',
+      foodapp_order_id: originalOrder.foodapp_order_id || '',
+      package_id: originalOrder.package_id || 0,
+
+      // Status information
+      status: originalOrder.status || "pending",
+      orderStatus: originalOrder.orderStatus || "Paymented",
+      syncStatus: originalOrder.syncStatus || "pending",
+
+      // Enhanced item information structure
+      itemInfo: {
+        items: [{
+          name: product.name,
+          item_name: product.name,
+          quantity: 1, // Each label represents 1 item
+          amount: 1,
+          fare: {
+            priceDisplay: product.price ? product.price.toLocaleString('vi-VN') : '0',
+            currencySymbol: '₫',
+            price: product.price || 0
+          },
+          price: product.price || 0,
+          comment: product.note || '',
+          note_prod: product.note || '',
+          product_id: product.product_id || product.id,
+
+          // Enhanced modifier information
+          modifierGroups: product.extras ? product.extras.map(extra => ({
+            modifierGroupName: extra.group_extra_name || 'Extras',
+            groupName: extra.group_extra_name || 'Extras',
+            modifiers: [{
+              modifierName: extra.name,
+              name: extra.name,
+              price: extra.price || 0,
+              priceDisplay: extra.price ? extra.price.toLocaleString('vi-VN') : '0'
+            }]
+          })) : [],
+
+          // Flattened modifier strings for easier template access
+          stringName: product.extras ? product.extras.map(extra => extra.name).join(' / ') : '',
+          option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
+          extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
+        }],
+        itemIdx: labelIndex + 1, // Use 1-based indexing for display
+        totalItems: totalLabels,
+      },
+
+      // Direct decals format for immediate template compatibility
+      decals: [{
+        item_name: product.name,
+        amount: 1,
+        note_prod: product.note || '',
+        stringName: product.extras ? product.extras.map(extra => extra.name).join(' / ') : '',
+        option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
+        extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
+        itemIdx: labelIndex + 1, // Use 1-based indexing for display
+        totalItems: totalLabels,
+        price: product.price || 0,
+        priceDisplay: product.price ? product.price.toLocaleString('vi-VN') : '0₫',
+        product_id: product.product_id || product.id,
+      }],
+
+      // Customer and service information
+      customerInfo: {
+        name: originalOrder.shopTableName || 'Khách hàng',
+        table: originalOrder.shopTableName,
+        phone: originalOrder.customerPhone || '',
+        address: originalOrder.customerAddress || '',
+      },
+
+      // Additional metadata for comprehensive printing
+      products: originalOrder.products, // Keep full product array for reference
+      offline_code: originalOrder.offline_code || originalOrder.session,
+      offlineOrderId: originalOrder.offlineOrderId || originalOrder.session,
+
+      // Fees and discounts
+      svFee: originalOrder.svFee || "0",
+      svFee_amount: originalOrder.svFee_amount || 0,
+      phuthu: originalOrder.phuthu || 0,
+      fix_discount: originalOrder.fix_discount || 0,
+      perDiscount: originalOrder.perDiscount || 0,
+
+      // Print tracking
+      printStatus: originalOrder.printStatus || "not_printed",
+      currentItemIndex: labelIndex + 1,
+      isPartialPrint: true, // Indicates this is one item from a multi-item order
+    };
+  };
+
+  // Helper function to transform order for bill printing
+  const transformOrderForBill = (originalOrder) => {
+    return {
+      ...originalOrder,
+      displayID: originalOrder.session,
+      orderValue: originalOrder.total_amount,
+      itemInfo: {
+        items: originalOrder.products ? originalOrder.products.map(product => ({
+          name: product.name,
+          quantity: product.quanlity || 1,
+          fare: {
+            priceDisplay: product.price ? product.price.toLocaleString('vi-VN') : '0',
+            currencySymbol: '₫'
+          },
+          comment: product.note || '',
+          modifierGroups: product.extras ? product.extras.map(extra => ({
+            modifierGroupName: extra.group_extra_name || 'Extras',
+            modifiers: [{
+              modifierName: extra.name,
+              price: extra.price || 0
+            }]
+          })) : [],
+        })) : []
+      },
+      customerInfo: {
+        name: originalOrder.shopTableName || 'Khách hàng',
+      },
+      serviceType: 'offline',
+      tableName: originalOrder.shopTableName,
+    };
+  };
+
   // Capture snapshot function for print queue service
-  const handleCaptureSnapshot = async (type, order) => {
+  const handleCaptureSnapshot = async (type, order, options = {}) => {
     try {
       console.log(`RootNav: Capturing ${type} snapshot for order:`, order?.session || order?.offlineOrderId);
 
-      // Set the printing order to render in ViewShot components
-      setPrintingOrder(order);
+      // Transform the order based on print type
+      let transformedOrder;
+
+      if (type === 'label') {
+        // For label printing, use the enhanced transformation
+        const { productIndex = 0, labelIndex = 0, totalLabels = 1 } = options;
+        transformedOrder = transformOrderForLabel(order, productIndex, labelIndex, totalLabels);
+        console.log(`RootNav: Transformed order for label printing (product ${productIndex + 1}, label ${labelIndex + 1}/${totalLabels})`);
+      } else if (type === 'bill') {
+        // For bill printing, use the simpler transformation
+        transformedOrder = transformOrderForBill(order);
+        console.log(`RootNav: Transformed order for bill printing`);
+      } else {
+        throw new Error(`Unknown snapshot type: ${type}`);
+      }
+
+      // Set the transformed printing order to render in ViewShot components
+      setPrintingOrder(transformedOrder);
       setIsComponentReady(false);
 
       // Wait for component to render with new order data - increased delay for reliability
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Mark component as ready for capture
       setIsComponentReady(true);
-      
+
       // Additional wait to ensure component state is stable
       await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -54,8 +232,6 @@ const HiddenViewShotComponents = () => {
         viewShotRef = viewTemShotRef;
       } else if (type === 'bill') {
         viewShotRef = viewBillShotRef;
-      } else {
-        throw new Error(`Unknown snapshot type: ${type}`);
       }
 
       // Wait for ref to be available with retries
@@ -127,8 +303,8 @@ const HiddenViewShotComponents = () => {
     <View style={styles.hiddenPrintComponents} collapsable={false}>
       <ViewShot
         ref={viewTemShotRef}
-        options={{ 
-          format: "jpg", 
+        options={{
+          format: "jpg",
           quality: 1.0,
           result: 'tmpfile'
         }}
@@ -146,9 +322,9 @@ const HiddenViewShotComponents = () => {
 
       <ViewShot
         ref={viewBillShotRef}
-        options={{ 
-          format: 'jpg', 
-          quality: 1.0, 
+        options={{
+          format: 'jpg',
+          quality: 1.0,
           result: 'base64'
         }}
         style={[
