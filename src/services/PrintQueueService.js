@@ -3,8 +3,11 @@ import printingService from './PrintingService';
 
 class PrintQueueService {
     constructor() {
-        this.queue = [];
-        this.isProcessing = false;
+        // Separate queues for labels and bills to allow concurrent processing
+        this.labelQueue = [];
+        this.billQueue = [];
+        this.isProcessingLabels = false;
+        this.isProcessingBills = false;
         this.listeners = [];
         this.maxRetries = 3;
         this.retryDelay = 2000; // 2 seconds
@@ -16,7 +19,7 @@ class PrintQueueService {
         this.captureCallback = callback;
     }
 
-    // Add a print task to the queue
+    // Add a print task to the appropriate queue
     addPrintTask(task) {
         const taskId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
         const printTask = {
@@ -27,36 +30,89 @@ class PrintQueueService {
             createdAt: new Date().toISOString(),
         };
 
-        this.queue.push(printTask);
-        this.notifyListeners('taskAdded', printTask);
+        // Route tasks to appropriate queues
+        if (task.type === 'label') {
+            this.labelQueue.push(printTask);
+            this.notifyListeners('taskAdded', { ...printTask, queueType: 'label' });
 
-        // Start processing if not already processing
-        if (!this.isProcessing) {
-            this.processQueue();
+            // Start label processing if not already processing
+            if (!this.isProcessingLabels) {
+                this.processLabelQueue();
+            }
+        } else if (task.type === 'bill') {
+            this.billQueue.push(printTask);
+            this.notifyListeners('taskAdded', { ...printTask, queueType: 'bill' });
+
+            // Start bill processing if not already processing
+            if (!this.isProcessingBills) {
+                this.processBillQueue();
+            }
+        } else if (task.type === 'both') {
+            // Split 'both' type into separate label and bill tasks
+            const labelTaskId = taskId + '_label';
+            const billTaskId = taskId + '_bill';
+
+            const labelTask = {
+                id: labelTaskId,
+                ...task,
+                type: 'label',
+                status: 'queued',
+                retries: 0,
+                createdAt: new Date().toISOString(),
+                parentTaskId: taskId
+            };
+
+            const billTask = {
+                id: billTaskId,
+                ...task,
+                type: 'bill',
+                status: 'queued',
+                retries: 0,
+                createdAt: new Date().toISOString(),
+                parentTaskId: taskId
+            };
+
+            this.labelQueue.push(labelTask);
+            this.billQueue.push(billTask);
+
+            this.notifyListeners('taskAdded', { ...labelTask, queueType: 'label' });
+            this.notifyListeners('taskAdded', { ...billTask, queueType: 'bill' });
+
+            // Start both processing if not already processing
+            if (!this.isProcessingLabels) {
+                this.processLabelQueue();
+            }
+            if (!this.isProcessingBills) {
+                this.processBillQueue();
+            }
+
+            return { labelTaskId, billTaskId, parentTaskId: taskId };
+        } else {
+            throw new Error(`Unknown print task type: ${task.type}`);
         }
 
         return taskId;
     }
 
-    // Process the print queue
-    async processQueue() {
-        if (this.isProcessing || this.queue.length === 0) {
+    // Process the label queue
+    async processLabelQueue() {
+        if (this.isProcessingLabels || this.labelQueue.length === 0) {
             return;
         }
 
-        this.isProcessing = true;
-        this.notifyListeners('processingStarted');
+        this.isProcessingLabels = true;
+        this.notifyListeners('processingStarted', { queueType: 'label' });
 
-        while (this.queue.length > 0) {
-            const task = this.queue[0];
+        while (this.labelQueue.length > 0) {
+            const task = this.labelQueue[0];
 
             try {
                 await this.processTask(task);
                 // Remove successful task from queue
-                this.queue.shift();
-                this.notifyListeners('taskCompleted', task);
+                this.labelQueue.shift();
+                this.notifyListeners('taskCompleted', { ...task, queueType: 'label' });
             } catch (error) {
-                console.error('Print task failed:', error);
+                console.error('Label print task failed:', error);
 
                 // Handle retry logic
                 task.retries += 1;
@@ -66,18 +122,60 @@ class PrintQueueService {
                 if (task.retries >= this.maxRetries) {
                     // Max retries reached, remove from queue and mark as failed
                     task.status = 'failed';
-                    this.queue.shift();
-                    this.notifyListeners('taskFailed', task);
+                    this.labelQueue.shift();
+                    this.notifyListeners('taskFailed', { ...task, queueType: 'label' });
                 } else {
                     // Retry after delay
-                    this.notifyListeners('taskRetrying', task);
+                    this.notifyListeners('taskRetrying', { ...task, queueType: 'label' });
                     await this.delay(this.retryDelay);
                 }
             }
         }
 
-        this.isProcessing = false;
-        this.notifyListeners('processingCompleted');
+        this.isProcessingLabels = false;
+        this.notifyListeners('processingCompleted', { queueType: 'label' });
+    }
+
+    // Process the bill queue
+    async processBillQueue() {
+        if (this.isProcessingBills || this.billQueue.length === 0) {
+            return;
+        }
+
+        this.isProcessingBills = true;
+        this.notifyListeners('processingStarted', { queueType: 'bill' });
+
+        while (this.billQueue.length > 0) {
+            const task = this.billQueue[0];
+
+            try {
+                await this.processTask(task);
+                // Remove successful task from queue
+                this.billQueue.shift();
+                this.notifyListeners('taskCompleted', { ...task, queueType: 'bill' });
+            } catch (error) {
+                console.error('Bill print task failed:', error);
+
+                // Handle retry logic
+                task.retries += 1;
+                task.lastError = error.message;
+                task.status = 'retrying';
+
+                if (task.retries >= this.maxRetries) {
+                    // Max retries reached, remove from queue and mark as failed
+                    task.status = 'failed';
+                    this.billQueue.shift();
+                    this.notifyListeners('taskFailed', { ...task, queueType: 'bill' });
+                } else {
+                    // Retry after delay
+                    this.notifyListeners('taskRetrying', { ...task, queueType: 'bill' });
+                    await this.delay(this.retryDelay);
+                }
+            }
+        }
+
+        this.isProcessingBills = false;
+        this.notifyListeners('processingCompleted', { queueType: 'bill' });
     }
 
     // Process individual print task
@@ -98,9 +196,6 @@ class PrintQueueService {
                 break;
             case 'bill':
                 await this.printBill(task);
-                break;
-            case 'both':
-                await this.printBoth(task);
                 break;
             default:
                 throw new Error(`Unknown print task type: ${task.type}`);
@@ -182,23 +277,6 @@ class PrintQueueService {
         }
     }
 
-    // Print both label and bill
-    async printBoth(task) {
-        const { order, printerInfo } = task;
-
-        try {
-            // Print label first
-            if (printerInfo) {
-                await this.printLabel({ order, printerInfo });
-            }
-
-            // Then print bill
-            await this.printBill({ order });
-
-        } catch (error) {
-            throw error;
-        }
-    }
 
     // Save print record to AsyncStorage
     async savePrintRecord(order, type, success, error = null, metadata = null) {
@@ -261,29 +339,67 @@ class PrintQueueService {
         });
     }
 
-    // Get queue status
+    // Get queue status for both queues
     getQueueStatus() {
+        const labelTasks = this.labelQueue.map(task => ({
+            id: task.id,
+            type: task.type,
+            status: task.status,
+            retries: task.retries,
+            createdAt: task.createdAt,
+            queueType: 'label'
+        }));
+
+        const billTasks = this.billQueue.map(task => ({
+            id: task.id,
+            type: task.type,
+            status: task.status,
+            retries: task.retries,
+            createdAt: task.createdAt,
+            queueType: 'bill'
+        }));
+
         return {
-            isProcessing: this.isProcessing,
-            queueLength: this.queue.length,
-            tasks: this.queue.map(task => ({
-                id: task.id,
-                type: task.type,
-                status: task.status,
-                retries: task.retries,
-                createdAt: task.createdAt
-            }))
+            label: {
+                isProcessing: this.isProcessingLabels,
+                queueLength: this.labelQueue.length,
+                tasks: labelTasks
+            },
+            bill: {
+                isProcessing: this.isProcessingBills,
+                queueLength: this.billQueue.length,
+                tasks: billTasks
+            },
+            // Combined view for backward compatibility
+            combined: {
+                isProcessing: this.isProcessingLabels || this.isProcessingBills,
+                queueLength: this.labelQueue.length + this.billQueue.length,
+                tasks: [...labelTasks, ...billTasks]
+            }
         };
     }
 
-    // Clear failed tasks from queue
+    // Clear failed tasks from both queues
     clearFailedTasks() {
-        const beforeLength = this.queue.length;
-        this.queue = this.queue.filter(task => task.status !== 'failed');
-        const afterLength = this.queue.length;
+        const beforeLabelLength = this.labelQueue.length;
+        const beforeBillLength = this.billQueue.length;
 
-        if (beforeLength !== afterLength) {
-            this.notifyListeners('failedTasksCleared', { removed: beforeLength - afterLength });
+        this.labelQueue = this.labelQueue.filter(task => task.status !== 'failed');
+        this.billQueue = this.billQueue.filter(task => task.status !== 'failed');
+
+        const afterLabelLength = this.labelQueue.length;
+        const afterBillLength = this.billQueue.length;
+
+        const labelRemoved = beforeLabelLength - afterLabelLength;
+        const billRemoved = beforeBillLength - afterBillLength;
+        const totalRemoved = labelRemoved + billRemoved;
+
+        if (totalRemoved > 0) {
+            this.notifyListeners('failedTasksCleared', {
+                removed: totalRemoved,
+                labelRemoved,
+                billRemoved
+            });
         }
     }
 
