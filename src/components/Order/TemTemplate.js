@@ -25,19 +25,19 @@ const getDefaultSettings = (dpi = 72) => ({
     width: mmToPixels(50 - 4, dpi), // 50mm
     height: mmToPixels(30 - 4, dpi), // 30mm
     fontSize: {
-        storeName: calculateDynamicFontSize(16),
-        orderNumber: calculateDynamicFontSize(16),
-        tableInfo: calculateDynamicFontSize(14),
-        dateTime: calculateDynamicFontSize(10),
-        priceText: calculateDynamicFontSize(10),
-        pageCounter: calculateDynamicFontSize(14),
-        itemName: calculateDynamicFontSize(16),
-        modifier: calculateDynamicFontSize(14),
-        note: calculateDynamicFontSize(14),
-        quantity: calculateDynamicFontSize(14),
-        channelInfo: calculateDynamicFontSize(10)
+        storeName: calculateDynamicFontSize(12),
+        orderNumber: calculateDynamicFontSize(12),
+        tableInfo: calculateDynamicFontSize(10),
+        dateTime: calculateDynamicFontSize(8),
+        priceText: calculateDynamicFontSize(8),
+        pageCounter: calculateDynamicFontSize(8),
+        itemName: calculateDynamicFontSize(12),
+        modifier: calculateDynamicFontSize(10),
+        note: calculateDynamicFontSize(10),
+        quantity: calculateDynamicFontSize(10),
+        channelInfo: calculateDynamicFontSize(8)
     },
-    padding: 6,
+    padding: 2,
     margin: 2
 });
 
@@ -56,17 +56,17 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                         height: mmToPixels(Number(printerInfo.sHeight) - 4, dpi),
                         dpi: dpi,
                         fontSize: {
-                            storeName: calculateDynamicFontSize(printerInfo.labelStoreName || 16),
-                            orderNumber: calculateDynamicFontSize(printerInfo.labelOrderNumber || 16),
+                            storeName: calculateDynamicFontSize(12),
+                            orderNumber: calculateDynamicFontSize(12),
                             tableInfo: calculateDynamicFontSize(10),
-                            dateTime: calculateDynamicFontSize(printerInfo.labelDateTime || 10),
-                            priceText: calculateDynamicFontSize(printerInfo.labelPriceText || 10),
-                            pageCounter: calculateDynamicFontSize(printerInfo.labelPageCounter || 10),
-                            itemName: calculateDynamicFontSize(printerInfo.labelItemName || 16),
-                            modifier: calculateDynamicFontSize(printerInfo.labelModifier || 14),
-                            note: calculateDynamicFontSize(printerInfo.labelNote || 14),
-                            quantity: calculateDynamicFontSize(printerInfo.labelQuantity || 14),
-                            channelInfo: calculateDynamicFontSize(printerInfo.labelChannelInfo || 10)
+                            dateTime: calculateDynamicFontSize(8),
+                            priceText: calculateDynamicFontSize(8),
+                            pageCounter: calculateDynamicFontSize(8),
+                            itemName: calculateDynamicFontSize(12),
+                            modifier: calculateDynamicFontSize(10),
+                            note: calculateDynamicFontSize(10),
+                            quantity: calculateDynamicFontSize(10),
+                            channelInfo: calculateDynamicFontSize(8)
                         }
                     });
                 }
@@ -268,16 +268,16 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                     {/* Modifiers/Options/Notes */}
                     {(item.stringName || item.option || item.extrastring || item.note_prod || orderPrint.note) && (
                         <View style={styles.modifierSection}>
-                            <Text style={styles.modifierText} numberOfLines={2} ellipsizeMode="tail">
-                                {[
+                            <Text style={styles.modifierText} numberOfLines={3} ellipsizeMode="tail">
+                                {[...new Set([
                                     item.stringName,
                                     item.option,
                                     item.extrastring,
-                                    item.note_prod && item.note_prod.trim() !== '' ? `* ${item.note_prod}` : null,
-                                    orderPrint.note && orderPrint.note.trim() !== '' ? `** ${orderPrint.note}` : null
+                                    item.note_prod && item.note_prod.trim() !== '' ? `${item.note_prod}` : null,
+                                    orderPrint.note && orderPrint.note.trim() !== '' ? `${orderPrint.note}` : null
                                 ]
-                                    .filter(text => text && text.trim() !== '')
-                                    .join(' / ')}
+                                    .filter(text => text && text.trim() !== ''))]
+                                    .join('/')}
                             </Text>
                         </View>
                     )}

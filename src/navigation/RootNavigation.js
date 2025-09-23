@@ -294,16 +294,24 @@ const HiddenViewShotComponents = () => {
   // Queue multiple labels for orders with multiple products and quantities
   const queueMultipleLabels = async (order, printerInfo) => {
     try {
-      console.log('RootNav: Starting queueMultipleLabels for order:', order?.session || order?.offlineOrderId);
+      console.log('RootNav: Starting queueMultipleLabels for order:', order?.session || order?.offlineOrderId || order?.displayID);
 
-      if (!order || !order.products) {
+      // Handle different order structures: offline orders use order.products, online orders use order.itemInfo.items
+      let products = null;
+      if (order?.products) {
+        products = order.products; // Offline orders
+      } else if (order?.itemInfo?.items) {
+        products = order.itemInfo.items; // Online orders
+      }
+
+      if (!order || !products || products.length === 0) {
         throw new Error('Order or products not available');
       }
 
       // Calculate total number of labels to be printed
       let totalLabels = 0;
-      order.products.forEach(product => {
-        totalLabels += (product.quanlity || 1);
+      products.forEach(product => {
+        totalLabels += (product.quanlity || product.quantity || 1);
       });
 
       console.log(`RootNav: Total labels to print: ${totalLabels}`);
@@ -312,9 +320,9 @@ const HiddenViewShotComponents = () => {
       const printTaskIds = [];
 
       // Create print tasks for each product and each quantity
-      for (let productIndex = 0; productIndex < order.products.length; productIndex++) {
-        const product = order.products[productIndex];
-        const quantity = product.quanlity || 1;
+      for (let productIndex = 0; productIndex < products.length; productIndex++) {
+        const product = products[productIndex];
+        const quantity = product.quanlity || product.quantity || 1;
 
         // Create one print task for each quantity of the product
         for (let quantityIndex = 0; quantityIndex < quantity; quantityIndex++) {
@@ -335,8 +343,7 @@ const HiddenViewShotComponents = () => {
           });
 
           printTaskIds.push(taskId);
-          console.log(`RootNav: Queued label task ${taskId} - Product: "${product.name}" (${productIndex + 1}/${order.products.length}), Label: ${currentLabelIndex + 1}/${totalLabels}, Qty: ${quantityIndex + 1}/${quantity}`);
-
+          console.log(`RootNav: Queued label task ${taskId} - Product: "${product.name}" (${productIndex + 1}/${products.length}), Label: ${currentLabelIndex + 1}/${totalLabels}, Qty: ${quantityIndex + 1}/${quantity}`);
           currentLabelIndex++;
         }
       }

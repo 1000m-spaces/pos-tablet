@@ -325,10 +325,11 @@ const PrinterSettingsModal = ({
         onClose();
     };
 
-    // Helper function to get current modal settings for connection
-    const getCurrentSettings = (printerType) => {
+    // Build current printer configuration from form state
+    const buildCurrentPrinterConfig = (printerType) => {
         if (printerType === 'label') {
             return {
+                // Label printer settings
                 IP: ip,
                 sWidth: parseInt(sWidth),
                 sHeight: parseInt(sHeight),
@@ -336,28 +337,84 @@ const PrinterSettingsModal = ({
                 connectionType: labelConnectionType,
                 usbDevice: labelUsbDevice,
                 serialPort: labelSerialPort,
-                // Label font sizes
+
+                // Label printer font sizes
                 labelStoreName: parseInt(labelStoreName),
                 labelOrderNumber: parseInt(labelOrderNumber),
                 labelItemName: parseInt(labelItemName),
                 labelModifier: parseInt(labelModifier),
                 labelNote: parseInt(labelNote),
+
                 // Label printer DPI
-                labelPrinterDPI: parseInt(labelPrinterDPI)
+                labelPrinterDPI: parseInt(labelPrinterDPI),
             };
         } else {
             return {
+                // Bill printer settings
                 billIP: billIP,
                 billPort: parseInt(billPort),
                 billPaperSize: billPaperSize,
                 billConnectionType: billConnectionType,
                 billUsbDevice: billUsbDevice,
                 billSerialPort: billSerialPort,
-                // Bill font sizes
+
+                // Bill printer font sizes
                 billHeader: parseInt(billHeader),
                 billContent: parseInt(billContent),
                 billTotal: parseInt(billTotal)
             };
+        }
+    };
+
+    // Enhanced test function that uses current form data and auto-saves
+    const testWithCurrentConfig = async (printerType) => {
+        // First validate current form data
+        if (!validateForm()) {
+            Toast.show({
+                type: 'error',
+                text1: 'Cấu hình không hợp lệ',
+                text2: 'Vui lòng kiểm tra lại thông tin cấu hình',
+                position: 'bottom',
+            });
+            return;
+        }
+
+        const isLabel = printerType === 'label';
+        const currentConfig = buildCurrentPrinterConfig(printerType);
+
+        // Auto-save configuration before testing
+        try {
+            const fullPrinterSettings = {
+                ...buildCurrentPrinterConfig('label'),
+                ...buildCurrentPrinterConfig('bill')
+            };
+
+            await AsyncStorage.setPrinterInfo(fullPrinterSettings);
+
+            // Update global printer service with new settings
+            await handleSettingsUpdate();
+
+            Toast.show({
+                type: 'info',
+                text1: 'Auto-saving configuration...',
+                text2: 'Testing with current settings',
+                position: 'bottom',
+            });
+        } catch (error) {
+            console.error('Error auto-saving settings:', error);
+            Toast.show({
+                type: 'warning',
+                text1: 'Could not save settings',
+                text2: 'Testing with current configuration anyway',
+                position: 'bottom',
+            });
+        }
+
+        // Test with current configuration
+        if (isLabel) {
+            await testLabelPrinter();
+        } else {
+            await testBillPrinter();
         }
     };
 
@@ -368,7 +425,7 @@ const PrinterSettingsModal = ({
         const isTesting = isLabel ? isLabelTesting : isBillTesting;
         const settings = isLabel ? globalLabelSettings : globalBillSettings;
 
-        const testFunction = isLabel ? testLabelPrinter : testBillPrinter;
+        const testFunction = () => testWithCurrentConfig(printerType);
 
         const getStatusColor = () => {
             switch (status) {
@@ -408,10 +465,10 @@ const PrinterSettingsModal = ({
                     <TouchableOpacity
                         style={[styles.connectionButton, styles.testButton]}
                         onPress={testFunction}
-                        disabled={isTesting}
+                        disabled={isTesting || isSaving}
                     >
                         <TextNormal style={styles.connectionButtonText}>
-                            {isTesting ? 'Đang kiểm tra...' : 'Kiểm tra'}
+                            {isTesting ? 'Đang kiểm tra...' : (isSaving ? 'Đang lưu...' : 'Kiểm tra & Lưu')}
                         </TextNormal>
                     </TouchableOpacity>
                 </View>
@@ -655,81 +712,6 @@ const PrinterSettingsModal = ({
                                 />
                             </View>
 
-                            {/* Font Size Settings for Label Printer */}
-                            <View style={styles.sectionHeader}>
-                                <TextNormal style={styles.sectionTitle}>{"Cài đặt kích thước chữ"}</TextNormal>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Tên cửa hàng"}</TextNormal>
-                                <View style={styles.inputContainer}>
-                                    <TextInput
-                                        placeholder="15"
-                                        value={labelStoreName.toString()}
-                                        onChangeText={(text) => setLabelStoreName(text)}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Số đơn hàng"}</TextNormal>
-                                <View style={styles.inputContainer}>
-                                    <TextInput
-                                        placeholder="15"
-                                        value={labelOrderNumber.toString()}
-                                        onChangeText={(text) => setLabelOrderNumber(text)}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Tên món"}</TextNormal>
-                                <View style={styles.inputContainer}>
-                                    <TextInput
-                                        placeholder="15"
-                                        value={labelItemName.toString()}
-                                        onChangeText={(text) => setLabelItemName(text)}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Modifier"}</TextNormal>
-                                <View style={styles.inputContainer}>
-                                    <TextInput
-                                        placeholder="14"
-                                        value={labelModifier.toString()}
-                                        onChangeText={(text) => setLabelModifier(text)}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Ghi chú"}</TextNormal>
-                                <View style={styles.inputContainer}>
-                                    <TextInput
-                                        placeholder="14"
-                                        value={labelNote.toString()}
-                                        onChangeText={(text) => setLabelNote(text)}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
-                                </View>
-                            </View>
-
                             <View style={styles.inputGroup}>
                                 <TextNormal style={styles.label}>{"DPI máy in (Dots Per Inch)"}</TextNormal>
                                 <View style={styles.inputContainer}>
@@ -833,53 +815,6 @@ const PrinterSettingsModal = ({
                                 <Text style={styles.paperSizeDescription}>
                                     Chọn kích thước giấy in phù hợp với máy in thermal của bạn
                                 </Text>
-                            </View>
-
-                            {/* Font Size Settings for Bill Printer */}
-                            <View style={styles.sectionHeader}>
-                                <TextNormal style={styles.sectionTitle}>{"Cài đặt kích thước chữ"}</TextNormal>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Tiêu đề hóa đơn"}</TextNormal>
-                                <View style={styles.inputContainer}>
-                                    <TextInput
-                                        placeholder="24"
-                                        value={billHeader.toString()}
-                                        onChangeText={(text) => setBillHeader(text)}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Nội dung hóa đơn"}</TextNormal>
-                                <View style={styles.inputContainer}>
-                                    <TextInput
-                                        placeholder="16"
-                                        value={billContent.toString()}
-                                        onChangeText={(text) => setBillContent(text)}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
-                                </View>
-                            </View>
-
-                            <View style={styles.inputGroup}>
-                                <TextNormal style={styles.label}>{"Tổng cộng"}</TextNormal>
-                                <View style={styles.inputContainer}>
-                                    <TextInput
-                                        placeholder="18"
-                                        value={billTotal.toString()}
-                                        onChangeText={(text) => setBillTotal(text)}
-                                        style={styles.input}
-                                        keyboardType="numeric"
-                                        placeholderTextColor={Colors.textSecondary}
-                                    />
-                                </View>
                             </View>
                         </>
                     )}

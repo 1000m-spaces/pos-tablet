@@ -1,46 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform, Image, PixelRatio } from "react-native";
+import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform } from "react-native";
 import { Table, Row } from "react-native-table-component";
-import ViewShot from "react-native-view-shot";
-import PrintTemplate from "./TemTemplate";
-import { useRef } from "react";
 import AsyncStorage from 'store/async_storage/index'
-import BillTemplate from "./BillTemplate";
 import Toast from 'react-native-toast-message'
-import XPrinter from 'rn-xprinter';
-import RNFS from 'react-native-fs';
 import OrderDetailDialog from './OrderDetailDialog';
 import { getOrderIdentifierForPrinting } from '../../utils/orderUtils';
+import printQueueService from '../../services/PrintQueueService';
 
 const { width, height } = Dimensions.get("window");
 
-// Convert mm to pixels using device's actual DPI, optimized for tablets
-const mmToPixels = (mm) => {
-    const { width, height } = Dimensions.get('window');
-    const screenWidth = Math.max(width, height); // Use the larger dimension for tablets
-    const screenHeight = Math.min(width, height);
-
-    // Get physical dimensions in inches (assuming standard tablet sizes)
-    // Most tablets are around 10-12 inches diagonally
-    const diagonalInches = Math.sqrt(Math.pow(screenWidth / PixelRatio.get(), 2) + Math.pow(screenHeight / PixelRatio.get(), 2)) / 160;
-
-    // Calculate actual DPI based on physical screen size
-    const actualDpi = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / diagonalInches;
-
-    return Math.round((mm * actualDpi) / 25.4); // 25.4mm = 1 inch
-};
-
-// Calculate thermal printer width based on paper size
-const getThermalPrinterWidth = (paperSize) => {
-    // Standard thermal printer widths at 203 DPI
-    switch (paperSize) {
-        case '58mm':
-            return 384; // 58mm ≈ 384 pixels at 203 DPI
-        case '80mm':
-            return 576; // 80mm ≈ 576 pixels at 203 DPI
-        default:
-            return 576; // Default to 80mm if not specified
-    }
+// Convert mm to pixels for ViewShot width calculation
+const mmToPixels = (mm, dpi = 203) => {
+    return Math.round((mm * dpi) / 25.4); // 25.4mm = 1 inch
 };
 
 const Badge = ({ text, colorText, colorBg, width }) => (
@@ -53,34 +24,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
-    const [printingOrder, setPrintingOrder] = useState(null);
     const [printedLabels, setPrintedLabelsState] = useState([]);
     const [isAutoPrinting, setIsAutoPrinting] = useState(false);
-    const [printerInfo, setPrinterInfo] = useState(null);
-    const viewTemShotRef = useRef();
-    const viewBillShotRef = useRef();
-
-    // Create printer instances
-    const labelPrinterRef = useRef(null);
-    const billPrinterRef = useRef(null);
-
-    // Initialize printer instances
-    useEffect(() => {
-        labelPrinterRef.current = new XPrinter();
-        billPrinterRef.current = new XPrinter();
-
-        return () => {
-            // Cleanup printer instances
-            if (labelPrinterRef.current) {
-                labelPrinterRef.current.dispose();
-                labelPrinterRef.current = null;
-            }
-            if (billPrinterRef.current) {
-                billPrinterRef.current.dispose();
-                billPrinterRef.current = null;
-            }
-        };
-    }, []);
 
     const tableHead = ["Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
@@ -103,46 +48,6 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
         };
         loadPrintedLabels();
     }, []);
-
-    useEffect(() => {
-        const loadPrinterInfo = async () => {
-            const info = await AsyncStorage.getLabelPrinterInfo();
-            setPrinterInfo(info);
-        };
-        loadPrinterInfo();
-    }, []);
-
-    // Helper function to connect to printer based on connection type
-    const connectToPrinter = async (printerInstance, printerConfig) => {
-        try {
-            switch (printerConfig.connectionType) {
-                case 'network':
-                    if (!printerConfig.IP) {
-                        throw new Error('IP address not configured');
-                    }
-                    return await printerInstance.netConnect(printerConfig.IP);
-
-                case 'usb':
-                    if (!printerConfig.usbDevice) {
-                        throw new Error('USB device not selected');
-                    }
-                    return await printerInstance.usbConnect(printerConfig.usbDevice);
-
-                case 'serial':
-                    if (!printerConfig.serialPort) {
-                        throw new Error('Serial port not selected');
-                    }
-                    return await printerInstance.serialConnect(printerConfig.serialPort);
-
-                default:
-                    throw new Error('Unknown connection type');
-            }
-        } catch (error) {
-            console.error('Printer connection error:', error);
-            throw error;
-        }
-    };
-
 
 
     const getStatusColor = (status) => {
@@ -218,143 +123,53 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
                 throw new Error('Printer settings not configured');
             }
 
-            // Attempt to connect to printer before printing
-            try {
-                await connectToPrinter(labelPrinterRef.current, labelPrinterInfo);
-            } catch (connectError) {
-                console.error('Printer connection error:', connectError);
-                throw new Error('Printer settings not configured');
+            const targetOrder = order || selectedOrder;
+            console.log('Queueing label print for order:', targetOrder.displayID);
+
+            // Use global.queueMultipleLabels for multiple products if available
+            if (global.queueMultipleLabels && targetOrder.itemInfo?.items && targetOrder.itemInfo.items.length > 0) {
+                const labelTaskIds = await global.queueMultipleLabels(targetOrder, labelPrinterInfo);
+                console.log(`Queued ${labelTaskIds.length} label tasks:`, labelTaskIds);
+
+                // Update print status
+                await AsyncStorage.setPrintedLabels(targetOrder.displayID);
+                setPrintedLabelsState(prev => [...prev, targetOrder.displayID]);
+
+                Toast.show({
+                    type: 'success',
+                    text1: `Đã xếp hàng in ${labelTaskIds.length} tem`
+                });
+            } else {
+                // Fallback to single label task
+                const taskId = printQueueService.addPrintTask({
+                    type: 'label',
+                    order: targetOrder,
+                    priority: 'high'
+                });
+
+                // Update print status
+                await AsyncStorage.setPrintedLabels(targetOrder.displayID);
+                setPrintedLabelsState(prev => [...prev, targetOrder.displayID]);
+
+                Toast.show({
+                    type: 'success',
+                    text1: 'Đã xếp hàng in tem'
+                });
+                console.log('Label print task queued with ID:', taskId);
             }
-
-            // Store the original order
-            const originalOrder = order || selectedOrder;
-            setPrintingOrder(originalOrder);
-
-            // Calculate total number of labels to be printed
-            let totalLabels = 0;
-            originalOrder.itemInfo.items.forEach(item => {
-                if (item.separate && item.modifierGroups && item.modifierGroups.length > 0) {
-                    totalLabels += item.modifierGroups.length;
-                } else {
-                    totalLabels += 1;
-                }
-            });
-
-            let currentLabelIndex = 0;
-
-            // Print each item separately
-            for (let i = 0; i < originalOrder.itemInfo.items.length; i++) {
-                const item = originalOrder.itemInfo.items[i];
-
-                if (item.separate && item.modifierGroups && item.modifierGroups.length > 0) {
-                    // If item has separate flag and modifier groups, print each modifier group
-                    for (let j = 0; j < item.modifierGroups.length; j++) {
-                        const modifierGroup = item.modifierGroups[j];
-
-                        // Create a temporary order with just this modifier group
-                        const tempOrder = {
-                            ...originalOrder,
-                            itemInfo: {
-                                ...originalOrder.itemInfo,
-                                items: [{
-                                    ...item,
-                                    // name: `${item.name} - ${modifierGroup.modifierGroupName}`,
-                                    name: `${modifierGroup.modifierGroupName}`,
-                                    modifierGroups: [modifierGroup],
-                                    itemIdx: currentLabelIndex,
-                                    totalItems: totalLabels,
-                                }],
-                                itemIdx: currentLabelIndex,
-                                totalItems: totalLabels,
-                            }
-                        };
-
-                        // Update the ViewShot with the temporary order
-                        setPrintingOrder(tempOrder);
-
-                        // Wait for the ViewShot to be ready
-                        await new Promise(resolve => setTimeout(resolve, 500));
-
-                        // Capture and print the label
-                        const uri = await viewTemShotRef.current.capture();
-                        const imageInfo = await Image.getSize(uri);
-                        const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                        await labelPrinterRef.current.tsplPrintBitmap(
-                            Number(labelPrinterInfo.sWidth),
-                            Number(labelPrinterInfo.sHeight),
-                            base64,
-                            imageInfo.width
-                        );
-
-                        // Add a small delay between prints
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        currentLabelIndex++;
-                    }
-                } else {
-                    // Original behavior for non-separate items
-                    const tempOrder = {
-                        ...originalOrder,
-                        itemInfo: {
-                            ...originalOrder.itemInfo,
-                            items: [{
-                                ...item,
-                                itemIdx: currentLabelIndex + 1,
-                                totalItems: totalLabels,
-                            }],
-                            itemIdx: currentLabelIndex + 1,
-                            totalItems: totalLabels,
-                        }
-                    };
-
-                    // Update the ViewShot with the temporary order
-                    setPrintingOrder(tempOrder);
-
-                    // Wait for the ViewShot to be ready
-                    await new Promise(resolve => setTimeout(resolve, 500));
-
-                    // Capture and print the label
-                    const uri = await viewTemShotRef.current.capture();
-                    const imageInfo = await Image.getSize(uri);
-                    const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                    await labelPrinterRef.current.tsplPrintBitmap(
-                        Number(labelPrinterInfo.sWidth),
-                        Number(labelPrinterInfo.sHeight),
-                        base64,
-                        imageInfo.width
-                    );
-
-                    // Add a small delay between prints
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    currentLabelIndex++;
-                }
-            }
-
-            // Restore the original order
-            setPrintingOrder(null);
-
-            // Update print status after successful print
-            const orderIdentifier = getOrderIdentifierForPrinting(originalOrder, false); // false for online orders
-            await AsyncStorage.setPrintedLabels(orderIdentifier);
-            setPrintedLabelsState(prev => [...prev, orderIdentifier]);
-
-            Toast.show({
-                type: 'success',
-                text1: 'In tem thành công'
-            });
         } catch (error) {
-            console.error('Print error:', error);
+            console.error('Print queue error:', error);
             Toast.show({
                 type: 'error',
                 text1: error.message === 'Printer settings not configured' ?
                     'Vui lòng thiết lập máy in' :
-                    'Lỗi in tem: ' + error.message
+                    'Lỗi xếp hàng in tem: ' + error.message
             });
             if (error.message === 'Printer settings not configured') {
                 showSettingPrinter();
             }
         } finally {
             setLoadingVisible(false);
-            setPrintingOrder(null);
         }
     };
 
@@ -383,48 +198,35 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             } else if (billPrinterInfo.billConnectionType === 'serial' && !billPrinterInfo.billSerialPort) {
                 throw new Error('Printer settings not configured');
             }
-            // Set the order for printing
-            setPrintingOrder(order || selectedOrder);
 
-            // Wait for the ViewShot to be ready
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const targetOrder = order || selectedOrder;
+            console.log('Queueing bill print for order:', targetOrder.displayID);
 
-            // Attempt to connect to printer before printing
-            try {
-                const billConfig = {
-                    connectionType: billPrinterInfo.billConnectionType || 'network',
-                    IP: billPrinterInfo.billIP,
-                    usbDevice: billPrinterInfo.billUsbDevice,
-                    serialPort: billPrinterInfo.billSerialPort
-                };
-                await connectToPrinter(billPrinterRef.current, billConfig);
-            } catch (connectError) {
-                console.error('Printer connection error:', connectError);
-                throw new Error('Printer settings not configured');
-            }
-
-            const imageData = await viewBillShotRef.current.capture();
-            const printerWidth = getThermalPrinterWidth(billPrinterInfo.billPaperSize);
-            await billPrinterRef.current.printBitmap(imageData, 1, printerWidth, 0);
+            // Add bill printing task to queue
+            const taskId = printQueueService.addPrintTask({
+                type: 'bill',
+                order: targetOrder,
+                priority: 'high'
+            });
 
             Toast.show({
                 type: 'success',
-                text1: 'In hoá đơn thành công'
+                text1: 'Đã xếp hàng in hoá đơn'
             });
+            console.log('Bill print task queued with ID:', taskId);
         } catch (error) {
-            console.error('Print error:', error);
+            console.error('Print queue error:', error);
             Toast.show({
                 type: 'error',
                 text1: error.message === 'Printer settings not configured' ?
                     'Vui lòng thiết lập máy in' :
-                    'Lỗi in hoá đơn: ' + error.message
+                    'Lỗi xếp hàng in hoá đơn: ' + error.message
             });
             if (error.message === 'Printer settings not configured') {
                 showSettingPrinter();
             }
         } finally {
             setLoadingVisible(false);
-            setPrintingOrder(null);
         }
     };
 
@@ -449,69 +251,43 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
                 throw new Error('Printer settings not configured');
             }
 
-            // Store the original order
-            const originalOrder = order;
-            setPrintingOrder(originalOrder);
+            console.log('Auto-queueing label print for order:', order.displayID);
 
-            // Connect to printer
-            await connectToPrinter(labelPrinterRef.current, labelPrinterInfo);
+            // Use global.queueMultipleLabels for multiple products if available
+            if (global.queueMultipleLabels && order.itemInfo?.items && order.itemInfo.items.length > 0) {
+                const labelTaskIds = await global.queueMultipleLabels(order, labelPrinterInfo);
+                console.log(`Auto-queued ${labelTaskIds.length} label tasks:`, labelTaskIds);
 
-            // Print each item separately
-            for (let i = 0; i < originalOrder.itemInfo.items.length; i++) {
-                // Create a temporary order with just this item
-                const tempOrder = {
-                    ...originalOrder,
-                    itemInfo: {
-                        ...originalOrder.itemInfo,
-                        items: [originalOrder.itemInfo.items[i]],
-                        itemIdx: i,
-                        totalItems: originalOrder.itemInfo.items.length,
-                    }
-                };
+                // Update print status
+                await AsyncStorage.setPrintedLabels(order.displayID);
+                setPrintedLabelsState(prev => [...prev, order.displayID]);
 
-                // Update the ViewShot with the temporary order
-                setPrintingOrder(tempOrder);
+                Toast.show({
+                    type: 'success',
+                    text1: `Đã tự động xếp hàng in ${labelTaskIds.length} tem cho đơn ${order.displayID}`
+                });
+            } else {
+                // Fallback to single label task
+                const taskId = printQueueService.addPrintTask({
+                    type: 'label',
+                    order: order,
+                    priority: 'high'
+                });
 
-                // Wait for the ViewShot to be ready
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Update print status
+                await AsyncStorage.setPrintedLabels(order.displayID);
+                setPrintedLabelsState(prev => [...prev, order.displayID]);
 
-                // Print the label
-                const uri = await viewTemShotRef.current.capture();
-                const imageInfo = await Image.getSize(uri);
-                const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                await labelPrinterRef.current.tsplPrintBitmap(
-                    Number(labelPrinterInfo.sWidth),
-                    Number(labelPrinterInfo.sHeight),
-                    base64,
-                    imageInfo.width
-                );
-
-                // Add a small delay between prints
-                await new Promise(resolve => setTimeout(resolve, 500));
+                Toast.show({
+                    type: 'success',
+                    text1: `Đã tự động xếp hàng in tem cho đơn ${order.displayID}`
+                });
+                console.log('Auto-queued label print task with ID:', taskId);
             }
-
-            // Restore the original order
-            setPrintingOrder(null);
-
-            // Update print status
-            const orderIdentifier = getOrderIdentifierForPrinting(order, false); // false for online orders
-            await AsyncStorage.setPrintedLabels(orderIdentifier);
-            setPrintedLabelsState(prev => [...prev, orderIdentifier]);
-
-            Toast.show({
-                type: 'success',
-                text1: `Đã tự động in tem cho đơn ${order.displayID}`
-            });
         } catch (error) {
-            console.error('Auto print error:', error);
+            console.error('Auto print queue error:', error);
             if (error.message === 'Printer settings not configured') {
                 showSettingPrinter();
-            }
-        } finally {
-            setPrintingOrder(null);
-            // Close printer connection after auto printing
-            if (labelPrinterRef.current) {
-                labelPrinterRef.current.closeConnection();
             }
         }
     };
@@ -519,6 +295,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
     // Monitor orders for new unprinted items
     useEffect(() => {
         const checkAndPrintNewOrders = async () => {
+            const labels = await AsyncStorage.getPrintedLabels();
             if (isAutoPrinting || !orders.length) return;
 
             if (orderType != 1) {
@@ -531,7 +308,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
             setIsAutoPrinting(true);
             try {
                 for (const order of orders) {
-                    if (order && !printedLabels.includes(order.displayID)) {
+                    if (order && !labels.includes(order.displayID)) {
+                        console.log("Auto print order:", order.displayID);
                         await autoPrintOrder(order);
                         // Add a small delay between prints
                         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -543,7 +321,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
         };
 
         checkAndPrintNewOrders();
-    }, [orders, printedLabels, orderType]);
+    }, [orders, orderType]);
 
     const tableData = orders?.map(order => [
         order.service || "GRAB",
@@ -595,38 +373,6 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
                 onConfirm={onConfirmOrder ? () => onConfirmOrder(selectedOrder) : undefined}
                 loadingVisible={loadingVisible}
             />
-
-            <ViewShot
-                ref={viewTemShotRef}
-                options={{ format: "jpg", quality: 1.0 }}
-                style={{
-                    position: 'absolute',
-                    left: -9999,
-                    top: -9999,
-                    width: printerInfo ? mmToPixels(Number(printerInfo.sWidth)) : mmToPixels(50),
-                    backgroundColor: 'white',
-                    opacity: 0,
-                    zIndex: -1,
-                    pointerEvents: 'none',
-                }}>{printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}</ViewShot>
-            <ViewShot
-                ref={viewBillShotRef}
-                options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
-                style={{
-                    position: 'absolute',
-                    left: -9999,
-                    top: -9999,
-                    width: 400,
-                    backgroundColor: 'white',
-                    opacity: 0,
-                    zIndex: -1,
-                    pointerEvents: 'none',
-                }}
-            >
-                {printingOrder && (
-                    <BillTemplate selectedOrder={printingOrder} />
-                )}
-            </ViewShot>
             <Toast
                 position="top"
                 topOffset={50}
