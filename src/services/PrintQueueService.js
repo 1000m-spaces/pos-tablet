@@ -112,15 +112,33 @@ class PrintQueueService {
 
     // Print label using image data from Main component
     async printLabel(task) {
-        const { order, printerInfo } = task;
+        const { order, printerInfo, metadata } = task;
 
         if (!printerInfo) {
             throw new Error('Printer info not available for label printing');
         }
 
         try {
-            // Request label snapshot from Main component
-            const uri = await this.captureCallback('label', order);
+            // Prepare options for handleCaptureSnapshot based on metadata
+            let options = {};
+            if (metadata && metadata.isMultiLabel) {
+                options = {
+                    productIndex: metadata.productIndex,
+                    labelIndex: metadata.labelIndex,
+                    totalLabels: metadata.totalLabels
+                };
+                console.log(`PrintQueue: Printing label for product "${metadata.productName}" - Label ${metadata.labelIndex + 1}/${metadata.totalLabels}`);
+            } else {
+                // Single label print (backward compatibility)
+                options = {
+                    productIndex: 0,
+                    labelIndex: 0,
+                    totalLabels: 1
+                };
+            }
+
+            // Request label snapshot from Main component with proper options
+            const uri = await this.captureCallback('label', order, options);
 
             if (!uri) {
                 throw new Error('Failed to capture label snapshot');
@@ -129,12 +147,12 @@ class PrintQueueService {
             // Print using the printing service
             await printingService.printLabel(uri, printerInfo);
 
-            // Save print record
-            await this.savePrintRecord(order, 'label', true);
+            // Save print record with metadata
+            await this.savePrintRecord(order, 'label', true, null, metadata);
 
         } catch (error) {
             console.error('Label printing error:', error);
-            await this.savePrintRecord(order, 'label', false, error.message);
+            await this.savePrintRecord(order, 'label', false, error.message, metadata);
             throw error;
         }
     }
@@ -183,7 +201,7 @@ class PrintQueueService {
     }
 
     // Save print record to AsyncStorage
-    async savePrintRecord(order, type, success, error = null) {
+    async savePrintRecord(order, type, success, error = null, metadata = null) {
         try {
             const printRecord = {
                 orderId: order.session || order.offlineOrderId,
@@ -195,7 +213,15 @@ class PrintQueueService {
                     session: order.session,
                     total_amount: order.total_amount,
                     shopTableName: order.shopTableName
-                }
+                },
+                // Include metadata for tracking individual labels
+                metadata: metadata ? {
+                    productIndex: metadata.productIndex,
+                    labelIndex: metadata.labelIndex,
+                    totalLabels: metadata.totalLabels,
+                    productName: metadata.productName,
+                    isMultiLabel: metadata.isMultiLabel
+                } : null
             };
 
             // Get existing print records

@@ -392,15 +392,33 @@ const PaymentCart = () => {
       const printerInfo = await AsyncStorage.getLabelPrinterInfo();
       console.log('Triggering auto-print for order:', orderData.session);
 
-      // Add print task to queue - print both label and bill
-      const taskId = printQueueService.addPrintTask({
-        type: 'both', // Print both label and bill
-        order: orderData,
-        printerInfo: printerInfo,
-        priority: 'high'
-      });
+      // Use the new queueMultipleLabels function to handle multiple products and quantities
+      if (global.queueMultipleLabels && orderData.products && orderData.products.length > 0) {
+        // Queue multiple labels for all products and quantities
+        const labelTaskIds = await global.queueMultipleLabels(orderData, printerInfo);
+        console.log(`Auto-print: Queued ${labelTaskIds.length} label tasks:`, labelTaskIds);
 
-      console.log('Auto-print task added to queue with ID:', taskId);
+        // Also add bill printing task
+        const billTaskId = printQueueService.addPrintTask({
+          type: 'bill',
+          order: orderData,
+          priority: 'high'
+        });
+
+        console.log('Auto-print: Queued bill task:', billTaskId);
+        console.log(`Auto-print completed - ${labelTaskIds.length} labels + 1 bill queued`);
+      } else {
+        // Fallback to old method if queueMultipleLabels not available
+        console.log('Auto-print: Using fallback method (queueMultipleLabels not available)');
+        const taskId = printQueueService.addPrintTask({
+          type: 'both', // Print both label and bill
+          order: orderData,
+          printerInfo: printerInfo,
+          priority: 'high'
+        });
+
+        console.log('Auto-print task added to queue with ID:', taskId);
+      }
 
     } catch (error) {
       console.error('Error triggering auto-print:', error);

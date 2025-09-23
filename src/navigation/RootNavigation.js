@@ -291,11 +291,78 @@ const HiddenViewShotComponents = () => {
     initializePrintQueue();
   }, []);
 
+  // Queue multiple labels for orders with multiple products and quantities
+  const queueMultipleLabels = async (order, printerInfo) => {
+    try {
+      console.log('RootNav: Starting queueMultipleLabels for order:', order?.session || order?.offlineOrderId);
+
+      if (!order || !order.products) {
+        throw new Error('Order or products not available');
+      }
+
+      // Calculate total number of labels to be printed
+      let totalLabels = 0;
+      order.products.forEach(product => {
+        totalLabels += (product.quanlity || 1);
+      });
+
+      console.log(`RootNav: Total labels to print: ${totalLabels}`);
+
+      let currentLabelIndex = 0;
+      const printTaskIds = [];
+
+      // Create print tasks for each product and each quantity
+      for (let productIndex = 0; productIndex < order.products.length; productIndex++) {
+        const product = order.products[productIndex];
+        const quantity = product.quanlity || 1;
+
+        // Create one print task for each quantity of the product
+        for (let quantityIndex = 0; quantityIndex < quantity; quantityIndex++) {
+          const taskId = printQueueService.addPrintTask({
+            type: 'label',
+            order: order,
+            printerInfo: printerInfo,
+            // Metadata for tracking individual labels
+            metadata: {
+              productIndex: productIndex,
+              labelIndex: currentLabelIndex,
+              totalLabels: totalLabels,
+              productQuantityIndex: quantityIndex,
+              productQuantityTotal: quantity,
+              productName: product.name,
+              isMultiLabel: true
+            }
+          });
+
+          printTaskIds.push(taskId);
+          console.log(`RootNav: Queued label task ${taskId} - Product: "${product.name}" (${productIndex + 1}/${order.products.length}), Label: ${currentLabelIndex + 1}/${totalLabels}, Qty: ${quantityIndex + 1}/${quantity}`);
+
+          currentLabelIndex++;
+        }
+      }
+
+      console.log(`RootNav: Successfully queued ${printTaskIds.length} label printing tasks`);
+      return printTaskIds;
+
+    } catch (error) {
+      console.error('RootNav: Error in queueMultipleLabels:', error);
+      throw error;
+    }
+  };
+
   // Clean up on unmount
   useEffect(() => {
     return () => {
       setPrintingOrder(null);
       setIsComponentReady(false);
+    };
+  }, []);
+
+  // Expose functions globally for use by other components
+  useEffect(() => {
+    global.queueMultipleLabels = queueMultipleLabels;
+    return () => {
+      delete global.queueMultipleLabels;
     };
   }, []);
 
