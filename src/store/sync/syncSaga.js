@@ -64,8 +64,9 @@ function* syncPendingOrdersSaga() {
 
         if (response.success) {
             // Update sync status for successfully synced orders
+            const ordersSyncedServer = response.result?.data || [];
             const updatedOrders = pendingOrders.map(order => {
-                if (ordersToSync.some(syncOrder => syncOrder.session === order.session)) {
+                if (ordersSyncedServer.some(syncOrder => syncOrder.offline_code === order.session && syncOrder.match === true)) {
                     return {
                         ...order,
                         syncStatus: 'synced',

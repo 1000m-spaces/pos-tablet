@@ -83,7 +83,7 @@ export const getFormattedOrderTotal = (order, isOfflineOrder) => {
  */
 export const getOrderTableInfo = (order, isOfflineOrder) => {
     if (isOfflineOrder) {
-        return order.shopTableName || 'Mang về';
+        return order.shoptablename || 'Mang về';
     }
     return null; // Online orders don't have table info in the same way
 };

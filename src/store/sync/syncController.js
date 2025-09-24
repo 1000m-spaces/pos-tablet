@@ -6,7 +6,7 @@ class SyncController {
         try {
             const response = await HttpClient.post(UrlApi.syncOrders, body);
             const { data, status } = response;
-            console.log('sync orders error serrverrr: ', response);
+            console.log('sync orders response controller: ', response);
             if (status !== 200) {
                 console.log('sync orders error: non-200 status:', status);
                 return { success: false, status, result: null };

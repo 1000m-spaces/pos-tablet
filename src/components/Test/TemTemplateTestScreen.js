@@ -126,11 +126,11 @@ const TemTemplateTestScreen = () => {
         {
             title: "Offline Order (Object 2)",
             json: `{
-    "subPrice": 276000,
+    "price_paid": 276000,
     "svFee": "0",
     "svFee_amount": 0,
     "shopTableid": "28685",
-    "shopTableName": "Bàn 15",
+    "shoptablename": "Bàn 15",
     "orderNote": "",
     "products": [
         {
@@ -333,7 +333,7 @@ const TemTemplateTestScreen = () => {
         let normalizedData = {
             displayID: jsonObj.displayID || jsonObj.session,
             session: jsonObj.session || jsonObj.displayID,
-            tableName: jsonObj.tableName || jsonObj.shopTableName || (jsonObj.customerInfo?.name),
+            tableName: jsonObj.tableName || jsonObj.shoptablename || (jsonObj.customerInfo?.name),
             createdAt: jsonObj.created_at || jsonObj.timestamp || new Date().toISOString(),
             orderNote: jsonObj.orderNote || jsonObj.eater?.comment || "",
             staff: "System Staff",

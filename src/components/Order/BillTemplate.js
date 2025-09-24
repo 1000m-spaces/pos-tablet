@@ -241,7 +241,7 @@ const BillTemplate = ({ selectedOrder }) => {
                     </View>
                     <View style={styles.tableSection}>
                         <Text style={[styles.tableNumber, { fontSize: fontSizes.header * 1.5 }]}>
-                            {selectedOrder?.tableName || selectedOrder?.shopTableName || 'N/A'}
+                            {selectedOrder?.tableName || selectedOrder?.shoptablename || 'N/A'}
                         </Text>
                     </View>
                 </View>

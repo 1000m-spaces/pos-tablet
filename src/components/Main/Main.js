@@ -29,7 +29,7 @@ const Main = () => {
 
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
-  }, [dispatch]);
+  }, []);
 
   useEffect(() => {
     const loadUserShop = async () => {

@@ -360,9 +360,9 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
 
                             // Service and location information
                             serviceType: 'offline',
-                            tableName: originalOrder.shopTableName,
-                            table: originalOrder.shopTableName,
-                            shopTableName: originalOrder.shopTableName,
+                            tableName: originalOrder.shoptablename,
+                            table: originalOrder.shoptablename,
+                            shoptablename: originalOrder.shoptablename,
                             shopTableid: originalOrder.shopTableid || "0",
 
                             // Timing information
@@ -380,7 +380,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                             roleid: originalOrder.roleid || "4",
 
                             // Payment and pricing information
-                            subPrice: originalOrder.subPrice || originalOrder.total_amount || 0,
+                            price_paid: originalOrder.price_paid || originalOrder.total_amount || 0,
                             total_amount: originalOrder.total_amount || 0,
                             orderValue: originalOrder.total_amount || 0,
                             transType: originalOrder.transType || "41",
@@ -451,8 +451,8 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
 
                             // Customer and service information
                             customerInfo: {
-                                name: originalOrder.shopTableName || 'Khách hàng',
-                                table: originalOrder.shopTableName,
+                                name: originalOrder.shoptablename || 'Khách hàng',
+                                table: originalOrder.shoptablename,
                                 phone: originalOrder.customerPhone || '',
                                 address: originalOrder.customerAddress || '',
                             },
@@ -590,10 +590,10 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                     })) : []
                 },
                 customerInfo: {
-                    name: order.shopTableName || 'Khách hàng',
+                    name: order.shoptablename || 'Khách hàng',
                 },
                 serviceType: 'offline',
-                tableName: order.shopTableName,
+                tableName: order.shoptablename,
             };
             // Set the order for printing
             setPrintingOrder(billOrder);
@@ -680,8 +680,8 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
     };
 
     const tableData = filteredOrders.map((order, index) => [
-        order.session || `M-${index + 1}`,
-        order.shopTableName || 'N/A',
+        order.session || order.offline_code || `M-${index + 1}`,
+        order.shoptablename || 'N/A',
         formatCurrency(order.total_amount || 0),
         getItemCount(order).toString(),
         renderStatusSelector(order),
