@@ -260,7 +260,7 @@ const PaymentCart = () => {
       });
 
       // Calculate totals
-      const subPrice = transformedProducts.reduce((sum, product) => sum + product.amount, 0);
+      const price_paid = transformedProducts.reduce((sum, product) => sum + product.amount, 0);
 
       // Generate auto-increment order ID by date (format: 4-digit counter only)
       const generateOfflineOrderId = async () => {
@@ -313,18 +313,18 @@ const PaymentCart = () => {
       console.log(' User info payment cart:', user);
 
       const orderData = {
-        subPrice: subPrice,
+        price_paid: price_paid,
         svFee: "0",
         svFee_amount: 0,
         shopTableid: currentOrder.tableId || "0",
-        shopTableName: selectedTableName,
+        shoptablename: selectedTableName,
         orderNote: currentOrder.note || "",
         products: transformedProducts,
         cust_id: 0,
         transType: selectedPaymentMethod ? selectedPaymentMethod.trans_name : "41", // Use trans_name as transaction type
         chanel_type_id: currentOrder ? currentOrder.orderType : "1",
         phuthu: 0,
-        total_amount: subPrice,
+        total_amount: price_paid,
         fix_discount: 0,
         perDiscount: 0,
         session: session,

@@ -210,12 +210,14 @@ function* getOrderPaidSuccessSaga({ payload }) {
   try {
     const result = yield call(orderController.getOrderPaidSuccess, payload);
     if (result && result.success) {
-      console.log('AAAAAAAAAAA:', result)
       const pendingOrders = yield call(AsyncStorage.getPendingOrders);
       const pendingItems = pendingOrders.filter(item => item.syncStatus === "pending");
-      const dataSynced = [...pendingItems, ...result.data.data];
+      const resultItems = result.data?.data || [];
+      resultItems.forEach(item => {
+        item.syncStatus = "synced";
+      });
+      const dataSynced = [...pendingItems, ...resultItems];
       console.log('dataSynced:', dataSynced)
-      console.log('BBBBBBBBBBBBBB:', pendingItems, result.data)
       yield call(AsyncStorage.setPendingOrders, dataSynced);
       put(syncPendingOrdersAction());
       yield put({

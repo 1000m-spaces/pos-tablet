@@ -66,9 +66,9 @@ const Invoice = () => {
                 updated_at: order.updated_at || order.created_at || new Date().toISOString(),
                 // Ensure we have the required fields from the API format
                 session: order.session,
-                total_amount: order.total_amount || order.subPrice || 0,
+                total_amount: order.total_amount || order.price_paid || 0,
                 products: order.products || [],
-                shopTableName: order.shopTableName || 'N/A',
+                shoptablename: order.shoptablename || 'N/A',
                 tableId: order.tableId || null,
             }));
 

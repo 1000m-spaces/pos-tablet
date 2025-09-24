@@ -80,8 +80,8 @@ class PrintingService {
             displayID: orderData.offlineOrderId || orderData.session,
             session: orderData.session,
             created_at: orderData.created_at || new Date().toISOString(),
-            shopTableName: orderData.shopTableName || 'Mang về',
-            tableName: orderData.shopTableName || 'Mang về', // For TemTemplate compatibility
+            shoptablename: orderData.shoptablename || 'Mang về',
+            tableName: orderData.shoptablename || 'Mang về', // For TemTemplate compatibility
             total_amount: orderData.total_amount,
             serviceType: 'offline', // Default service type
             orderNote: orderData.note || '', // Order-level note
