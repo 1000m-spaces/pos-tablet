@@ -208,6 +208,8 @@ class PrintQueueService {
     // Print label using image data from Main component
     async printLabel(task) {
         const { order, printerInfo, metadata } = task;
+        
+        console.log(`PrintQueue: printLabel called with metadata:`, metadata);
 
         if (!printerInfo) {
             throw new Error('Printer info not available for label printing');
@@ -231,6 +233,8 @@ class PrintQueueService {
                     totalLabels: 1
                 };
             }
+
+            console.log(`PrintQueue: Built options for handleCaptureSnapshot:`, options);
 
             // Request label snapshot from Main component with proper options
             const uri = await this.captureCallback('label', order, options);
@@ -258,7 +262,7 @@ class PrintQueueService {
 
         try {
             // Request bill snapshot from Main component
-            const base64 = await this.captureCallback('bill', order);
+            const base64 = await this.captureCallback('bill', order, {});
 
             if (!base64) {
                 throw new Error('Failed to capture bill snapshot');

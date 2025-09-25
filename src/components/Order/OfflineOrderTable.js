@@ -12,7 +12,6 @@ import Colors from 'theme/Colors';
 import { TextNormal } from 'common/Text/TextFont';
 import RNFS from 'react-native-fs';
 import { useDispatch } from 'react-redux';
-import { syncPendingOrdersAction } from 'store/sync/syncAction';
 import XPrinter from 'rn-xprinter';
 import { getOrderIdentifierForPrinting } from '../../utils/orderUtils';
 

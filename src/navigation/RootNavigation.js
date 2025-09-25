@@ -29,8 +29,21 @@ const HiddenViewShotComponents = () => {
 
   // Helper function to transform order for label printing
   const transformOrderForLabel = (originalOrder, productIndex = 0, labelIndex = 0, totalLabels = 1) => {
+    console.log(`RootNav: transformOrderForLabel called with productIndex=${productIndex}, labelIndex=${labelIndex}, totalLabels=${totalLabels}`);
+    console.log('RootNav: originalOrder data:', {
+      session: originalOrder.session,
+      shoptablename: originalOrder.shoptablename,
+      shopTableName: originalOrder.shopTableName,
+      products: originalOrder.products?.length || 0
+    });
+
     const product = originalOrder.products?.[productIndex];
-    if (!product) return originalOrder;
+    if (!product) {
+      console.log(`RootNav: No product found at index ${productIndex}`);
+      return originalOrder;
+    }
+
+    console.log(`RootNav: Processing product:`, product.name, 'for label', labelIndex + 1, 'of', totalLabels);
 
     return {
       ...originalOrder,
@@ -41,9 +54,9 @@ const HiddenViewShotComponents = () => {
 
       // Service and location information
       serviceType: 'offline',
-      tableName: originalOrder.shopTableName,
-      table: originalOrder.shopTableName,
-      shopTableName: originalOrder.shopTableName,
+      tableName: originalOrder.shopTableName || originalOrder.shoptablename,
+      table: originalOrder.shopTableName || originalOrder.shoptablename,
+      shopTableName: originalOrder.shopTableName || originalOrder.shoptablename,
       shopTableid: originalOrder.shopTableid || "0",
 
       // Timing information
@@ -132,8 +145,8 @@ const HiddenViewShotComponents = () => {
 
       // Customer and service information
       customerInfo: {
-        name: originalOrder.shopTableName || 'Khách hàng',
-        table: originalOrder.shopTableName,
+        name: originalOrder.shopTableName || originalOrder.shoptablename || 'Khách hàng',
+        table: originalOrder.shopTableName || originalOrder.shoptablename,
         phone: originalOrder.customerPhone || '',
         address: originalOrder.customerAddress || '',
       },
@@ -192,7 +205,7 @@ const HiddenViewShotComponents = () => {
   // Capture snapshot function for print queue service
   const handleCaptureSnapshot = async (type, order, options = {}) => {
     try {
-      console.log(`RootNav: Capturing ${type} snapshot for order:`, order?.session || order?.offlineOrderId);
+      console.log(`RootNav: Capturing ${type} snapshot for order:`, order, options, order?.session || order?.offlineOrderId);
 
       // Transform the order based on print type
       let transformedOrder;

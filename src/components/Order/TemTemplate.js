@@ -220,7 +220,6 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             option: '',
             extrastring: '',
             note_prod: item.comment || '',
-            amount: item.quantity || 1,
         })) : []);
 
     const getOrderTypeText = (order) => {
