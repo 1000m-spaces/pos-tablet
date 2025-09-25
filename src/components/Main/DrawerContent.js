@@ -19,8 +19,8 @@ import { NAVIGATION_LOGIN } from 'navigation/routes';
 import { versionNameApp, versionDisplayApp, versionSystem, widthDevice } from 'assets/constans';
 const DrawerList = [
   { icon: 'menu_pos', label: 'Menu', navigateTo: NAVIGATION_HOME },
-  { icon: 'order_pos', label: 'FoodApp', navigateTo: NAVIGATION_ORDER },
-  { icon: 'invoice_pos', label: 'Đơn online', navigateTo: NAVIGATION_APP_ORDER },
+  // { icon: 'order_pos', label: 'FoodApp', navigateTo: NAVIGATION_ORDER },
+  // { icon: 'invoice_pos', label: 'Đơn online', navigateTo: NAVIGATION_APP_ORDER },
   { icon: 'invoice_pos', label: 'Hóa Đơn', navigateTo: NAVIGATION_INVOICE },
   { icon: 'account_pos', label: 'Tài khoản', navigateTo: NAVIGATION_PROFILE },
 ];
@@ -141,12 +141,12 @@ const DrawerContent = props => {
         <DrawerItem
           icon={({ color, size }) => (
             <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginLeft: 20 }}>
-              <Icons
+              {/* <Icons
                 type={'AntDesign'}
                 name={'close'}
                 color={'white'}
                 size={30}
-              />
+              /> */}
               <Text style={{ color: 'white', flexWrap: 'wrap', fontSize: 12, marginLeft: 5 }} numberOfLines={2}>
                 Sign Out
               </Text>
