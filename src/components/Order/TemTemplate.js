@@ -42,7 +42,10 @@ const getDefaultSettings = (dpi = 72) => ({
 });
 
 const PrintTemplate = ({ orderPrint, settings = {} }) => {
-    console.log("orderPrint", orderPrint);
+    console.log("TemTemplate orderPrint:", orderPrint);
+    console.log("TemTemplate decals:", orderPrint?.decals);
+    console.log("TemTemplate itemInfo:", orderPrint?.itemInfo);
+    console.log("TemTemplate table:", orderPrint?.table);
     const orderChannels = useSelector(state => getOrderChannelsSelector(state));
     const [printerSettings, setPrinterSettings] = useState(null);
     useEffect(() => {
@@ -221,6 +224,10 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             extrastring: '',
             note_prod: item.comment || '',
         })) : []);
+
+    console.log("TemTemplate itemsToRender:", itemsToRender);
+    console.log("TemTemplate using decals?", !!orderPrint?.decals);
+    console.log("TemTemplate itemsToRender[0]:", itemsToRender?.[0]);
 
     const getOrderTypeText = (order) => {
         if (order.chanel_type_id) {

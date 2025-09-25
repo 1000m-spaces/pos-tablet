@@ -45,7 +45,7 @@ const HiddenViewShotComponents = () => {
 
     console.log(`RootNav: Processing product:`, product.name, 'for label', labelIndex + 1, 'of', totalLabels);
 
-    return {
+    const transformedOrder = {
       ...originalOrder,
       // Basic order identification
       displayID: originalOrder.session,
@@ -54,9 +54,9 @@ const HiddenViewShotComponents = () => {
 
       // Service and location information
       serviceType: 'offline',
-      tableName: originalOrder.shopTableName || originalOrder.shoptablename,
-      table: originalOrder.shopTableName || originalOrder.shoptablename,
-      shopTableName: originalOrder.shopTableName || originalOrder.shoptablename,
+      tableName: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
+      table: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
+      shopTableName: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
       shopTableid: originalOrder.shopTableid || "0",
 
       // Timing information
@@ -123,6 +123,8 @@ const HiddenViewShotComponents = () => {
           stringName: product.extras ? product.extras.map(extra => extra.name).join(' / ') : '',
           option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
           extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
+          itemIdx: labelIndex + 1, // Use 1-based indexing for display
+          totalItems: totalLabels,
         }],
         itemIdx: labelIndex + 1, // Use 1-based indexing for display
         totalItems: totalLabels,
@@ -145,8 +147,8 @@ const HiddenViewShotComponents = () => {
 
       // Customer and service information
       customerInfo: {
-        name: originalOrder.shopTableName || originalOrder.shoptablename || 'Khách hàng',
-        table: originalOrder.shopTableName || originalOrder.shoptablename,
+        name: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table || 'Khách hàng',
+        table: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
         phone: originalOrder.customerPhone || '',
         address: originalOrder.customerAddress || '',
       },
@@ -168,6 +170,12 @@ const HiddenViewShotComponents = () => {
       currentItemIndex: labelIndex + 1,
       isPartialPrint: true, // Indicates this is one item from a multi-item order
     };
+
+    console.log(`RootNav: transformedOrder table field:`, transformedOrder.table);
+    console.log(`RootNav: transformedOrder decals:`, transformedOrder.decals);
+    console.log(`RootNav: transformedOrder itemInfo:`, transformedOrder.itemInfo);
+
+    return transformedOrder;
   };
 
   // Helper function to transform order for bill printing
@@ -195,10 +203,11 @@ const HiddenViewShotComponents = () => {
         })) : []
       },
       customerInfo: {
-        name: originalOrder.shopTableName || 'Khách hàng',
+        name: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table || 'Khách hàng',
       },
       serviceType: 'offline',
-      tableName: originalOrder.shopTableName,
+      tableName: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
+      table: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
     };
   };
 

@@ -333,10 +333,8 @@ const PaymentCart = () => {
       if (isStatusCreateOrder === Status.SUCCESS && isOrderDataSaved) {
         // Order is already saved in orderSaga for successful API calls
         console.log('Order successfully processed and saved via API');
-
         // Trigger auto-print after successful order creation
         await triggerAutoPrint(isOrderDataSaved);
-
         dispatch(resetCreateOrder());
       } else if (isStatusCreateOrder === Status.ERROR && isOrderDataSaved) {
         // Failed orders are now saved directly in orderSaga for better consistency
@@ -355,33 +353,19 @@ const PaymentCart = () => {
       console.log('Triggering auto-print for order:', orderData.session);
 
       // Use the new queueMultipleLabels function to handle multiple products and quantities
-      if (global.queueMultipleLabels && orderData.products && orderData.products.length > 0) {
-        // Queue multiple labels for all products and quantities
-        const labelTaskIds = await global.queueMultipleLabels(orderData, printerInfo);
-        console.log(`Auto-print: Queued ${labelTaskIds.length} label tasks:`, labelTaskIds);
+      // Queue multiple labels for all products and quantities
+      const labelTaskIds = await global.queueMultipleLabels(orderData, printerInfo);
+      console.log(`Auto-print: Queued ${labelTaskIds.length} label tasks:`, labelTaskIds);
 
-        // Also add bill printing task
-        const billTaskId = printQueueService.addPrintTask({
-          type: 'bill',
-          order: orderData,
-          priority: 'high'
-        });
+      // Also add bill printing task
+      const billTaskId = printQueueService.addPrintTask({
+        type: 'bill',
+        order: orderData,
+        priority: 'high'
+      });
 
-        console.log('Auto-print: Queued bill task:', billTaskId);
-        console.log(`Auto-print completed - ${labelTaskIds.length} labels + 1 bill queued`);
-      } else {
-        // Fallback to old method if queueMultipleLabels not available
-        console.log('Auto-print: Using fallback method (queueMultipleLabels not available)');
-        const taskId = printQueueService.addPrintTask({
-          type: 'both', // Print both label and bill
-          order: orderData,
-          printerInfo: printerInfo,
-          priority: 'high'
-        });
-
-        console.log('Auto-print task added to queue with ID:', taskId);
-      }
-
+      console.log('Auto-print: Queued bill task:', billTaskId);
+      console.log(`Auto-print completed - ${labelTaskIds.length} labels + 1 bill queued`);
     } catch (error) {
       console.error('Error triggering auto-print:', error);
       Toast.show({
