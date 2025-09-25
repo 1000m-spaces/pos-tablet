@@ -145,7 +145,7 @@ export const getOrderItems = (order, isOfflineOrder) => {
     if (isOfflineOrder) {
         return order?.products?.map((product, index) => ({
             id: index,
-            name: product.name,
+            name: product.name || product.prodname,
             quantity: product.quanlity || product.quantity || 1,
             price: product.price || product.amount || 0, // Handle different price field names
             note: product.note,

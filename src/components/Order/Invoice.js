@@ -62,7 +62,7 @@ const Invoice = () => {
                 syncStatus: order.syncStatus || 'pending', // All offline orders are pending by default
                 printStatus: printedLabelsData.includes(order.session) ? 'printed' : 'not_printed',
                 orderStatus: order.orderStatus || 'Paymented', // Default order status for cash payments
-                created_at: order.created_at || new Date().toISOString(),
+                created_at: order.created_at || (order.ordertime && normalizeToISO(order.ordertime)) || new Date().toISOString(),
                 updated_at: order.updated_at || order.created_at || new Date().toISOString(),
                 // Ensure we have the required fields from the API format
                 session: order.session,
@@ -103,6 +103,14 @@ const Invoice = () => {
             setIsLoading(false);
         }
     }, [selectedStatusFilter, selectedDate]);
+
+    const normalizeToISO = (dateString) => {
+        // dateString dạng "YYYY-MM-DD HH:mm:ss"
+        // tách thành ngày và giờ
+        const [datePart, timePart] = dateString.split(" ");
+
+        return `${datePart}T${timePart}Z`;
+    }
 
     const loadUserShop = async () => {
         const user = await AsyncStorage.getUser();

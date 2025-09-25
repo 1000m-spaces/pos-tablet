@@ -80,7 +80,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
         };
     }, []);
 
-    const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Đồng bộ", "Thời gian"];
+    const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Bill", "Đồng bộ", "Thời gian"];
     const numColumns = tableHead.length;
 
     const [tableWidth, setTableWidth] = useState([])
@@ -119,7 +119,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
 
     useEffect(() => {
         const { width, height } = Dimensions.get("window");
-        const calculatedTableWidth = width * 0.96;
+        const calculatedTableWidth = width - width * 0.09;
         setTableWidth(calculatedTableWidth);
         const columnWidth = calculatedTableWidth / numColumns;
         setWidthArr(Array(numColumns).fill(columnWidth));
@@ -223,11 +223,19 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
         }
     };
 
-    const getPrintStatusText = (status) => {
-        switch (status) {
-            case "printed": return "Đã in";
-            case "not_printed": return "Chưa in";
-            default: return "Không xác định";
+    const getPrintStatusText = (status, is_print) => {
+        if (is_print) {
+            switch (is_print) {
+                case "1": return "Đã in";
+                case "0": return "Chưa in";
+                default: return "Không xác định";
+            }
+        } else {
+            switch (status) {
+                case "printed": return "Đã in";
+                case "not_printed": return "Chưa in";
+                default: return "Không xác định";
+            }
         }
     };
 
@@ -691,19 +699,33 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
             style={styles.actionButton}
         >
             <Badge
-                text={getPrintStatusText(order.printStatus)}
+                text={getPrintStatusText(order.printStatus, order.is_print)}
                 colorText={getPrintStatusColor(order.printStatus)}
                 colorBg={getPrintStatusColorBg(order.printStatus)}
                 width={80}
             />
         </TouchableOpacity>,
-        <Badge
-            key={`sync-${order.session}`}
-            text={getSyncStatusText(order.syncStatus)}
-            colorText={getSyncStatusColor(order.syncStatus)}
-            colorBg={getSyncStatusColorBg(order.syncStatus)}
-            width={90}
-        />,
+        <TouchableOpacity
+            key={`print-${order.session}`}
+            onPress={() => printTem(order)}
+            style={styles.actionButton}
+        >
+            <Badge
+                text={getPrintStatusText(order.printStatus, order.is_print)}
+                colorText={getPrintStatusColor(order.printStatus)}
+                colorBg={getPrintStatusColorBg(order.printStatus)}
+                width={80}
+            />
+        </TouchableOpacity>,
+        <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+            <Badge
+                key={`sync-${order.session}`}
+                text={getSyncStatusText(order.syncStatus)}
+                colorText={getSyncStatusColor(order.syncStatus)}
+                colorBg={getSyncStatusColorBg(order.syncStatus)}
+                width={90}
+            />
+        </View >,
         formatDateTime(order.created_at)
     ]);
 
