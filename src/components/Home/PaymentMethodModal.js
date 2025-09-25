@@ -11,8 +11,8 @@ import Svg from 'common/Svg/Svg';
 import Colors from 'theme/Colors';
 import { heightDevice, widthDevice } from 'assets/constans';
 
-const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onSelectPayment, currentOrder }) => {
-    const [selectedMethod, setSelectedMethod] = useState(null);
+const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onSelectPayment, currentOrder, selectedPaymentMethod }) => {
+    const [selectedMethod, setSelectedMethod] = useState(selectedPaymentMethod || null);
 
     // Use payment methods if available
     const methods = paymentMethods || [];
@@ -45,9 +45,6 @@ const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onS
                 onPress={() => handleSelectMethod(item)}
             >
                 <View style={styles.methodInfo}>
-                    {/* <View style={styles.methodIcon}>
-                    <Svg name={item.icon || 'cash'} size={24} color={Colors.primary} />
-                </View> */}
                     <TextNormal style={styles.methodName}>{item.name}</TextNormal>
                 </View>
             </TouchableOpacity>)

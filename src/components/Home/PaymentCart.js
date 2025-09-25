@@ -8,17 +8,12 @@ import {
   TouchableOpacity,
   View,
   Alert,
-  Platform,
   Dimensions,
   PixelRatio,
-  Animated,
-  BackHandler,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   currentOrderSelector,
-  getTablesSelector,
-  userInfo,
   getPaymentChannelsSelector,
   getPaymentChannelsLoadingSelector,
   getStatusCreateOrder
@@ -30,13 +25,9 @@ import AsyncStorage from 'store/async_storage';
 import NoteModal from './NoteModal';
 import VoucherModal from './VoucherModal';
 import PaymentMethodModal from './PaymentMethodModal';
-import ConfirmationModal from 'common/ConfirmationModal/ConfirmationModal';
 import Status from 'common/Status/Status';
 import printingService from '../../services/PrintingService';
 import printQueueService from '../../services/PrintQueueService';
-import ViewShot from 'react-native-view-shot';
-import PrintTemplate from '../Order/TemTemplate';
-import BillTemplate from '../Order/BillTemplate';
 import Toast from 'react-native-toast-message';
 
 // Helper functions for printing dimensions
@@ -68,17 +59,9 @@ const PaymentCart = () => {
 
   const [payment, setPayment] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-  const [isModalOrderStatus, setIsModalOrderStatus] = useState(false);
   const [isOrderDataSaved, setIsOrderDataSaved] = useState(null);
 
   const [modal, setModal] = useState(false);
-
-  // Printing related state and refs
-  const [printingOrder, setPrintingOrder] = useState(null);
-  const [printerInfo, setPrinterInfo] = useState(null);
-  const [isAutoPrinting, setIsAutoPrinting] = useState(false);
-  const [autoPrintStatus, setAutoPrintStatus] = useState('');
-  const spinValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     let numOfProduct = 0;
@@ -102,48 +85,27 @@ const PaymentCart = () => {
     dispatch(getPaymentChannelsAction());
   }, [dispatch]);
 
-  // Prevent back navigation during auto print
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (isAutoPrinting) {
-        // Show a gentle reminder instead of allowing navigation
-        Alert.alert(
-          'Đang in đơn hàng',
-          'Vui lòng đợi quá trình in hoàn tất trước khi thoát',
-          [{ text: 'OK', style: 'default' }]
-        );
-        return true; // Prevent default back action
-      }
-      return false; // Allow default back action
-    });
-
-    return () => backHandler.remove();
-  }, [isAutoPrinting]);
-
   useEffect(() => {
     // Set default payment method when payment channels are loaded
     if (paymentChannels && paymentChannels.length > 0 && !selectedPaymentMethod) {
       // Try to find cash payment method (trans_name === '41') as default
+      console.log('Payment channels:', paymentChannels);
       const cashMethod = paymentChannels.find(method => method.trans_name === '41');
       const defaultMethod = cashMethod || paymentChannels[0];
       setSelectedPaymentMethod(defaultMethod);
     }
-  }, [paymentChannels, selectedPaymentMethod]);
+  }, [paymentChannels]); // Removed selectedPaymentMethod from dependency array
 
   // Initialize printing service and load printer info
   useEffect(() => {
     const initializePrinting = async () => {
       try {
         printingService.initialize();
-        const info = await AsyncStorage.getLabelPrinterInfo();
-        setPrinterInfo(info);
       } catch (error) {
         console.error('Error initializing printing service:', error);
       }
     };
-
     initializePrinting();
-
     // Cleanup on unmount
     return () => {
       printingService.dispose();
@@ -187,7 +149,7 @@ const PaymentCart = () => {
     onCloseModal();
   };
 
-  const processPayment = async () => {
+  const processPayment = async (paymentMethod) => {
     const user = await AsyncStorage.getUser();
     try {
       // Validate that there are products in the cart
@@ -243,8 +205,8 @@ const PaymentCart = () => {
 
         return {
           prodid: product.prodid,
-          price: productPrice + extraPrice,
-          prodprice: productPrice + extraPrice,
+          price: productPrice,
+          prodprice: productPrice,
           rate_discount: 0,
           opt1: product.option_item ? product.option_item.id : null,
           opt2: null,
@@ -309,7 +271,7 @@ const PaymentCart = () => {
       const session = `M-${offlineOrderId}`;
 
       // Create order object
-      console.log('Selected payment method for order:', selectedPaymentMethod);
+      console.log('Selected payment method for order:', paymentMethod);
       console.log(' User info payment cart:', user);
 
       const orderData = {
@@ -321,7 +283,7 @@ const PaymentCart = () => {
         orderNote: currentOrder.note || "",
         products: transformedProducts,
         cust_id: 0,
-        transType: selectedPaymentMethod ? selectedPaymentMethod.trans_name : "41", // Use trans_name as transaction type
+        transType: paymentMethod ? paymentMethod.trans_name : "41", // Use trans_name as transaction type
         chanel_type_id: currentOrder ? currentOrder.orderType : "1",
         phuthu: 0,
         total_amount: price_paid,
@@ -437,12 +399,12 @@ const PaymentCart = () => {
     onCloseModal();
     // Process payment after payment method is selected
     setTimeout(() => {
-      processPayment();
+      processPayment(method);
     }, 300); // Small delay to allow modal to close smoothly
   };
 
   const handlePaymentClick = () => {
-    // Validate that there are products in the cart before showing payment modal
+    // Validate that there are products in the cart before processing
     if (!currentOrder.products || currentOrder.products.length === 0) {
       Alert.alert('Thông báo', 'Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán');
       return;
@@ -504,16 +466,13 @@ const PaymentCart = () => {
       <TouchableOpacity
         style={[
           styles.orderBtn,
-          isAutoPrinting && styles.orderBtnDisabled
         ]}
         onPress={handlePaymentClick}
-        disabled={isAutoPrinting}
       >
         <TextNormal style={[
           styles.orderBtnText,
-          isAutoPrinting && styles.orderBtnTextDisabled
         ]}>
-          {isAutoPrinting ? 'Đang xử lý...' : 'Thanh toán'}
+          {'Thanh toán'}
         </TextNormal>
       </TouchableOpacity>
       <Modal
@@ -543,56 +502,11 @@ const PaymentCart = () => {
             onCloseModal={onCloseModal}
             onSelectPayment={onSelectPaymentMethod}
             currentOrder={currentOrder}
+            selectedPaymentMethod={selectedPaymentMethod}
           />
         )}
       </Modal>
 
-      {/* Auto Print Loading Modal */}
-      <Modal
-        isVisible={isAutoPrinting}
-        animationType="fade"
-        backdropColor="rgba(0,0,0,0.7)"
-        backdropOpacity={0.7}
-        hasBackdrop={true}
-        onBackButtonPress={() => { }} // Prevent back button press during auto print
-        onBackdropPress={() => { }} // Prevent backdrop press during auto print
-        style={{
-          justifyContent: 'center',
-          alignItems: 'center',
-          margin: 0,
-        }}
-      >
-        <View style={styles.autoPrintModal}>
-          <View style={styles.autoPrintContent}>
-            {/* Loading Spinner */}
-            <View style={styles.loadingSpinner}>
-              <Animated.View
-                style={[
-                  styles.spinner,
-                  {
-                    transform: [{
-                      rotate: spinValue.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ['0deg', '360deg'],
-                      })
-                    }]
-                  }
-                ]}
-              />
-            </View>
-
-            {/* Status Text */}
-            <TextNormal style={styles.autoPrintTitle}>
-              {autoPrintStatus || 'Đang tự động in...'}
-            </TextNormal>
-
-            {/* Progress Description */}
-            <TextNormal style={styles.autoPrintDescription}>
-              Vui lòng đợi trong giây lát, đừng chuyển màn hình
-            </TextNormal>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };

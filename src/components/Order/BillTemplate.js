@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
+import { useSelector } from 'react-redux';
+import { getOrderChannelsSelector, getPaymentChannelsSelector } from 'store/selectors';
 import AsyncStorage from 'store/async_storage/index';
 import QRCode from 'react-native-qrcode-svg';
 
 const BillTemplate = ({ selectedOrder }) => {
+    const paymentChannels = useSelector(state => getPaymentChannelsSelector(state));
+    const orderChannels = useSelector(state => getOrderChannelsSelector(state));
     const [fontSizes, setFontSizes] = useState({
         header: 24,
         content: 16,
@@ -162,6 +166,23 @@ const BillTemplate = ({ selectedOrder }) => {
         }
     };
 
+    const getOrderTypeText = (order) => {
+        if (order.chanel_type_id) {
+            var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id) || { name_vn: 'Mang đi', name: 'Mang đi' }
+            return orderType?.name_vn || orderType?.name || 'Mang đi';
+        }
+        return order.service;
+    };
+
+    const getTransType = (order) => {
+        if (order.transType && paymentChannels) {
+            // Find payment method by trans_name (transaction type)
+            const paymentMethod = paymentChannels.find(channel => channel.trans_name === order.transType) || { name: 'Tiền mặt', desc_eng: 'Cash' };
+            return paymentMethod?.name || paymentMethod?.desc_eng || 'Tiền mặt';
+        }
+        return order.service || 'Tiền mặt';
+    };
+
     const calculateSubTotal = () => {
         if (!selectedOrder?.itemInfo?.items) return 0;
         return selectedOrder.itemInfo.items.reduce((total, item) => {
@@ -228,10 +249,10 @@ const BillTemplate = ({ selectedOrder }) => {
                             Nhân viên: {userInfos.staffName}
                         </Text>
                         <Text style={[styles.orderInfoText, { fontSize: fontSizes.content }]}>
-                            HTTT: {selectedOrder?.paymentMethod || 'Tiền mặt'}
+                            HTTT: {getTransType(selectedOrder)}
                         </Text>
                         <Text style={[styles.orderInfoText, { fontSize: fontSizes.content }]}>
-                            Nguồn ĐH: {selectedOrder?.service || selectedOrder?.serviceType || 'POS'}
+                            Nguồn ĐH: {getOrderTypeText(selectedOrder)}
                         </Text>
                         {selectedOrder?.orderNote || selectedOrder?.note ? (
                             <Text style={[styles.orderInfoText, { fontSize: fontSizes.content }]}>
@@ -290,6 +311,21 @@ const BillTemplate = ({ selectedOrder }) => {
                     } else if (item.amount) {
                         itemPrice = typeof item.amount === 'number' ? item.amount : parseInt(item.amount) || 0;
                     }
+
+                    // Calculate extra items price and add to itemPrice
+                    const extraPrice = item.extra_items ?
+                        item.extra_items.reduce((sum, extra) => sum + (extra.price || 0), 0) : 0;
+
+                    // Calculate modifier price from modifierGroups
+                    const modifierPrice = item.modifierGroups ?
+                        item.modifierGroups.reduce((sum, group) => {
+                            if (group.modifiers) {
+                                return sum + group.modifiers.reduce((modSum, mod) => modSum + (mod.price || 0), 0);
+                            }
+                            return sum;
+                        }, 0) : 0;
+
+                    itemPrice += extraPrice + modifierPrice;
 
                     const quantity = item.quantity || item.quanlity || 1;
                     const totalPrice = itemPrice * quantity;
@@ -366,7 +402,7 @@ const BillTemplate = ({ selectedOrder }) => {
                 <View style={styles.totalRow}>
                     <Text style={[styles.totalLabel, { fontSize: fontSizes.content }]}>Tổng</Text>
                     <Text style={[styles.totalValue, { fontSize: fontSizes.content }]}>
-                        {formatCurrency(subTotal)}
+                        {formatCurrency(selectedOrder?.orderValue || selectedOrder?.total_amount || finalTotal)}
                     </Text>
                 </View>
                 {serviceFee > 0 && (

@@ -298,7 +298,34 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                                 }) : ''}
                             </Text>
                             <Text style={styles.priceText}>
-                                {formatPrice(item.price || item.priceDisplay || item.fare?.priceDisplay)}
+                                {(() => {
+                                    // Calculate base price
+                                    let basePrice = item.price || item.priceDisplay || item.fare?.priceDisplay || 0;
+
+                                    // Convert formatted string prices to numbers if needed
+                                    if (typeof basePrice === 'string') {
+                                        const priceStr = basePrice.toString().replace(/[^\d]/g, '');
+                                        basePrice = parseInt(priceStr) || 0;
+                                    }
+
+                                    // Calculate extra items price
+                                    const extraPrice = item.extra_items ?
+                                        item.extra_items.reduce((sum, extra) => sum + (extra.price || 0), 0) : 0;
+
+                                    // Calculate modifier price from modifierGroups
+                                    const modifierPrice = item.modifierGroups ?
+                                        item.modifierGroups.reduce((sum, group) => {
+                                            if (group.modifiers) {
+                                                return sum + group.modifiers.reduce((modSum, mod) => modSum + (mod.price || 0), 0);
+                                            }
+                                            return sum;
+                                        }, 0) : 0;
+
+                                    // Total price including extras and modifiers
+                                    const totalPrice = basePrice + extraPrice + modifierPrice;
+
+                                    return formatPrice(totalPrice);
+                                })()}
                             </Text>
                         </View>
                     </View>
