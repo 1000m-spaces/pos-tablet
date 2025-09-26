@@ -110,7 +110,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
             if (onRefresh) {
                 onRefresh();
             }
-        }, 30000); // 60,000 ms = 1 minute
+        }, 120000); // 60,000 ms = 1 minute
 
         // Cleanup interval on unmount
         return () => clearInterval(intervalId);

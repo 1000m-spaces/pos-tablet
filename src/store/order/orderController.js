@@ -22,6 +22,7 @@ class OrderController {
     }
   };
   getOrderPaidSuccess = async payload => {
+    console.log('getOrderPaidSuccess', UrlApi.getOrderPaidSuccess, payload);
     try {
       const { data } = await HttpClient.post(UrlApi.getOrderPaidSuccess, payload);
       return { success: true, data };

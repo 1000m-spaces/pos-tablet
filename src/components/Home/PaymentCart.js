@@ -279,7 +279,7 @@ const PaymentCart = () => {
         svFee: "0",
         svFee_amount: 0,
         shopTableid: currentOrder.tableId || "0",
-        shoptablename: selectedTableName,
+        shopTableName: selectedTableName,
         orderNote: currentOrder.note || "",
         products: transformedProducts,
         cust_id: 0,

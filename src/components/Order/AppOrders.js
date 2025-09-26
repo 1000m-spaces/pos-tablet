@@ -242,7 +242,7 @@ const AppOrders = () => {
           if (!isLoading) {
             fetchAppOrders();
           }
-        }, 30000);
+        }, 120000);
 
         return () => clearInterval(intervalId);
       }

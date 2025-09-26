@@ -165,7 +165,7 @@ const Orders = () => {
         if (!isLoading) {
           fetchOrders();
         }
-      }, 30000);
+      }, 120000);
       // Clean up interval on component unmount
       return () => clearInterval(intervalId);
     }

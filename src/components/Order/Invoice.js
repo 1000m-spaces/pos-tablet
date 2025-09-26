@@ -109,7 +109,7 @@ const Invoice = () => {
         // tách thành ngày và giờ
         const [datePart, timePart] = dateString.split(" ");
 
-        return `${datePart}T${timePart}Z`;
+        return `${datePart}T${timePart}+07:00`; // giờ VN
     }
 
     const loadUserShop = async () => {
