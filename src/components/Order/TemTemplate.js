@@ -37,7 +37,7 @@ const getDefaultSettings = (dpi = 72) => ({
         quantity: calculateDynamicFontSize(10),
         channelInfo: calculateDynamicFontSize(8)
     },
-    padding: 3,
+    padding: 5,
     margin: 2
 });
 
@@ -55,8 +55,8 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                 if (printerInfo && printerInfo.sWidth && printerInfo.sHeight) {
                     const dpi = printerInfo.labelPrinterDPI || 72;
                     setPrinterSettings({
-                        width: mmToPixels(Number(printerInfo.sWidth) - 2, dpi),
-                        height: mmToPixels(Number(printerInfo.sHeight) - 2, dpi),
+                        width: mmToPixels(Number(printerInfo.sWidth), dpi),
+                        height: mmToPixels(Number(printerInfo.sHeight), dpi),
                         dpi: dpi,
                         fontSize: {
                             storeName: calculateDynamicFontSize(12),
