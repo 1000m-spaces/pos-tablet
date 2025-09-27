@@ -30,25 +30,6 @@ import printingService from '../../services/PrintingService';
 import printQueueService from '../../services/PrintQueueService';
 import Toast from 'react-native-toast-message';
 
-// Helper functions for printing dimensions
-const { width, height } = Dimensions.get("window");
-
-// Convert mm to pixels using device's actual DPI, optimized for tablets
-const mmToPixels = (mm) => {
-  const { width, height } = Dimensions.get('window');
-  const screenWidth = Math.max(width, height); // Use the larger dimension for tablets
-  const screenHeight = Math.min(width, height);
-
-  // Get physical dimensions in inches (assuming standard tablet sizes)
-  // Most tablets are around 10-12 inches diagonally
-  const diagonalInches = Math.sqrt(Math.pow(screenWidth / PixelRatio.get(), 2) + Math.pow(screenHeight / PixelRatio.get(), 2)) / 160;
-
-  // Calculate actual DPI based on physical screen size
-  const actualDpi = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / diagonalInches;
-
-  return Math.round((mm * actualDpi) / 25.4); // 25.4mm = 1 inch
-};
-
 const PaymentCart = () => {
   const dispatch = useDispatch();
   const currentOrder = useSelector(state => currentOrderSelector(state));
