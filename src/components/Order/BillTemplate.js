@@ -451,7 +451,7 @@ const BillTemplate = ({ selectedOrder }) => {
                     Cảm ơn quý khách đã sử dụng dịch vụ!
                 </Text>
                 <Text style={[styles.footerText, { fontSize: fontSizes.content }]}>
-                    Powered by Neo Cafe
+                    Powered by Tra 1000M
                 </Text>
             </View>
             <View style={styles.qrSection}>
