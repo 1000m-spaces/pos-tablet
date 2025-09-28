@@ -55,9 +55,20 @@ function* syncPendingOrdersSaga() {
         console.log(`Attempting to sync ${ordersToSync.length} orders`);
 
         // Prepare orders for sync in the format expected by the API
+        const expandedOrders = ordersToSync.map(order => {
+            const expandedProducts = order.products.flatMap(item =>
+                Array(item.quanlity).fill(item)
+            );
+            return {
+                ...order,
+                products: expandedProducts
+            };
+        });
         const syncPayload = {
-            orders: ordersToSync
+            orders: expandedOrders
         };
+
+        console.log('Sync syncPayload:', expandedOrders);
 
         // Call the sync API
         const response = yield call(syncController.syncOrders, syncPayload);

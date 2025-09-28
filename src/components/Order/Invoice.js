@@ -68,7 +68,7 @@ const Invoice = () => {
                 session: order.session,
                 total_amount: order.total_amount || order.price_paid || 0,
                 products: order.products || [],
-                shoptablename: order.shoptablename || 'N/A',
+                shoptablename: order.shoptablename || order.shopTableName || 'N/A',
                 tableId: order.tableId || null,
             }));
 
