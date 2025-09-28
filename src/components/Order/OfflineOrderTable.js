@@ -105,8 +105,6 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
     useEffect(() => {
         // Background job: sync offline orders every 1 minute
         const intervalId = setInterval(() => {
-            // dispatch(syncPendingOrdersAction());
-            // Optionally refresh local data after dispatching sync action
             if (onRefresh) {
                 onRefresh();
             }

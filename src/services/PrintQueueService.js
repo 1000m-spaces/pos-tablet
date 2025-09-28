@@ -1,3 +1,4 @@
+import { getOrderIdentifierForPrinting } from 'utils/orderUtils';
 import AsyncStorage from '../store/async_storage';
 import printingService from './PrintingService';
 
@@ -208,7 +209,7 @@ class PrintQueueService {
     // Print label using image data from Main component
     async printLabel(task) {
         const { order, printerInfo, metadata } = task;
-        
+
         console.log(`PrintQueue: printLabel called with metadata:`, metadata);
 
         if (!printerInfo) {
@@ -248,7 +249,9 @@ class PrintQueueService {
 
             // Save print record with metadata
             await this.savePrintRecord(order, 'label', true, null, metadata);
-
+            // Update print status using consistent order identifier
+            const orderIdentifier = getOrderIdentifierForPrinting(order, true); // true for offline orders
+            await AsyncStorage.setPrintedLabels(orderIdentifier);
         } catch (error) {
             console.error('Label printing error:', error);
             await this.savePrintRecord(order, 'label', false, error.message, metadata);
