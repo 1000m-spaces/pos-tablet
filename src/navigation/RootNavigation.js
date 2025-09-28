@@ -20,7 +20,8 @@ const mmToPixels = (mm, dpi = 72) => {
 
 // Hidden ViewShot Components - Must be inside Redux Provider
 const HiddenViewShotComponents = () => {
-  const [printingOrder, setPrintingOrder] = useState(null);
+  const [printingOrderLabel, setPrintingOrderLabel] = useState(null);
+  const [printingOrderBill, setPrintingOrderBill] = useState(null);
   const [printerInfo, setPrinterInfo] = useState(null);
   const [isComponentReady, setIsComponentReady] = useState(false);
 
@@ -232,8 +233,12 @@ const HiddenViewShotComponents = () => {
         throw new Error(`Unknown snapshot type: ${type}`);
       }
 
-      // Set the transformed printing order to render in ViewShot components
-      setPrintingOrder(transformedOrder);
+      // Set the transformed printing order to render in appropriate ViewShot component
+      if (type === 'label') {
+        setPrintingOrderLabel(transformedOrder);
+      } else if (type === 'bill') {
+        setPrintingOrderBill(transformedOrder);
+      }
       setIsComponentReady(false);
 
       // Wait for component to render with new order data - increased delay for reliability
@@ -284,8 +289,12 @@ const HiddenViewShotComponents = () => {
 
     } catch (error) {
       console.error(`RootNav: Error capturing ${type} snapshot:`, error);
-      // Reset printing order on error to prevent stale state
-      setPrintingOrder(null);
+      // Reset appropriate printing order on error to prevent stale state
+      if (type === 'label') {
+        setPrintingOrderLabel(null);
+      } else if (type === 'bill') {
+        setPrintingOrderBill(null);
+      }
       throw new Error(`Failed to capture view snapshot: ${error.message}`);
     }
   };
@@ -382,7 +391,8 @@ const HiddenViewShotComponents = () => {
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      setPrintingOrder(null);
+      setPrintingOrderLabel(null);
+      setPrintingOrderBill(null);
       setIsComponentReady(false);
     };
   }, []);
@@ -413,7 +423,7 @@ const HiddenViewShotComponents = () => {
         ]}
         collapsable={false}
       >
-        {printingOrder && isComponentReady && <PrintTemplate orderPrint={printingOrder} />}
+        {printingOrderLabel && isComponentReady && <PrintTemplate orderPrint={printingOrderLabel} />}
       </ViewShot>
 
       <ViewShot
@@ -432,7 +442,7 @@ const HiddenViewShotComponents = () => {
         ]}
         collapsable={false}
       >
-        {printingOrder && isComponentReady && <BillTemplate selectedOrder={printingOrder} />}
+        {printingOrderBill && isComponentReady && <BillTemplate selectedOrder={printingOrderBill} />}
       </ViewShot>
     </View>
   );

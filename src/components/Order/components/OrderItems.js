@@ -3,43 +3,75 @@ import { View, Text, StyleSheet } from 'react-native';
 import InfoCard from './InfoCard';
 import { formatPrice } from '../utils/orderUtils';
 
-const OrderItemRow = ({ item, isOfflineOrder }) => (
-    <View style={styles.itemRow}>
-        <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            {item.note && (
-                <Text style={styles.itemNote}>📝 {item.note}</Text>
-            )}
-            {isOfflineOrder ? (
-                // Offline order extras
-                item.extras?.map((extra, idx) => (
-                    <View key={idx} style={styles.modifierGroup}>
-                        <Text style={styles.modifierName}>
-                            + {extra.name} {extra.price ? `(+${formatPrice(extra.price)})` : ''}
-                        </Text>
-                    </View>
-                ))
-            ) : (
-                // Online order modifier groups
-                item.modifierGroups?.map((group, gIdx) => (
-                    <View key={gIdx} style={styles.modifierGroup}>
-                        {group.modifiers?.map((modifier, mIdx) => (
-                            <Text key={mIdx} style={styles.modifierName}>
-                                + {modifier.modifierName}
+const OrderItemRow = ({ item, isOfflineOrder }) => {
+    // Calculate total price including extras and modifiers
+    const calculateTotalPrice = () => {
+        // Calculate base price
+        let basePrice = item.price || item.priceDisplay || item.fare?.priceDisplay || 0;
+
+        // Convert formatted string prices to numbers if needed
+        if (typeof basePrice === 'string') {
+            const priceStr = basePrice.toString().replace(/[^\d]/g, '');
+            basePrice = parseInt(priceStr) || 0;
+        }
+
+        // Calculate extra items price (for offline orders)
+        const extraPrice = item.extras ?
+            item.extras.reduce((sum, extra) => sum + (extra.price || 0), 0) : 0;
+
+        // Calculate modifier price from modifierGroups (for online orders)
+        const modifierPrice = item.modifierGroups ?
+            item.modifierGroups.reduce((sum, group) => {
+                if (group.modifiers) {
+                    return sum + group.modifiers.reduce((modSum, mod) => modSum + (mod.price || 0), 0);
+                }
+                return sum;
+            }, 0) : 0;
+
+        // Total price including extras and modifiers
+        const totalPrice = basePrice + extraPrice + modifierPrice;
+
+        return totalPrice;
+    };
+
+    return (
+        <View style={styles.itemRow}>
+            <View style={styles.itemInfo}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                {item.note && (
+                    <Text style={styles.itemNote}>📝 {item.note}</Text>
+                )}
+                {isOfflineOrder ? (
+                    // Offline order extras
+                    item.extras?.map((extra, idx) => (
+                        <View key={idx} style={styles.modifierGroup}>
+                            <Text style={styles.modifierName}>
+                                + {extra.name} {extra.price ? `(+${formatPrice(extra.price)})` : ''}
                             </Text>
-                        ))}
-                    </View>
-                ))
-            )}
+                        </View>
+                    ))
+                ) : (
+                    // Online order modifier groups
+                    item.modifierGroups?.map((group, gIdx) => (
+                        <View key={gIdx} style={styles.modifierGroup}>
+                            {group.modifiers?.map((modifier, mIdx) => (
+                                <Text key={mIdx} style={styles.modifierName}>
+                                    + {modifier.modifierName}
+                                </Text>
+                            ))}
+                        </View>
+                    ))
+                )}
+            </View>
+            <View style={styles.itemQuantity}>
+                <Text style={styles.quantityText}>x{item.quantity}</Text>
+                <Text style={styles.itemPrice}>
+                    {formatPrice(calculateTotalPrice())}
+                </Text>
+            </View>
         </View>
-        <View style={styles.itemQuantity}>
-            <Text style={styles.quantityText}>x{item.quantity}</Text>
-            <Text style={styles.itemPrice}>
-                {formatPrice(item.price)}
-            </Text>
-        </View>
-    </View>
-);
+    );
+};
 
 const OrderItems = ({ orderData, isOfflineOrder }) => {
     const { items, formattedTotal } = orderData;
