@@ -46,6 +46,64 @@ const Orders = () => {
     }).split('/').join('-');
   };
 
+  // Transform new API format to match existing order structure
+  const transformOrderData = (order, service = 'GRAB') => {
+    return {
+      displayID: order.display_id || '',
+      deliveryId: order.delivery_id || '',
+      service: service,
+      state: order.state || 'ORDER_CREATED',
+      orderValue: order.price_paid || order.total_price || '0',
+      totalPrice: order.total_price || '0',
+      discount: order.discount || '0',
+      discountInfo: order.discount_info || null,
+      // Transform items to match expected itemInfo structure
+      itemInfo: {
+        items: (order.items || []).map(item => ({
+          // Fields for OrderTable compatibility
+          product_name: item.product_name || '',
+          quantity: item.quantity || 1,
+          quanlity: item.quantity || 1, // Keep both spellings for compatibility
+          price: item.price_product || '0',
+          total_price: item.total_price || '0',
+          note: item.note || '',
+          extra: item.extra || null,
+          campaign: item.campaign || '',
+          // Fields for OrderDetailDialog compatibility
+          name: item.product_name || '', // Used by getOrderItems
+          comment: item.note || '', // Used by getOrderItems
+          fare: {
+            priceDisplay: item.price_product || '0',
+            currencySymbol: '₫'
+          },
+          // Transform options/modifiers
+          modifierGroups: (item.option || []).map(opt => ({
+            product_name: opt.product_name || '',
+            name: opt.product_name || '', // For display compatibility
+            quantity: opt.quantity || 1
+          })),
+          option: item.option || []
+        }))
+      },
+      // Preserve original eater/driver for getCustomerInfo/getDriverInfo utility functions
+      eater: order.eater || null,
+      driver: order.driver || null,
+      // Also keep transformed versions for backward compatibility
+      customerInfo: order.eater ? {
+        name: order.eater.name || '',
+        phone: order.eater.mobileNumber || '',
+        comment: order.eater.comment || '',
+        address: order.eater.address || ''
+      } : null,
+      driverInfo: order.driver ? {
+        name: order.driver.name || '',
+        phone: order.driver.mobileNumber || ''
+      } : null,
+      // Raw data for reference
+      rawData: order
+    };
+  };
+
   const fetchOrders = useCallback(async () => {
     if (!userShop) {
       console.log('No user shop data available');
@@ -64,14 +122,18 @@ const Orders = () => {
       if (orderType === 1) {
         // Fetch GRAB orders only
         const grabOrdersRes = await orderController.fetchOrder({
-          branch_id: userShop.id,
-          brand_id: userShop.partnerid,
-          merchant_id: userShop.partnerid,
+          branch_id: Number(userShop.id),
+          brand_id: Number(userShop.partnerid),
+          merchant_id: Number(userShop.partnerid),
           service: "GRAB",
         });
 
         if (grabOrdersRes.success) {
-          setData(grabOrdersRes?.data?.orders || []);
+          const rawOrders = grabOrdersRes?.data?.grab || [];
+          // Transform each order to match expected structure
+          const transformedOrders = rawOrders.map(order => transformOrderData(order, 'GRAB'));
+          console.log('Transformed orders:', transformedOrders);
+          setData(transformedOrders);
         } else {
           Toast.show({
             type: 'error',
@@ -83,9 +145,9 @@ const Orders = () => {
         // History orders - keep existing logic
         const formattedDate = formatDate(selectedDate);
         const res = await orderController.fetchOrderHistory({
-          branch_id: userShop.id,
-          brand_id: userShop.partnerid,
-          merchant_id: userShop.partnerid,
+          branch_id: Number(userShop.id),
+          brand_id: Number(userShop.partnerid),
+          merchant_id: Number(userShop.partnerid),
           from_at: formattedDate,
           to_at: formattedDate,
           page: 1,
@@ -106,11 +168,14 @@ const Orders = () => {
               })
             );
             const orderDetailsResults = await Promise.all(orderDetailsPromises);
-            const orders = orderDetailsResults.map((result, index) => ({
+            const rawOrders = orderDetailsResults.map((result, index) => ({
               ...result?.data?.order,
               ...statements[index]
             }));
-            setData(orders);
+            // Transform history orders to match expected structure
+            const transformedOrders = rawOrders.map(order => transformOrderData(order, 'GRAB'));
+            console.log('Transformed history orders:', transformedOrders);
+            setData(transformedOrders);
           } catch (error) {
             console.error('Error fetching order details:', error);
             Toast.show({
