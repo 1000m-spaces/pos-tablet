@@ -432,7 +432,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
 
                                     // Flattened modifier strings for easier template access
                                     stringName: product.extras ? product.extras.map(extra => extra.name).join(' / ') : '',
-                                    option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
+                                    option: product.option,
                                     extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
                                 }],
                                 itemIdx: currentLabelIndex + 1, // Use 1-based indexing for display
@@ -564,13 +564,6 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
             } else if (billPrinterInfo.billConnectionType === 'serial' && !billPrinterInfo.billSerialPort) {
                 throw new Error('Printer settings not configured');
             }
-
-            Toast.show({
-                type: 'info',
-                text1: 'Đang in bill...',
-                text2: 'Vui lòng đợi'
-            });
-
             // Convert offline order to format compatible with BillTemplate
             const billOrder = {
                 ...order,
@@ -585,6 +578,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                             currencySymbol: '₫'
                         },
                         comment: product.note || '',
+                        option: product.option,
                         modifierGroups: product.extras ? product.extras.map(extra => ({
                             modifierGroupName: extra.group_extra_name || 'Extras',
                             modifiers: [{
@@ -812,7 +806,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                 <View style={styles.loadingOverlay}>
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={Colors.primary} />
-                        <TextNormal style={styles.loadingText}>Đang in tem...</TextNormal>
+                        <TextNormal style={styles.loadingText}>Đang in ...</TextNormal>
                     </View>
                 </View>
             )}

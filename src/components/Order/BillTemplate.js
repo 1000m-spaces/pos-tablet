@@ -344,6 +344,14 @@ const BillTemplate = ({ selectedOrder }) => {
                                 {(() => {
                                     const allOptions = [];
 
+                                    // Add options from option array
+                                    if (item.option && Array.isArray(item.option)) {
+                                        const optionNames = item.option
+                                            .filter(opt => opt && opt.optdetailid && opt.optdetailname)
+                                            .map(opt => opt.optdetailname);
+                                        allOptions.push(...optionNames);
+                                    }
+
                                     // Add modifiers
                                     if (item.modifierGroups && item.modifierGroups.length > 0) {
                                         item.modifierGroups.forEach(group => {
