@@ -380,7 +380,6 @@ const PrinterSettingsModal = ({
         }
 
         const isLabel = printerType === 'label';
-        const currentConfig = buildCurrentPrinterConfig(printerType);
 
         // Auto-save configuration before testing
         try {

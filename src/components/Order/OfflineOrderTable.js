@@ -704,7 +704,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
         </TouchableOpacity>,
         <TouchableOpacity
             key={`print-${order.session}`}
-            onPress={() => printTem(order)}
+            onPress={() => printBill(order)}
             style={styles.actionButton}
         >
             <Badge
