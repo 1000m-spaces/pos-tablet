@@ -127,6 +127,7 @@ const Orders = () => {
           merchant_id: Number(userShop.partnerid),
           service: "GRAB",
         });
+        console.log('data response GRAB orders:', grabOrdersRes);
 
         if (grabOrdersRes.success) {
           const rawOrders = grabOrdersRes?.data?.grab || [];
@@ -381,7 +382,7 @@ const Orders = () => {
                 </TextNormal>
               </View>
             ) : (
-              <OrderTable orderType={orderType} orders={data} showSettingPrinter={() => setPrinterModalVisible(true)} />
+              <OrderTable orderType={orderType} orders={data} showSettingPrinter={() => setPrinterModalVisible(true)} isFoodApp={true} />
             )}
             {/* Printer Settings Modal */}
             <PrinterSettingsModal

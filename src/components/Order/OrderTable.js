@@ -23,7 +23,7 @@ const Badge = ({ text, colorText, colorBg, width }) => (
     </View>
 );
 
-const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) => {
+const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp }) => {
     const dispatch = useDispatch();
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
@@ -31,7 +31,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
     const [printedLabels, setPrintedLabelsState] = useState([]);
     const [isAutoPrinting, setIsAutoPrinting] = useState(false);
 
-    const tableHead = ["Xác nhận", "Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
+    const tableHead = [...(isFoodApp ? [] : ["Xác nhận"]), "Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
 
     const [tableWidth, setTableWidth] = useState([])
@@ -328,12 +328,12 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
     }, [orders, orderType]);
 
     const tableData = orders?.map(order => [
-        <View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        ...(isFoodApp ? [] : [<View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <TouchableOpacity style={{ justifyContent: 'center', alignItems: 'center', height: '80%', width: '60%', backgroundColor: '#19b400', borderRadius: 10 }}
                 onPress={() => { handleConfirmOrder(order.displayID) }}>
                 <TextNormal>Xác nhận đơn</TextNormal>
             </TouchableOpacity>
-        </View>,
+        </View>]),
         order.service || "GRAB",
         order.displayID,
         order.orderValue,

@@ -209,6 +209,7 @@ const AppOrders = () => {
 
           // We'll combine this with Redux data in the useEffect
           setData(isOnlineOrderSelector);
+          dispatch(resetGetOnlineOrder());
         }
       } else {
         // Fetch paid success orders (Lịch sử)
@@ -264,7 +265,6 @@ const AppOrders = () => {
   useEffect(() => {
     if (userShop?.id) {
       const intervalId = setInterval(() => {
-        console.log('Auto-refreshing online orders for shop ID:', userShop);
         dispatch(getOnlineOrder({ rest_id: userShop?.id }));
       }, 20000)
       return () => clearInterval(intervalId);
@@ -273,6 +273,7 @@ const AppOrders = () => {
 
   const loadDataOrderOnline = () => {
     if (orderType === 1 && isStatusGetOnlineOrder === Status.SUCCESS) {
+      dispatch(resetGetOnlineOrder());
       if (isOnlineOrderSelector?.length > 0) {
         const transformedAppOrders = isOnlineOrderSelector
           .map(transformAppOrder)
@@ -474,6 +475,7 @@ const AppOrders = () => {
                 orderType={orderType}
                 orders={data}
                 showSettingPrinter={() => setPrinterModalVisible(true)}
+                isFoodApp={false}
               />
             )}
 
