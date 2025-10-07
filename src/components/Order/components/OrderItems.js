@@ -4,6 +4,7 @@ import InfoCard from './InfoCard';
 import { formatPrice } from '../utils/orderUtils';
 
 const OrderItemRow = ({ item, isOfflineOrder }) => {
+    console.log('OrderItemRow: item:', item);
     // Calculate total price including extras and modifiers
     const calculateTotalPrice = () => {
         // Calculate base price
@@ -41,12 +42,24 @@ const OrderItemRow = ({ item, isOfflineOrder }) => {
                 {item.note && (
                     <Text style={styles.itemNote}>📝 {item.note}</Text>
                 )}
+                {/* Display options from option array */}
+                {item.option && Array.isArray(item.option) && item.option.some(opt => opt && opt.optdetailid && opt.optdetailname) && (
+                    item.option
+                        .filter(opt => opt && opt.optdetailid && opt.optdetailname)
+                        .map((opt, idx) => (
+                            <View key={`option-${idx}`} style={styles.modifierGroup}>
+                                <Text style={styles.modifierName}>
+                                    {opt.optdetailname}
+                                </Text>
+                            </View>
+                        ))
+                )}
                 {isOfflineOrder ? (
                     // Offline order extras
                     item.extras?.map((extra, idx) => (
                         <View key={idx} style={styles.modifierGroup}>
                             <Text style={styles.modifierName}>
-                                + {extra.name} {extra.price ? `(+${formatPrice(extra.price)})` : ''}
+                                {extra.name} {extra.price ? `(+${formatPrice(extra.price)})` : ''}
                             </Text>
                         </View>
                     ))
@@ -56,7 +69,7 @@ const OrderItemRow = ({ item, isOfflineOrder }) => {
                         <View key={gIdx} style={styles.modifierGroup}>
                             {group.modifiers?.map((modifier, mIdx) => (
                                 <Text key={mIdx} style={styles.modifierName}>
-                                    + {modifier.modifierName}
+                                    {modifier.modifierName}
                                 </Text>
                             ))}
                         </View>

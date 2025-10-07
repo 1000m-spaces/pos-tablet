@@ -150,6 +150,7 @@ export const getOrderItems = (order, isOfflineOrder) => {
             price: product.price || product.amount || 0, // Handle different price field names
             note: product.note,
             extras: product.extras || [],
+            option: product.option || [],
         })) || [];
     } else {
         return order?.itemInfo?.items?.map((item, index) => {
@@ -171,6 +172,7 @@ export const getOrderItems = (order, isOfflineOrder) => {
                 currencySymbol: item.fare?.currencySymbol || '₫',
                 note: item.comment,
                 modifierGroups: item.modifierGroups || [],
+                option: item.option || [],
             };
         }) || [];
     }

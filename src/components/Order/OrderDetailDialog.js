@@ -33,6 +33,7 @@ const OrderDetailDialog = ({
         labelPrinterStatus,
         billPrinterStatus,
     } = usePrinter();
+    console.log('selectedOrder', selectedOrder);
 
     // Use our custom hooks
     const {

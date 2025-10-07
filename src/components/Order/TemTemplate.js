@@ -272,21 +272,48 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                     </View>
 
                     {/* Modifiers/Options/Notes */}
-                    {(item.stringName || item.option || item.extrastring || item.note_prod || orderPrint.note) && (
-                        <View style={styles.modifierSection}>
-                            <Text style={styles.modifierText} numberOfLines={3} ellipsizeMode="tail">
-                                {[...new Set([
-                                    item.stringName,
-                                    item.option,
-                                    item.extrastring,
-                                    item.note_prod && item.note_prod.trim() !== '' ? `${item.note_prod}` : null,
-                                    orderPrint.note && orderPrint.note.trim() !== '' ? `${orderPrint.note}` : null
-                                ]
-                                    .filter(text => text && text.trim() !== ''))]
-                                    .join('/')}
-                            </Text>
-                        </View>
-                    )}
+                    {(() => {
+                        const allOptions = [];
+
+                        // Add options from option array
+                        if (item.option) {
+                            if (Array.isArray(item.option)) {
+                                // New format: array of objects
+                                const optionNames = item.option
+                                    .filter(opt => opt && opt.optdetailid && opt.optdetailname)
+                                    .map(opt => opt.optdetailname);
+                                allOptions.push(...optionNames);
+                            } else if (typeof item.option === 'string' && item.option.trim() !== '') {
+                                // Old format: string
+                                allOptions.push(item.option.trim());
+                            }
+                        }
+
+                        // Add other option fields
+                        if (item.stringName && item.stringName.trim() !== '') {
+                            allOptions.push(item.stringName.trim());
+                        }
+                        if (item.extrastring && item.extrastring.trim() !== '') {
+                            allOptions.push(item.extrastring.trim());
+                        }
+                        if (item.note_prod && item.note_prod.trim() !== '') {
+                            allOptions.push(item.note_prod.trim());
+                        }
+                        if (orderPrint.note && orderPrint.note.trim() !== '') {
+                            allOptions.push(orderPrint.note.trim());
+                        }
+
+                        // Remove duplicates
+                        const uniqueOptions = [...new Set(allOptions)];
+
+                        return uniqueOptions.length > 0 && (
+                            <View style={styles.modifierSection}>
+                                <Text style={styles.modifierText} numberOfLines={3} ellipsizeMode="tail">
+                                    {uniqueOptions.join('/')}
+                                </Text>
+                            </View>
+                        );
+                    })()}
 
                     {/* Bottom section with additional order info, date/time, and price */}
                     <View style={styles.bottomSection}>
