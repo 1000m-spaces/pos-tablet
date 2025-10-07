@@ -36,7 +36,7 @@ export default (state = initializeState, { type, payload }) => {
         statusGetOnlineOrder: Status.LOADING,
       };
     case NEOCAFE.GET_ONLINE_ORDER_SUCCESS:
-      console.log('payload::', payload)
+      console.log('payload:: GET_ONLINE_ORDER_SUCCESS', payload)
       return {
         ...state,
         onlineOrders: payload,

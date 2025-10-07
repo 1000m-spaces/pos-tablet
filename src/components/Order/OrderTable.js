@@ -6,6 +6,9 @@ import Toast from 'react-native-toast-message'
 import OrderDetailDialog from './OrderDetailDialog';
 import { getOrderIdentifierForPrinting } from '../../utils/orderUtils';
 import printQueueService from '../../services/PrintQueueService';
+import { TextNormal } from "common/Text/TextFont";
+import { useDispatch } from "react-redux";
+import { confirmOrderOnline } from "store/actions";
 
 const { width, height } = Dimensions.get("window");
 
@@ -21,13 +24,14 @@ const Badge = ({ text, colorText, colorBg, width }) => (
 );
 
 const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) => {
+    const dispatch = useDispatch();
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [printedLabels, setPrintedLabelsState] = useState([]);
     const [isAutoPrinting, setIsAutoPrinting] = useState(false);
 
-    const tableHead = ["Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
+    const tableHead = ["Xác nhận", "Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
 
     const [tableWidth, setTableWidth] = useState([])
@@ -35,7 +39,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
 
     useEffect(() => {
         const { width, height } = Dimensions.get("window");
-        const calculatedTableWidth = width * 0.96;
+        const calculatedTableWidth = width - width * 0.09 - 20;
         setTableWidth(calculatedTableWidth);
         const columnWidth = calculatedTableWidth / numColumns;
         setWidthArr(Array(numColumns).fill(columnWidth));
@@ -324,6 +328,12 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
     }, [orders, orderType]);
 
     const tableData = orders?.map(order => [
+        <View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <TouchableOpacity style={{ justifyContent: 'center', alignItems: 'center', height: '80%', width: '60%', backgroundColor: '#19b400', borderRadius: 10 }}
+                onPress={() => { handleConfirmOrder(order.displayID) }}>
+                <TextNormal>Xác nhận đơn</TextNormal>
+            </TouchableOpacity>
+        </View>,
         order.service || "GRAB",
         order.displayID,
         order.orderValue,
@@ -337,6 +347,17 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder }) =
         />,
         <Badge text={getStatusText(order.state)} colorText={getStatusColor(order.state)} colorBg={getStatusColorBg(order.state)} width="80%" key={order.displayID + "_status"} />
     ]);
+
+    // confirm order
+    const handleConfirmOrder = (orderId) => {
+        dispatch(confirmOrderOnline({ order_id: orderId }));
+        Toast.show({
+            type: 'info',
+            text1: 'Đang xác nhận đơn hàng...',
+            position: 'bottom',
+        });
+    };
+
 
     return (
         <>

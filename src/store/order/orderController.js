@@ -14,8 +14,8 @@ class OrderController {
   getOrderShipping = async payload => {
     try {
       const { data } = await HttpClient.post(UrlApi.getOrderShipping, payload);
-      console.log('getOrderShipping', data);
-      console.log('getOrderShipping payload', payload);
+      console.log('data getOrder Shipping and Pick up controller:', data);
+      console.log('getOrder Shipping and Pick up payload', payload);
       return { success: true, data };
     } catch (error) {
       return { success: false, error: error.message };
@@ -42,8 +42,9 @@ class OrderController {
   // New method to fetch orders from getOrderOnlineNew API
   fetchOrderOnlineNew = async payload => {
     try {
-      console.log('fetchOrderOnlineNew', UrlApi.getOnlineOrder, payload);
+      console.log('payload fetchOrderOnlineNew', UrlApi.getOnlineOrder, payload);
       const { data } = await HttpClient.post(UrlApi.getOnlineOrder, payload);
+      console.log('all data fetchOrderOnlineNew', data);
       return { success: true, data: data };
     } catch (error) {
       return { success: false, error: error.message };
@@ -81,8 +82,9 @@ class OrderController {
 
   confirmOrderOnline = async payload => {
     try {
-      console.log('confirmOrderOnline', UrlApi.confirmOrderOnline, payload);
+      console.log('confirmOrderOnline:', UrlApi.confirmOrderOnline, payload);
       const { data } = await HttpClient.post(UrlApi.confirmOrderOnline, payload);
+      console.log('data confirmOrderOnline:', data);
       return { success: true, data: data };
     } catch (error) {
       return { success: false, error: error.message };

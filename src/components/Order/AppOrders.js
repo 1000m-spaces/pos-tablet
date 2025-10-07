@@ -16,9 +16,11 @@ import Colors from 'theme/Colors';
 import OrderTable from './OrderTable';
 import PrinterSettingsModal from 'common/PrinterSettingsModal';
 import AsyncStorage from 'store/async_storage/index';
-import { getOrderShipping, getOrderPaidSuccess, resetGetOrderShipping, resetGetOrderPaidSuccess } from 'store/order/orderAction';
+import { getOrderShipping, getOrderPaidSuccess, resetGetOrderShipping, resetGetOrderPaidSuccess, getOnlineOrder, resetGetOnlineOrder } from 'store/order/orderAction';
 import { usePrinter } from '../../services/PrinterService';
 import orderController from 'store/order/orderController';
+import { confirmOrderOnlineStatusSelector, getStatusGetOnlineOrder, onlineOrderSelector } from 'store/selectors';
+import Status from 'common/Status/Status';
 
 const appOrderFilters = [
   { id: 1, name: 'Đơn mới' },
@@ -133,7 +135,7 @@ const transformAppOrder = (apiOrder) => {
         }
       },
       // Add service info 
-      service: 'APP',
+      service: apiOrder.is_delivery == '1' ? 'Delivery' : 'Pick up',
       // Mark as app order
       source: 'app_order',
       // Add timestamps
@@ -163,6 +165,9 @@ const AppOrders = () => {
   const statusGetOrderShipping = useSelector(state => state.order.statusGetOrderShipping);
   const paidSuccessOrders = useSelector(state => state.order.paidSuccessOrders);
   const statusGetOrderPaidSuccess = useSelector(state => state.order.statusGetOrderPaidSuccess);
+  const isOnlineOrderSelector = useSelector(state => onlineOrderSelector(state));
+  const isStatusGetOnlineOrder = useSelector(state => getStatusGetOnlineOrder(state));
+  const isStatustConfirmOrderOnline = useSelector(state => confirmOrderOnlineStatusSelector(state));
 
   const fetchAppOrders = useCallback(async () => {
     if (!userShop) {
@@ -180,25 +185,30 @@ const AppOrders = () => {
     try {
       if (orderType === 1) {
         // Fetch from both Redux action and direct API call
-        const [, onlineOrdersRes] = await Promise.all([
-          // Redux action for shipping orders
-          dispatch(getOrderShipping({
-            rest_id: userShop.id
-          })),
-          // Direct API call for new online orders
-          orderController.fetchOrderOnlineNew({
-            rest_id: userShop.id
-          })
-        ]);
+        // const [, onlineOrdersRes] = await Promise.all([
+        //   // Redux action for shipping orders
+        //   dispatch(getOrderShipping({
+        //     rest_id: userShop.id
+        //   })),
+        //   // Direct API call for new online orders
+        //   orderController.fetchOrderOnlineNew({
+        //     rest_id: userShop.id
+        //   })
+        // ]);
+
+        // dispatch(getOrderShipping({
+        //   rest_id: userShop.id
+        // }))
+        dispatch(getOnlineOrder({ rest_id: userShop.id }));
 
         // Handle online orders from direct API call
-        if (onlineOrdersRes.success && onlineOrdersRes.data?.status) {
-          const transformedOnlineOrders = onlineOrdersRes.data.data
+        if (isStatusGetOnlineOrder === Status.SUCCESS) {
+          const transformedOnlineOrders = isOnlineOrderSelector
             .map(transformOrderOnlineNew)
             .filter(order => order !== null);
 
           // We'll combine this with Redux data in the useEffect
-          setData(prevData => [...prevData, ...transformedOnlineOrders]);
+          setData(isOnlineOrderSelector);
         }
       } else {
         // Fetch paid success orders (Lịch sử)
@@ -235,19 +245,62 @@ const AppOrders = () => {
   useEffect(() => {
     if (userShop) {
       fetchAppOrders();
-
-      // Set up interval for fetching orders every 30 seconds for "Đơn mới"
-      if (orderType === 1) {
-        const intervalId = setInterval(() => {
-          if (!isLoading) {
-            fetchAppOrders();
-          }
-        }, 120000);
-
-        return () => clearInterval(intervalId);
-      }
     }
   }, [userShop, orderType]);
+
+
+  // set data all online order
+  useEffect(() => {
+    if (isStatustConfirmOrderOnline === Status.SUCCESS) {
+      dispatch(getOnlineOrder({ rest_id: userShop.id }));
+      dispatch(resetGetOnlineOrder());
+    }
+  }, [isStatustConfirmOrderOnline]);
+
+  useEffect(() => {
+    loadDataOrderOnline();
+  }, [orderType, isOnlineOrderSelector, isStatustConfirmOrderOnline]);
+
+  useEffect(() => {
+    if (userShop?.id) {
+      const intervalId = setInterval(() => {
+        console.log('Auto-refreshing online orders for shop ID:', userShop);
+        dispatch(getOnlineOrder({ rest_id: userShop?.id }));
+      }, 20000)
+      return () => clearInterval(intervalId);
+    }
+  }, [userShop])
+
+  const loadDataOrderOnline = () => {
+    if (orderType === 1 && isStatusGetOnlineOrder === Status.SUCCESS) {
+      if (isOnlineOrderSelector?.length > 0) {
+        const transformedAppOrders = isOnlineOrderSelector
+          .map(transformAppOrder)
+          .filter(order => order !== null);
+
+        // Combine with existing online orders (if any were set by direct API call)
+        setData(prevData => {
+          // Filter out any app orders to avoid duplicates, keep online orders
+          const onlineOrders = prevData.filter(order => order.source === 'online_new');
+          return [...transformedAppOrders, ...onlineOrders];
+        });
+      } else if (isStatusGetOnlineOrder === Status.ERROR) {
+        Toast.show({
+          type: 'error',
+          text1: shippingOrders?.error || 'Lỗi khi tải đơn hàng mới',
+          position: 'bottom',
+        });
+      }
+      setIsLoading(false);
+    } else if (statusGetOrderShipping === 'ERROR') {
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi khi tải đơn hàng mới',
+        position: 'bottom',
+      });
+      setIsLoading(false);
+    }
+  };
 
   // Handle Redux state updates
   useEffect(() => {
@@ -409,7 +462,7 @@ const AppOrders = () => {
             </View>
 
             {/* Content */}
-            {isLoading || statusGetOrderShipping === 'LOADING' || statusGetOrderPaidSuccess === 'LOADING' ? (
+            {isLoading || statusGetOrderShipping === 'LOADING' || statusGetOrderPaidSuccess === 'LOADING' || isStatustConfirmOrderOnline === Status.LOADING ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={Colors.primary} />
                 <TextNormal style={styles.loadingText}>
