@@ -31,19 +31,15 @@ const HiddenViewShotComponents = () => {
   // Helper function to transform order for label printing
   const transformOrderForLabel = (originalOrder, productIndex = 0, labelIndex = 0, totalLabels = 1) => {
     console.log(`RootNav: transformOrderForLabel called with productIndex=${productIndex}, labelIndex=${labelIndex}, totalLabels=${totalLabels}`);
-    
+
     // Detect order type based on structure
     const isOnlineOrder = originalOrder.source === 'app_order' || originalOrder.source === 'online_new';
     const isOfflineOrder = originalOrder.products && Array.isArray(originalOrder.products);
-    
+
     console.log('RootNav: originalOrder data:', {
-      session: originalOrder.session,
-      displayID: originalOrder.displayID,
-      source: originalOrder.source,
+      ...originalOrder,
       isOnlineOrder,
       isOfflineOrder,
-      products: originalOrder.products?.length || 0,
-      items: originalOrder.itemInfo?.items?.length || 0
     });
 
     // Get product from appropriate structure
@@ -53,7 +49,7 @@ const HiddenViewShotComponents = () => {
     } else if (isOnlineOrder && originalOrder.itemInfo?.items) {
       product = originalOrder.itemInfo.items[productIndex];
     }
-    
+
     if (!product) {
       console.log(`RootNav: No product found at index ${productIndex}`);
       return originalOrder;
@@ -63,7 +59,7 @@ const HiddenViewShotComponents = () => {
 
     // Extract product details based on order type
     let productName, productPrice, productComment, productModifiers, productId;
-    
+
     if (isOfflineOrder) {
       // Offline order structure
       productName = product.name;
@@ -85,7 +81,7 @@ const HiddenViewShotComponents = () => {
       // Online order structure
       productName = product.prodname || product.name;
       // Parse price from fare object or use priceDisplay
-      const priceFromFare = product.fare?.priceDisplay ? 
+      const priceFromFare = product.fare?.priceDisplay ?
         parseInt(product.fare.priceDisplay.replace(/[^0-9]/g, '')) : 0;
       productPrice = product.price || priceFromFare || 0;
       productComment = product.comment || '';
@@ -126,14 +122,14 @@ const HiddenViewShotComponents = () => {
 
       // Service and location information
       serviceType: isOnlineOrder ? 'online' : 'offline',
-      tableName: isOnlineOrder ? 
-        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') : 
+      tableName: isOnlineOrder ?
+        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') :
         (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table),
-      table: isOnlineOrder ? 
-        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') : 
+      table: isOnlineOrder ?
+        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') :
         (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table),
-      shopTableName: isOnlineOrder ? 
-        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') : 
+      shopTableName: isOnlineOrder ?
+        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') :
         (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table),
       shopTableid: originalOrder.shopTableid || "0",
 
@@ -190,7 +186,7 @@ const HiddenViewShotComponents = () => {
 
           // Flattened modifier strings for easier template access
           stringName: modifierStrings.stringName,
-          option: modifierStrings.option,
+          option: [product.option],
           extrastring: modifierStrings.extrastring,
           itemIdx: labelIndex + 1, // Use 1-based indexing for display
           totalItems: totalLabels,
@@ -205,7 +201,7 @@ const HiddenViewShotComponents = () => {
         amount: 1,
         note_prod: productComment,
         stringName: modifierStrings.stringName,
-        option: modifierStrings.option,
+        option: [product.option],
         extrastring: modifierStrings.extrastring,
         itemIdx: labelIndex + 1, // Use 1-based indexing for display
         totalItems: totalLabels,
@@ -216,17 +212,17 @@ const HiddenViewShotComponents = () => {
 
       // Customer and service information
       customerInfo: {
-        name: isOnlineOrder ? 
-          (originalOrder.eater?.name || originalOrder.service || 'Khách hàng') : 
+        name: isOnlineOrder ?
+          (originalOrder.eater?.name || originalOrder.service || 'Khách hàng') :
           (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table || 'Khách hàng'),
-        table: isOnlineOrder ? 
-          (originalOrder.service || 'Online') : 
+        table: isOnlineOrder ?
+          (originalOrder.service || 'Online') :
           (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table),
-        phone: isOnlineOrder ? 
-          (originalOrder.eater?.mobileNumber || '') : 
+        phone: isOnlineOrder ?
+          (originalOrder.eater?.mobileNumber || '') :
           (originalOrder.customerPhone || ''),
-        address: isOnlineOrder ? 
-          (originalOrder.eater?.address?.address || '') : 
+        address: isOnlineOrder ?
+          (originalOrder.eater?.address?.address || '') :
           (originalOrder.customerAddress || ''),
       },
 
@@ -246,7 +242,7 @@ const HiddenViewShotComponents = () => {
       printStatus: originalOrder.printStatus || "not_printed",
       currentItemIndex: labelIndex + 1,
       isPartialPrint: true, // Indicates this is one item from a multi-item order
-      
+
       // Preserve source marker
       source: originalOrder.source,
     };
@@ -296,22 +292,22 @@ const HiddenViewShotComponents = () => {
         items: items
       },
       customerInfo: {
-        name: isOnlineOrder ? 
-          (originalOrder.eater?.name || originalOrder.service || 'Khách hàng') : 
+        name: isOnlineOrder ?
+          (originalOrder.eater?.name || originalOrder.service || 'Khách hàng') :
           (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table || 'Khách hàng'),
-        phone: isOnlineOrder ? 
-          (originalOrder.eater?.mobileNumber || '') : 
+        phone: isOnlineOrder ?
+          (originalOrder.eater?.mobileNumber || '') :
           (originalOrder.customerPhone || ''),
-        address: isOnlineOrder ? 
-          (originalOrder.eater?.address?.address || '') : 
+        address: isOnlineOrder ?
+          (originalOrder.eater?.address?.address || '') :
           (originalOrder.customerAddress || ''),
       },
       serviceType: isOnlineOrder ? 'online' : 'offline',
-      tableName: isOnlineOrder ? 
-        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') : 
+      tableName: isOnlineOrder ?
+        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') :
         (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table),
-      table: isOnlineOrder ? 
-        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') : 
+      table: isOnlineOrder ?
+        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') :
         (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table),
     };
   };
@@ -429,7 +425,7 @@ const HiddenViewShotComponents = () => {
   // Queue multiple labels for orders with multiple products and quantities
   const queueMultipleLabels = async (order, printerInfo) => {
     try {
-      console.log('RootNav: Starting queueMultipleLabels for order:', order?.session || order?.offlineOrderId || order?.displayID);
+      console.log('RootNav: Starting queueMultipleLabels for order:', order);
 
       // Handle different order structures: offline orders use order.products, online orders use order.itemInfo.items
       let products = null;
@@ -458,6 +454,7 @@ const HiddenViewShotComponents = () => {
       for (let productIndex = 0; productIndex < products.length; productIndex++) {
         const product = products[productIndex];
         const quantity = product.quanlity || product.quantity || 1;
+        console.log('RootNav: Product:', order, product);
 
         // Create one print task for each quantity of the product
         for (let quantityIndex = 0; quantityIndex < quantity; quantityIndex++) {

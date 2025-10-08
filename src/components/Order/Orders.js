@@ -96,6 +96,7 @@ const Orders = () => {
       // Preserve original eater/driver for getCustomerInfo/getDriverInfo utility functions
       eater: order.eater || null,
       driver: order.driver || null,
+      source: 'app_order',
       // Also keep transformed versions for backward compatibility
       customerInfo: order.eater ? {
         name: order.eater.name || '',
