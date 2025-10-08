@@ -67,7 +67,6 @@ const Orders = () => {
           price: item.price_product || '0',
           total_price: item.total_price || '0',
           note: item.note || '',
-          extra: item.extra || null,
           campaign: item.campaign || '',
           // Fields for OrderDetailDialog compatibility
           name: item.product_name || '', // Used by getOrderItems
@@ -76,13 +75,22 @@ const Orders = () => {
             priceDisplay: item.price_product || '0',
             currencySymbol: '₫'
           },
-          // Transform options/modifiers
-          modifierGroups: (item.option || []).map(opt => ({
+          // Transform options for OrderItems.js display - keep as option array
+          option: (item.option || []).map(opt => ({
+            optdetailid: opt.product_name || '', // Use product_name as ID
+            optdetailname: opt.product_name || '',
             product_name: opt.product_name || '',
-            name: opt.product_name || '', // For display compatibility
             quantity: opt.quantity || 1
           })),
-          option: item.option || []
+          // Transform extras to modifierGroups for online order display
+          modifierGroups: (item.extra || []).map(ext => ({
+            modifiers: [{
+              modifierName: ext.product_name || '',
+              quantity: ext.quantity || 1
+            }]
+          })),
+          // Keep original extra for backward compatibility
+          extra: item.extra || null
         }))
       },
       // Preserve original eater/driver for getCustomerInfo/getDriverInfo utility functions
@@ -93,7 +101,7 @@ const Orders = () => {
         name: order.eater.name || '',
         phone: order.eater.mobileNumber || '',
         comment: order.eater.comment || '',
-        address: order.eater.address || ''
+        address: order.eater.address?.address || order.eater.address || ''
       } : null,
       driverInfo: order.driver ? {
         name: order.driver.name || '',
