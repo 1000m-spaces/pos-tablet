@@ -184,21 +184,6 @@ const AppOrders = () => {
 
     try {
       if (orderType === 1) {
-        // Fetch from both Redux action and direct API call
-        // const [, onlineOrdersRes] = await Promise.all([
-        //   // Redux action for shipping orders
-        //   dispatch(getOrderShipping({
-        //     rest_id: userShop.id
-        //   })),
-        //   // Direct API call for new online orders
-        //   orderController.fetchOrderOnlineNew({
-        //     rest_id: userShop.id
-        //   })
-        // ]);
-
-        // dispatch(getOrderShipping({
-        //   rest_id: userShop.id
-        // }))
         dispatch(getOnlineOrder({ rest_id: userShop.id }));
 
         // Handle online orders from direct API call
