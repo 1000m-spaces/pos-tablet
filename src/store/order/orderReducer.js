@@ -180,6 +180,11 @@ export default (state = initializeState, { type, payload }) => {
         ...state,
         statusConfirmOrderOnline: Status.ERROR,
       };
+    case NEOCAFE.CONFIRM_ORDER_ONLINE_RESET:
+      return {
+        ...state,
+        statusConfirmOrderOnline: Status.DEFAULT,
+      };
     default: {
       return state;
     }

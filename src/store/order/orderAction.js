@@ -46,3 +46,7 @@ export const getOrderPaidSuccess = payload => ({
 export const resetGetOrderPaidSuccess = () => ({
   type: NEOCAFE.GET_ORDER_PAID_SUCCESS_RESET,
 });
+
+export const resetConfirmOrderOnline = () => ({
+  type: NEOCAFE.CONFIRM_ORDER_ONLINE_RESET,
+});

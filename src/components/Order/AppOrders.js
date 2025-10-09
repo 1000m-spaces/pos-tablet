@@ -156,6 +156,7 @@ const AppOrders = () => {
   const [userShop, setUserShop] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [printerType, setPrinterType] = useState('label');
+  const [confirmedOrderId, setConfirmedOrderId] = useState(null); // Lifted state for order confirmation
 
   // Printer service
   const { labelPrinterStatus, billPrinterStatus } = usePrinter();
@@ -235,9 +236,10 @@ const AppOrders = () => {
   }, [userShop, orderType]);
 
 
-  // set data all online order
+  // set data all online order - refresh orders after successful confirmation
+  // Note: resetConfirmOrderOnline is handled in OrderTable.js after auto-print completes
   useEffect(() => {
-    if (isStatustConfirmOrderOnline === Status.SUCCESS) {
+    if (isStatustConfirmOrderOnline === Status.SUCCESS && userShop?.id) {
       dispatch(getOnlineOrder({ rest_id: userShop.id }));
       dispatch(resetGetOnlineOrder());
     }
@@ -461,6 +463,8 @@ const AppOrders = () => {
                 orders={data}
                 showSettingPrinter={() => setPrinterModalVisible(true)}
                 isFoodApp={false}
+                confirmedOrderId={confirmedOrderId}
+                setConfirmedOrderId={setConfirmedOrderId}
               />
             )}
 
