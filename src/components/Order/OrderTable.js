@@ -335,7 +335,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 throw new Error('Printer settings not configured');
             }
 
-            console.log('Auto-queueing label print for order:', order.displayID);
+            console.log('Auto-queueing label print for order:', order);
 
             // Use global.queueMultipleLabels for multiple products if available
             if (global.queueMultipleLabels && order.itemInfo?.items && order.itemInfo.items.length > 0) {
