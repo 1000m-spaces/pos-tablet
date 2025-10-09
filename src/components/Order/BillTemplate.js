@@ -114,9 +114,9 @@ const BillTemplate = ({ selectedOrder }) => {
                 // Remove dots (thousands separator) and parse as integer
                 numericAmount = parseInt(amount.replace(/\./g, ''), 10);
             }
-            return new Intl.NumberFormat('vi-VN').format(numericAmount);
+            return new Intl.NumberFormat('vi-VN').format(numericAmount) + 'đ';
         } catch (error) {
-            return amount?.toString() || '0';
+            return (amount?.toString() || '0') + 'đ';
         }
     };
 
