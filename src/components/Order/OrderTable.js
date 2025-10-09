@@ -8,7 +8,7 @@ import { getOrderIdentifierForPrinting } from '../../utils/orderUtils';
 import printQueueService from '../../services/PrintQueueService';
 import { TextNormal } from "common/Text/TextFont";
 import { useDispatch } from "react-redux";
-import { confirmOrderOnline } from "store/actions";
+import { callDriverBack, confirmOrderOnline } from "store/actions";
 
 const { width, height } = Dimensions.get("window");
 
@@ -23,7 +23,8 @@ const Badge = ({ text, colorText, colorBg, width }) => (
     </View>
 );
 
-const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp }) => {
+const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, dataShippingSuccess }) => {
+    console.log('OrderTable orders:', orders);
     const dispatch = useDispatch();
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
@@ -327,11 +328,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         checkAndPrintNewOrders();
     }, [orders, orderType]);
 
-    const tableData = orders?.map(order => [
+    const tableData = orders?.map((order, index) => [
         ...(isFoodApp ? [] : [<View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <TouchableOpacity style={{ justifyContent: 'center', alignItems: 'center', height: '80%', width: '60%', backgroundColor: '#19b400', borderRadius: 10 }}
-                onPress={() => { handleConfirmOrder(order.displayID) }}>
-                <TextNormal>Xác nhận đơn</TextNormal>
+                onPress={() => { !historyDelivery ? handleConfirmOrder(order.displayID) : postCallDriverBack(dataShippingSuccess[index]) }}>
+                <TextNormal>{!historyDelivery ? 'Xác nhận đơn' : 'Gọi tài xế'}</TextNormal>
             </TouchableOpacity>
         </View>]),
         order.service || "GRAB",
@@ -357,6 +358,65 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             position: 'bottom',
         });
     };
+
+    const postCallDriverBack = (order) => {
+        // Parse metadata và request_products nếu có
+        const metadata = order.metadata ? JSON.parse(order.metadata) : {};
+        const requestProducts = order.request_products
+            ? JSON.parse(order.request_products)
+            : [];
+
+        const dataPayload = {
+            branch_id: Number(order.rest_id) || 0,
+            brand_id: Number(order.partner_id) || 0, // ❓ cần xác nhận: brand_id có phải là partner_id không?
+            brand_order_id: order.shipping_order_id || order.orderid || "string",
+            drop_off: {
+                address: metadata.deliver_address || order.shipping_address || "",
+                apt_number: metadata.deliver_detail_address || "",
+                building: "", // ❓ chưa thấy thông tin building
+                cod: Number(order.price_paid) || 0, // hoặc order.shipping_fee?
+                lat: metadata.deliver_latitude || "",
+                lng: metadata.deliver_longitude || "",
+                mobile: metadata.deliver_phone || order.userphone || "",
+                name: metadata.deliver_name || "",
+                remarks: order.note_manager || "",
+                require_pod: true, // mặc định true như mẫu
+            },
+            images: [], // ❓ không thấy thông tin hình ảnh
+            items: (order.products || []).map((p) => ({
+                _id: p.prod_id || "string",
+                name: p.prodname || "",
+                num: Number(p.quantity) || 0,
+                price: Number(p.paid_price) || 0,
+            })),
+            merchant_id: Number(order.shopowner_id) || 0,
+            note: order.description || "",
+            partner_user_id: metadata.partner_user_id || order.partner_user_id || "",
+            pick_up: {
+                address: "Kho cửa hàng / chi nhánh", // ❓ không có thông tin pickup → có thể lấy từ cấu hình
+                apt_number: "",
+                building: "",
+                cod: 0,
+                lat: "", // ❓ nếu có toạ độ cửa hàng
+                lng: "",
+                mobile: "", // ❓ số điện thoại cửa hàng
+                name: order.tableName || "Store",
+                remarks: "",
+                require_pod: true,
+            },
+            promo_code: "", // ❓ không thấy mã giảm giá
+            remarks: order.note_manager || "",
+            requests: requestProducts.map((r) => ({
+                _id: r.pid?.toString() || "",
+                num: Number(r.quantity) || 0,
+            })),
+            total_price: Number(order.price_total) || 0,
+            user_id: order.cust_id?.toString() || "",
+        };
+
+        console.log('postCallDriverBack order:', dataPayload);
+        // dispatch(callDriverBack({ order_id: orderId }));
+    }
 
 
     return (

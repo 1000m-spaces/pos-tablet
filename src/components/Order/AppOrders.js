@@ -19,7 +19,7 @@ import AsyncStorage from 'store/async_storage/index';
 import { getOrderShipping, getOrderPaidSuccess, resetGetOrderShipping, resetGetOrderPaidSuccess, getOnlineOrder, resetGetOnlineOrder } from 'store/order/orderAction';
 import { usePrinter } from '../../services/PrinterService';
 import orderController from 'store/order/orderController';
-import { confirmOrderOnlineStatusSelector, getStatusGetOnlineOrder, onlineOrderSelector } from 'store/selectors';
+import { confirmOrderOnlineStatusSelector, getStatusGetOnlineOrder, onlineOrderSelector, shippingOrdersSelector, shippingOrdersStatusSelector } from 'store/selectors';
 import Status from 'common/Status/Status';
 
 const appOrderFilters = [
@@ -168,6 +168,8 @@ const AppOrders = () => {
   const isOnlineOrderSelector = useSelector(state => onlineOrderSelector(state));
   const isStatusGetOnlineOrder = useSelector(state => getStatusGetOnlineOrder(state));
   const isStatustConfirmOrderOnline = useSelector(state => confirmOrderOnlineStatusSelector(state));
+  const isShippingOrdersSelector = useSelector(state => shippingOrdersSelector(state));
+  const isShippingOrdersStatus = useSelector(state => shippingOrdersStatusSelector(state));
 
   const fetchAppOrders = useCallback(async () => {
     if (!userShop) {
@@ -199,23 +201,24 @@ const AppOrders = () => {
         // dispatch(getOrderShipping({
         //   rest_id: userShop.id
         // }))
-        dispatch(getOnlineOrder({ rest_id: userShop.id }));
+        // dispatch(getOnlineOrder({ rest_id: userShop.id }));
 
         // Handle online orders from direct API call
-        if (isStatusGetOnlineOrder === Status.SUCCESS) {
-          const transformedOnlineOrders = isOnlineOrderSelector
-            .map(transformOrderOnlineNew)
-            .filter(order => order !== null);
+        // if (isStatusGetOnlineOrder === Status.SUCCESS) {
+        const transformedOnlineOrders = isOnlineOrderSelector
+          .map(transformOrderOnlineNew)
+          .filter(order => order !== null);
 
-          // We'll combine this with Redux data in the useEffect
-          setData(isOnlineOrderSelector);
-          dispatch(resetGetOnlineOrder());
-        }
+        // We'll combine this with Redux data in the useEffect
+        setData(isOnlineOrderSelector);
+        // dispatch(resetGetOnlineOrder());
+        // }
       } else {
         // Fetch paid success orders (Lịch sử)
-        dispatch(getOrderPaidSuccess({
-          rest_id: userShop.id
-        }));
+        // dispatch(getOrderPaidSuccess({
+        //   rest_id: userShop.id
+        // }));
+        setData(isShippingOrdersSelector)
       }
     } catch (error) {
       console.error('Error fetching app orders:', error);
@@ -245,9 +248,19 @@ const AppOrders = () => {
 
   useEffect(() => {
     if (userShop) {
-      fetchAppOrders();
+      dispatch(getOrderShipping({
+        rest_id: userShop.id
+      }))
+      dispatch(getOnlineOrder({ rest_id: userShop.id }));
+
     }
   }, [userShop, orderType]);
+
+  useEffect(() => {
+    if (userShop) {
+      fetchAppOrders();
+    }
+  }, [orderType]);
 
 
   // set data all online order
@@ -266,6 +279,9 @@ const AppOrders = () => {
     if (userShop?.id) {
       const intervalId = setInterval(() => {
         dispatch(getOnlineOrder({ rest_id: userShop?.id }));
+        dispatch(getOrderShipping({
+          rest_id: userShop.id
+        }))
       }, 20000)
       return () => clearInterval(intervalId);
     }
@@ -336,21 +352,21 @@ const AppOrders = () => {
   }, [statusGetOrderShipping, shippingOrders, orderType]);
 
   useEffect(() => {
-    if (orderType === 2 && statusGetOrderPaidSuccess === 'SUCCESS') {
-      if (paidSuccessOrders?.status && paidSuccessOrders?.data) {
-        const transformedOrders = paidSuccessOrders.data
+    if (orderType === 2 && isShippingOrdersStatus === 'SUCCESS') {
+      if (isShippingOrdersSelector?.status && isShippingOrdersSelector?.data) {
+        const transformedOrders = isShippingOrdersSelector.data
           .map(transformAppOrder)
           .filter(order => order !== null);
         setData(transformedOrders);
-      } else if (paidSuccessOrders?.status === false) {
+      } else if (isShippingOrdersSelector?.status === false) {
         Toast.show({
           type: 'error',
-          text1: paidSuccessOrders?.error || 'Lỗi khi tải lịch sử đơn hàng',
+          text1: isShippingOrdersSelector?.error || 'Lỗi khi tải lịch sử đơn hàng',
           position: 'bottom',
         });
       }
       setIsLoading(false);
-    } else if (statusGetOrderPaidSuccess === 'ERROR') {
+    } else if (isShippingOrdersStatus === 'ERROR') {
       Toast.show({
         type: 'error',
         text1: 'Lỗi khi tải lịch sử đơn hàng',
@@ -358,7 +374,7 @@ const AppOrders = () => {
       });
       setIsLoading(false);
     }
-  }, [statusGetOrderPaidSuccess, paidSuccessOrders, orderType]);
+  }, [isShippingOrdersStatus, isShippingOrdersSelector, orderType]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -476,6 +492,8 @@ const AppOrders = () => {
                 orders={data}
                 showSettingPrinter={() => setPrinterModalVisible(true)}
                 isFoodApp={false}
+                historyDelivery={orderType === 2}
+                dataShippingSuccess={isShippingOrdersSelector?.data || []}
               />
             )}
 

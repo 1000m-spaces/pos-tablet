@@ -90,5 +90,15 @@ class OrderController {
       return { success: false, error: error.message };
     }
   };
+  // call the driver back
+  callDriverBackController = async payload => {
+    try {
+      console.log('payload callDriverBackController', payload);
+      const { data } = await HttpClient.post(UrlApi.callDriverBack, payload);
+      return { success: true, data: data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
 }
 export default new OrderController();

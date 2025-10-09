@@ -57,6 +57,7 @@ export const UrlApi = {
   cancelOrder: BASE_PATH_MENU + 'cancelOrderOnline',
   confirmOrderOnline: BASE_PATH_MENU + 'confirmOrderOnline',
   getListHistoryOrder: BASE_PATH_MENU + 'getOrderDetail',
+  callDriverBack: BASE_PATH_1000M + 'synthetic/delivery/v1/orders',
 
   orderSuccessPayment: BASE_PATH_MENU + 'getOrderPaidSuccessNew', // don da thanh toan
   orderNotComplete: BASE_PATH_MENU + 'getOrderNotCompleteNew',

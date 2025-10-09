@@ -234,6 +234,22 @@ function* getOrderPaidSuccessSaga({ payload }) {
   }
 }
 
+function* callDriverBackSaga({ payload }) {
+  try {
+    const result = yield call(orderController.callDriverBackController, payload);
+    if (result && result.success) {
+      yield put({
+        type: NEOCAFE.CALL_DRIVER_BACK_SUCCESS,
+        payload: result.data,
+      });
+    } else {
+      yield put({ type: NEOCAFE.CALL_DRIVER_BACK_ERROR });
+    }
+  } catch (error) {
+    yield put({ type: NEOCAFE.CALL_DRIVER_BACK_ERROR });
+  }
+}
+
 export default function* watcherSaga() {
   yield takeLatest(NEOCAFE.CREATE_ORDER_REQUEST, createOrderSaga);
   yield takeLatest(NEOCAFE.ADD_PRODUCT_CART_REQUEST, addProductCartSaga);
@@ -242,4 +258,5 @@ export default function* watcherSaga() {
   yield takeLatest(NEOCAFE.CONFIRM_ORDER_ONLINE_REQUEST, confirmOrderOnlineSaga);
   yield takeLatest(NEOCAFE.GET_ORDER_SHIPPING_REQUEST, getOrderShippingSaga);
   yield takeLatest(NEOCAFE.GET_ORDER_PAID_SUCCESS_REQUEST, getOrderPaidSuccessSaga);
+  yield takeLatest(NEOCAFE.CALL_DRIVER_BACK_REQUEST, callDriverBackSaga);
 }
