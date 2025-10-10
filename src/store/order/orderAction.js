@@ -55,3 +55,6 @@ export const callDriverBack = payload => ({
 export const resetCallDriverBack = () => ({
   type: NEOCAFE.CALL_DRIVER_BACK_RESET,
 });
+export const resetConfirmOrderOnline = () => ({
+  type: NEOCAFE.CONFIRM_ORDER_ONLINE_RESET,
+});

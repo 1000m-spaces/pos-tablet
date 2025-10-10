@@ -156,13 +156,12 @@ const AppOrders = () => {
   const [userShop, setUserShop] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [printerType, setPrinterType] = useState('label');
+  const [confirmedOrderId, setConfirmedOrderId] = useState(null); // Lifted state for order confirmation
 
   // Printer service
   const { labelPrinterStatus, billPrinterStatus } = usePrinter();
 
   // Redux selectors
-  const shippingOrders = useSelector(state => state.order.shippingOrders);
-  const statusGetOrderShipping = useSelector(state => state.order.statusGetOrderShipping);
   const paidSuccessOrders = useSelector(state => state.order.paidSuccessOrders);
   const statusGetOrderPaidSuccess = useSelector(state => state.order.statusGetOrderPaidSuccess);
   const isOnlineOrderSelector = useSelector(state => onlineOrderSelector(state));
@@ -186,39 +185,19 @@ const AppOrders = () => {
 
     try {
       if (orderType === 1) {
-        // Fetch from both Redux action and direct API call
-        // const [, onlineOrdersRes] = await Promise.all([
-        //   // Redux action for shipping orders
-        //   dispatch(getOrderShipping({
-        //     rest_id: userShop.id
-        //   })),
-        //   // Direct API call for new online orders
-        //   orderController.fetchOrderOnlineNew({
-        //     rest_id: userShop.id
-        //   })
-        // ]);
+        const transformedAppOrders = isOnlineOrderSelector
+          .map(transformAppOrder)
+          .filter(order => order !== null);
 
-        // dispatch(getOrderShipping({
-        //   rest_id: userShop.id
-        // }))
-        // dispatch(getOnlineOrder({ rest_id: userShop.id }));
-
-        // Handle online orders from direct API call
-        // if (isStatusGetOnlineOrder === Status.SUCCESS) {
-        // const transformedOnlineOrders = isOnlineOrderSelector
-        //   .map(transformOrderOnlineNew)
-        //   .filter(order => order !== null);
-
-        // We'll combine this with Redux data in the useEffect
-        setData(isOnlineOrderSelector);
+        setData(transformedAppOrders);
         // dispatch(resetGetOnlineOrder());
         // }
       } else {
         // Fetch paid success orders (Lịch sử)
-        // dispatch(getOrderPaidSuccess({
-        //   rest_id: userShop.id
-        // }));
-        setData(isShippingOrdersSelector)
+        const transformedOrders = isShippingOrdersSelector.data
+          .map(transformAppOrder)
+          .filter(order => order !== null);
+        setData(transformedOrders)
       }
     } catch (error) {
       console.error('Error fetching app orders:', error);
@@ -263,7 +242,8 @@ const AppOrders = () => {
   }, [orderType]);
 
 
-  // set data all online order
+  // set data all online order - refresh orders after successful confirmation
+  // Note: resetConfirmOrderOnline is handled in OrderTable.js after auto-print completes
   useEffect(() => {
     (async () => {
       if (isStatustConfirmOrderOnline === Status.SUCCESS) {
@@ -341,12 +321,12 @@ const AppOrders = () => {
       } else if (isStatusGetOnlineOrder === Status.ERROR) {
         Toast.show({
           type: 'error',
-          text1: shippingOrders?.error || 'Lỗi khi tải đơn hàng mới',
+          text1: isShippingOrdersSelector?.error || 'Lỗi khi tải đơn hàng mới',
           position: 'bottom',
         });
       }
       setIsLoading(false);
-    } else if (statusGetOrderShipping === 'ERROR') {
+    } else if (isShippingOrdersStatus === 'ERROR') {
       Toast.show({
         type: 'error',
         text1: 'Lỗi khi tải đơn hàng mới',
@@ -357,36 +337,36 @@ const AppOrders = () => {
   };
 
   // Handle Redux state updates
-  useEffect(() => {
-    if (orderType === 1 && statusGetOrderShipping === 'SUCCESS') {
-      if (shippingOrders?.status && shippingOrders?.data) {
-        const transformedAppOrders = shippingOrders.data
-          .map(transformAppOrder)
-          .filter(order => order !== null);
+  // useEffect(() => {
+  //   if (orderType === 1 && isStatusGetOnlineOrder === 'SUCCESS') {
+  //     if (isShippingOrdersSelector?.status && isShippingOrdersSelector?.data) {
+  //       const transformedAppOrders = isShippingOrdersSelector.data
+  //         .map(transformAppOrder)
+  //         .filter(order => order !== null);
 
-        // Combine with existing online orders (if any were set by direct API call)
-        setData(prevData => {
-          // Filter out any app orders to avoid duplicates, keep online orders
-          const onlineOrders = prevData.filter(order => order.source === 'online_new');
-          return [...transformedAppOrders, ...onlineOrders];
-        });
-      } else if (shippingOrders?.status === false) {
-        Toast.show({
-          type: 'error',
-          text1: shippingOrders?.error || 'Lỗi khi tải đơn hàng mới',
-          position: 'bottom',
-        });
-      }
-      setIsLoading(false);
-    } else if (statusGetOrderShipping === 'ERROR') {
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi khi tải đơn hàng mới',
-        position: 'bottom',
-      });
-      setIsLoading(false);
-    }
-  }, [statusGetOrderShipping, shippingOrders, orderType]);
+  //       // Combine with existing online orders (if any were set by direct API call)
+  //       setData(prevData => {
+  //         // Filter out any app orders to avoid duplicates, keep online orders
+  //         const onlineOrders = prevData.filter(order => order.source === 'online_new');
+  //         return [...transformedAppOrders, ...onlineOrders];
+  //       });
+  //     } else if (isShippingOrdersSelector?.status === false) {
+  //       Toast.show({
+  //         type: 'error',
+  //         text1: isShippingOrdersSelector?.error || 'Lỗi khi tải đơn hàng mới',
+  //         position: 'bottom',
+  //       });
+  //     }
+  //     setIsLoading(false);
+  //   } else if (isStatusGetOnlineOrder === 'ERROR') {
+  //     Toast.show({
+  //       type: 'error',
+  //       text1: 'Lỗi khi tải đơn hàng mới',
+  //       position: 'bottom',
+  //     });
+  //     setIsLoading(false);
+  //   }
+  // }, [isShippingOrdersStatus, isShippingOrdersSelector, orderType]);
 
   useEffect(() => {
     if (orderType === 2 && isShippingOrdersStatus === 'SUCCESS') {
@@ -516,7 +496,7 @@ const AppOrders = () => {
             </View>
 
             {/* Content */}
-            {isLoading || statusGetOrderShipping === 'LOADING' || statusGetOrderPaidSuccess === 'LOADING' || isStatustConfirmOrderOnline === Status.LOADING ? (
+            {isLoading || isShippingOrdersStatus === 'LOADING' || statusGetOrderPaidSuccess === 'LOADING' || isStatustConfirmOrderOnline === Status.LOADING ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={Colors.primary} />
                 <TextNormal style={styles.loadingText}>
@@ -529,8 +509,8 @@ const AppOrders = () => {
                 orders={data}
                 showSettingPrinter={() => setPrinterModalVisible(true)}
                 isFoodApp={false}
-                historyDelivery={orderType === 2}
-                dataShippingSuccess={isShippingOrdersSelector?.data || []}
+                confirmedOrderId={confirmedOrderId}
+                setConfirmedOrderId={setConfirmedOrderId}
               />
             )}
 

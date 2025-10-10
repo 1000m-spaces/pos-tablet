@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform } from "react-native";
 import { Table, Row } from "react-native-table-component";
 import AsyncStorage from 'store/async_storage/index'
@@ -6,8 +6,10 @@ import Toast from 'react-native-toast-message'
 import OrderDetailDialog from './OrderDetailDialog';
 import printQueueService from '../../services/PrintQueueService';
 import { TextNormal } from "common/Text/TextFont";
-import { useDispatch } from "react-redux";
-import { callDriverBack, confirmOrderOnline } from "store/actions";
+import { useDispatch, useSelector } from "react-redux";
+import { confirmOrderOnline, resetConfirmOrderOnline } from "store/actions";
+import { confirmOrderOnlineStatusSelector } from "store/selectors";
+import Status from "common/Status/Status";
 
 const { width, height } = Dimensions.get("window");
 
@@ -22,14 +24,15 @@ const Badge = ({ text, colorText, colorBg, width }) => (
     </View>
 );
 
-const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, dataShippingSuccess }) => {
-    console.log('OrderTable orders:', orders);
+const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, confirmedOrderId, setConfirmedOrderId }) => {
     const dispatch = useDispatch();
+    const confirmOrderStatus = useSelector(confirmOrderOnlineStatusSelector);
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [printedLabels, setPrintedLabelsState] = useState([]);
     const [isAutoPrinting, setIsAutoPrinting] = useState(false);
+    const confirmedOrderIdRef = useRef(null); // Use ref to store order ID immediately
 
     const tableHead = [...(isFoodApp ? [] : ["Xác nhận"]), "Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
@@ -52,6 +55,83 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         };
         loadPrintedLabels();
     }, []);
+
+    // Sync ref with prop (lifted state from AppOrders)
+    useEffect(() => {
+        confirmedOrderIdRef.current = confirmedOrderId;
+        console.log('confirmedOrderId prop changed to:', confirmedOrderId);
+    }, [confirmedOrderId]);
+
+    // Auto-print bill and label after successful order confirmation
+    useEffect(() => {
+        const autoPrintAfterConfirm = async () => {
+            const orderId = confirmedOrderIdRef.current;
+            console.log('Confirm status changed:', confirmOrderStatus, 'for order:', orderId);
+
+            // Only proceed if we have a confirmed order ID
+            if (!orderId) {
+                return; // Nothing to process
+            }
+
+            if (confirmOrderStatus === Status.SUCCESS) {
+                // Find the confirmed order
+                const confirmedOrder = orders.find(order => order.displayID === orderId);
+
+                if (!confirmedOrder) {
+                    console.warn('Confirmed order not found in orders list:', orderId);
+                    confirmedOrderIdRef.current = null;
+                    setConfirmedOrderId(null);
+                    dispatch(resetConfirmOrderOnline());
+                    return;
+                }
+
+                if (isAutoPrinting) {
+                    console.log('Already printing, skipping...');
+                    return;
+                }
+
+                setIsAutoPrinting(true);
+                console.log('Starting auto-print for order:', orderId);
+
+                Toast.show({
+                    type: 'success',
+                    text1: 'Đơn hàng đã xác nhận',
+                    text2: 'Đang tự động in tem và hóa đơn...',
+                    position: 'bottom',
+                });
+
+                try {
+                    // Auto-print label first
+                    await printTem(confirmedOrder);
+
+                    // Then auto-print bill
+                    await printBill(confirmedOrder);
+
+                    console.log('Auto-print completed for order:', orderId);
+                } catch (error) {
+                    console.error('Auto-print error:', error);
+                } finally {
+                    setIsAutoPrinting(false);
+                    confirmedOrderIdRef.current = null;
+                    setConfirmedOrderId(null);
+                    // Reset confirm status
+                    dispatch(resetConfirmOrderOnline());
+                }
+            } else if (confirmOrderStatus === Status.ERROR) {
+                console.error('Order confirmation failed for:', orderId);
+                Toast.show({
+                    type: 'error',
+                    text1: 'Xác nhận đơn hàng thất bại',
+                    position: 'bottom',
+                });
+                confirmedOrderIdRef.current = null;
+                setConfirmedOrderId(null);
+                dispatch(resetConfirmOrderOnline());
+            }
+        };
+
+        autoPrintAfterConfirm();
+    }, [confirmOrderStatus]);
 
 
     const getStatusColor = (status) => {
@@ -255,7 +335,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 throw new Error('Printer settings not configured');
             }
 
-            console.log('Auto-queueing label print for order:', order.displayID);
+            console.log('Auto-queueing label print for order:', order);
 
             // Use global.queueMultipleLabels for multiple products if available
             if (global.queueMultipleLabels && order.itemInfo?.items && order.itemInfo.items.length > 0) {
@@ -327,6 +407,26 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         checkAndPrintNewOrders();
     }, [orders, orderType]);
 
+    // confirm order
+    const handleConfirmOrder = (orderId) => {
+        console.log('handleConfirmOrder called with orderId:', orderId);
+        // Set ref immediately (synchronous) - survives re-renders
+        confirmedOrderIdRef.current = orderId;
+        console.log('confirmedOrderIdRef set to:', orderId);
+        // Set lifted state if available (from AppOrders)
+        if (setConfirmedOrderId) {
+            setConfirmedOrderId(orderId);
+            console.log('Lifted state setConfirmedOrderId called with:', orderId);
+        }
+        // Dispatch action
+        dispatch(confirmOrderOnline({ order_id: orderId }));
+        Toast.show({
+            type: 'info',
+            text1: 'Đang xác nhận đơn hàng...',
+            position: 'bottom',
+        });
+    };
+
     const tableData = orders?.map((order, index) => [
         ...(isFoodApp ? [] : [<View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <TouchableOpacity style={{ justifyContent: 'center', alignItems: 'center', height: '80%', width: '60%', backgroundColor: '#19b400', borderRadius: 10 }}
@@ -347,16 +447,6 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         />,
         <Badge text={getStatusText(order.state)} colorText={getStatusColor(order.state)} colorBg={getStatusColorBg(order.state)} width="80%" key={order.displayID + "_status"} />
     ]);
-
-    // confirm order
-    const handleConfirmOrder = (orderId) => {
-        dispatch(confirmOrderOnline({ order_id: orderId }));
-        Toast.show({
-            type: 'info',
-            text1: 'Đang xác nhận đơn hàng...',
-            position: 'bottom',
-        });
-    };
 
     const postCallDriverBack = (order) => {
         // Parse metadata và request_products nếu có

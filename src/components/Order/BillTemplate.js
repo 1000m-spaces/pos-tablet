@@ -6,6 +6,7 @@ import AsyncStorage from 'store/async_storage/index';
 import QRCode from 'react-native-qrcode-svg';
 
 const BillTemplate = ({ selectedOrder }) => {
+    console.log('BillTemplate: selectedOrder:', selectedOrder);
     const paymentChannels = useSelector(state => getPaymentChannelsSelector(state));
     const orderChannels = useSelector(state => getOrderChannelsSelector(state));
     const [fontSizes, setFontSizes] = useState({
@@ -107,9 +108,15 @@ const BillTemplate = ({ selectedOrder }) => {
 
     const formatCurrency = (amount) => {
         try {
-            return new Intl.NumberFormat('vi-VN').format(amount);
+            // If amount is a string with Vietnamese format (e.g., "59.000"), parse it first
+            let numericAmount = amount;
+            if (typeof amount === 'string') {
+                // Remove dots (thousands separator) and parse as integer
+                numericAmount = parseInt(amount.replace(/\./g, ''), 10);
+            }
+            return new Intl.NumberFormat('vi-VN').format(numericAmount) + 'đ';
         } catch (error) {
-            return amount?.toString() || '0';
+            return (amount?.toString() || '0') + 'đ';
         }
     };
 
@@ -189,13 +196,13 @@ const BillTemplate = ({ selectedOrder }) => {
             // Extract numeric price more robustly
             let itemPrice = 0;
             if (item.fare?.priceDisplay) {
-                // Handle formatted string prices like "25,000"
+                // Handle formatted string prices like "25,000" or "59.000"
                 const priceStr = item.fare.priceDisplay.toString().replace(/[^\d]/g, '');
                 itemPrice = parseInt(priceStr) || 0;
             } else if (item.price) {
-                itemPrice = typeof item.price === 'number' ? item.price : parseInt(item.price) || 0;
+                itemPrice = typeof item.price === 'number' ? item.price : parseInt(item.price.toString().replace(/[^\d]/g, '')) || 0;
             } else if (item.amount) {
-                itemPrice = typeof item.amount === 'number' ? item.amount : parseInt(item.amount) || 0;
+                itemPrice = typeof item.amount === 'number' ? item.amount : parseInt(item.amount.toString().replace(/[^\d]/g, '')) || 0;
             }
             return total + (itemPrice * (item.quantity || item.quanlity || 1));
         }, 0);
@@ -303,13 +310,13 @@ const BillTemplate = ({ selectedOrder }) => {
                     // Extract numeric price more robustly
                     let itemPrice = 0;
                     if (item.fare?.priceDisplay) {
-                        // Handle formatted string prices like "25,000"
+                        // Handle formatted string prices like "25,000" or "59.000"
                         const priceStr = item.fare.priceDisplay.toString().replace(/[^\d]/g, '');
                         itemPrice = parseInt(priceStr) || 0;
                     } else if (item.price) {
-                        itemPrice = typeof item.price === 'number' ? item.price : parseInt(item.price) || 0;
+                        itemPrice = typeof item.price === 'number' ? item.price : parseInt(item.price.toString().replace(/[^\d]/g, '')) || 0;
                     } else if (item.amount) {
-                        itemPrice = typeof item.amount === 'number' ? item.amount : parseInt(item.amount) || 0;
+                        itemPrice = typeof item.amount === 'number' ? item.amount : parseInt(item.amount.toString().replace(/[^\d]/g, '')) || 0;
                     }
 
                     // Calculate extra items price and add to itemPrice
