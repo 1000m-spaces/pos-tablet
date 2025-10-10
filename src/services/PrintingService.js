@@ -21,6 +21,27 @@ class PrintingService {
         }
     }
 
+    // Close all active printer connections
+    async closeAllConnections() {
+        try {
+            if (this.labelPrinter) {
+                await this.labelPrinter.closeConnection();
+                console.log('Label printer connection closed');
+            }
+        } catch (error) {
+            console.error('Error closing label printer connection:', error);
+        }
+
+        try {
+            if (this.billPrinter) {
+                await this.billPrinter.closeConnection();
+                console.log('Bill printer connection closed');
+            }
+        } catch (error) {
+            console.error('Error closing bill printer connection:', error);
+        }
+    }
+
     // Cleanup printer instances
     dispose() {
         if (this.labelPrinter) {
@@ -213,7 +234,7 @@ class PrintingService {
             // Update print status using consistent order identifier
             const orderIdentifier = getOrderIdentifierForPrinting(orderData, true); // true for offline orders
             await AsyncStorage.setPrintedLabels(orderIdentifier);
-            await this.printerInstance.closeConnection()
+            
             Toast.show({
                 type: 'success',
                 text1: 'In tem thành công'
@@ -294,7 +315,6 @@ class PrintingService {
                 await this.billPrinter.printBitmap(imageData, 1, printerWidth, 0);
             }
 
-            await this.billPrinter.closeConnection()
             Toast.show({
                 type: 'success',
                 text1: 'In hoá đơn thành công'
@@ -464,7 +484,6 @@ class PrintingService {
             );
 
             console.log(`Label printed successfully using image URI: ${imageUri}`);
-            await this.labelPrinter.closeConnection()
             return true;
 
         } catch (error) {
@@ -502,7 +521,6 @@ class PrintingService {
             await this.billPrinter.printBitmap(base64ImageData, 1, printerWidth, 0);
 
             console.log('Bill printed successfully using base64 data');
-            await this.billPrinter.closeConnection()
             return true;
 
         } catch (error) {

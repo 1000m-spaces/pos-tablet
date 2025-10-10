@@ -220,7 +220,6 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             stringName: item.modifierGroups?.flatMap(mg =>
                 mg.modifiers?.map(m => m.modifierName) || []
             ).join(' / ') || '',
-            option: '',
             extrastring: '',
             note_prod: item.comment || '',
         })) : []);
@@ -230,11 +229,20 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
     console.log("TemTemplate itemsToRender[0]:", itemsToRender?.[0]);
 
     const getOrderTypeText = (order) => {
+        // For online orders, prioritize service field
+        const isOnlineOrder = order.source === 'app_order' || order.source === 'online_new';
+        if (isOnlineOrder && order.service) {
+            return order.service;
+        }
+
+        // For offline orders, use channel type lookup
         if (order.chanel_type_id) {
             var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id) || { name_vn: 'Mang đi', name: 'Mang đi' }
             return orderType?.name_vn || orderType?.name || 'Mang đi';
         }
-        return order.service;
+
+        // Fallback to service field
+        return order.service || 'Mang đi';
     };
 
     // Helper function to format price

@@ -4,7 +4,6 @@ import InfoCard from './InfoCard';
 import { formatPrice } from '../utils/orderUtils';
 
 const OrderItemRow = ({ item, isOfflineOrder }) => {
-    console.log('OrderItemRow: item:', item);
     // Calculate total price including extras and modifiers
     const calculateTotalPrice = () => {
         // Calculate base price

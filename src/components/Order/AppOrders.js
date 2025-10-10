@@ -205,9 +205,9 @@ const AppOrders = () => {
 
         // Handle online orders from direct API call
         // if (isStatusGetOnlineOrder === Status.SUCCESS) {
-        const transformedOnlineOrders = isOnlineOrderSelector
-          .map(transformOrderOnlineNew)
-          .filter(order => order !== null);
+        // const transformedOnlineOrders = isOnlineOrderSelector
+        //   .map(transformOrderOnlineNew)
+        //   .filter(order => order !== null);
 
         // We'll combine this with Redux data in the useEffect
         setData(isOnlineOrderSelector);
@@ -265,11 +265,48 @@ const AppOrders = () => {
 
   // set data all online order
   useEffect(() => {
-    if (isStatustConfirmOrderOnline === Status.SUCCESS) {
-      dispatch(getOnlineOrder({ rest_id: userShop.id }));
-      dispatch(resetGetOnlineOrder());
+    (async () => {
+      if (isStatustConfirmOrderOnline === Status.SUCCESS) {
+        dispatch(getOnlineOrder({ rest_id: userShop.id }));
+        dispatch(resetGetOnlineOrder());
+        // await triggerAutoPrint(isOrderDataSaved);
+      }
     }
+    )
   }, [isStatustConfirmOrderOnline]);
+
+  // Trigger auto-print functionality
+  const triggerAutoPrint = async (orderData) => {
+    try {
+      // Check if auto-print is enabled
+      console.log('11111111111111')
+      const printerInfo = await AsyncStorage.getLabelPrinterInfo();
+      console.log('Triggering auto-print for order:', orderData.session);
+
+      // Use the new queueMultipleLabels function to handle multiple products and quantities
+      // Queue multiple labels for all products and quantities
+      const labelTaskIds = await global.queueMultipleLabels(orderData, printerInfo);
+      console.log(`Auto-print: Queued ${labelTaskIds.length} label tasks:`, labelTaskIds);
+
+      // Also add bill printing task
+      const billTaskId = printQueueService.addPrintTask({
+        type: 'bill',
+        order: orderData,
+        priority: 'high'
+      });
+
+      console.log('Auto-print: Queued bill task:', billTaskId);
+      console.log(`Auto-print completed - ${labelTaskIds.length} labels + 1 bill queued`);
+    } catch (error) {
+      console.error('Error triggering auto-print:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi tự động in',
+        text2: 'Không thể tự động in đơn hàng. Vui lòng in thủ công.',
+        position: 'top',
+      });
+    }
+  };
 
   useEffect(() => {
     loadDataOrderOnline();

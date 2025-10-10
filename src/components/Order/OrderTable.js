@@ -4,7 +4,6 @@ import { Table, Row } from "react-native-table-component";
 import AsyncStorage from 'store/async_storage/index'
 import Toast from 'react-native-toast-message'
 import OrderDetailDialog from './OrderDetailDialog';
-import { getOrderIdentifierForPrinting } from '../../utils/orderUtils';
 import printQueueService from '../../services/PrintQueueService';
 import { TextNormal } from "common/Text/TextFont";
 import { useDispatch } from "react-redux";

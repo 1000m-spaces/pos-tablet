@@ -1,44 +1,16 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform, ActivityIndicator, PixelRatio, Image } from "react-native";
+import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
 import { Table, Row } from "react-native-table-component";
-import ViewShot from "react-native-view-shot";
-import PrintTemplate from "./TemTemplate";
-import { useRef } from "react";
 import AsyncStorage from 'store/async_storage/index'
 import Toast from 'react-native-toast-message'
 import OrderDetailDialog from './OrderDetailDialog';
-import BillTemplate from "./BillTemplate";
 import Colors from 'theme/Colors';
 import { TextNormal } from 'common/Text/TextFont';
-import RNFS from 'react-native-fs';
 import { useDispatch } from 'react-redux';
-import XPrinter from 'rn-xprinter';
+import printQueueService from '../../services/PrintQueueService';
 import { getOrderIdentifierForPrinting } from '../../utils/orderUtils';
 
 const { width, height } = Dimensions.get("window");
-
-// Convert mm to pixels using device's actual DPI, optimized for tablets
-const mmToPixels = (mm) => {
-    const { width, height } = Dimensions.get('window');
-    const screenWidth = Math.max(width, height);
-    const screenHeight = Math.min(width, height);
-    const diagonalInches = Math.sqrt(Math.pow(screenWidth / PixelRatio.get(), 2) + Math.pow(screenHeight / PixelRatio.get(), 2)) / 160;
-    const actualDpi = Math.sqrt(Math.pow(screenWidth, 2) + Math.pow(screenHeight, 2)) / diagonalInches;
-    return Math.round((mm * actualDpi) / 25.4); // 25.4mm = 1 inch
-};
-
-// Calculate thermal printer width based on paper size
-const getThermalPrinterWidth = (paperSize) => {
-    // Standard thermal printer widths at 203 DPI
-    switch (paperSize) {
-        case '58mm':
-            return 384; // 58mm ≈ 384 pixels at 203 DPI
-        case '80mm':
-            return 576; // 80mm ≈ 576 pixels at 203 DPI
-        default:
-            return 576; // Default to 80mm if not specified
-    }
-};
 
 const Badge = ({ text, colorText, colorBg, width }) => (
     <View style={[styles.badge, { backgroundColor: colorBg, width: width }]}>
@@ -50,39 +22,12 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
-    const [printingOrder, setPrintingOrder] = useState(null);
     const [printedLabels, setPrintedLabelsState] = useState([]);
-    const [printerInfo, setPrinterInfo] = useState(null);
-    const viewTemShotRef = useRef();
-    const viewBillShotRef = useRef();
     const dispatch = useDispatch();
-
-    // Create printer instances
-    const labelPrinterRef = useRef(null);
-    const billPrinterRef = useRef(null);
-
-    // Initialize printer instances
-    useEffect(() => {
-        labelPrinterRef.current = new XPrinter();
-        billPrinterRef.current = new XPrinter();
-
-        return () => {
-            // Cleanup printer instances
-            if (labelPrinterRef.current) {
-                labelPrinterRef.current.dispose();
-                labelPrinterRef.current = null;
-            }
-            if (billPrinterRef.current) {
-                billPrinterRef.current.dispose();
-                billPrinterRef.current = null;
-            }
-        };
-    }, []);
 
     const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Bill", "Đồng bộ", "Thời gian"];
     const numColumns = tableHead.length;
 
-    const [tableWidth, setTableWidth] = useState([])
     const [widthArr, setWidthArr] = useState([]);
 
     const filteredOrders = useMemo(() => {
@@ -117,7 +62,6 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
     useEffect(() => {
         const { width, height } = Dimensions.get("window");
         const calculatedTableWidth = width - width * 0.09;
-        setTableWidth(calculatedTableWidth);
         const columnWidth = calculatedTableWidth / numColumns;
         setWidthArr(Array(numColumns).fill(columnWidth));
     }, [])
@@ -129,53 +73,6 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
         };
         loadPrintedLabels();
     }, []);
-
-    useEffect(() => {
-        const loadPrinterInfo = async () => {
-            const info = await AsyncStorage.getLabelPrinterInfo();
-            setPrinterInfo(info);
-        };
-        loadPrinterInfo();
-    }, []);
-
-    // Helper function to connect to printer based on connection type
-    const connectToPrinter = async (printerInstance, printerConfig) => {
-        try {
-            const connectionType = printerConfig.connectionType || printerConfig.billConnectionType;
-            switch (connectionType) {
-                case 'network':
-                    const ipAddress = printerConfig.IP || printerConfig.billIP;
-                    if (!ipAddress) {
-                        throw new Error('IP address not configured');
-                    }
-                    return await printerInstance.netConnect(ipAddress);
-
-                case 'usb':
-                    const usbDevice = printerConfig.usbDevice || printerConfig.billUsbDevice;
-                    if (!usbDevice) {
-                        throw new Error('USB device not selected');
-                    }
-                    return await printerInstance.usbConnect(usbDevice);
-
-                case 'serial':
-                    const serialPort = printerConfig.serialPort || printerConfig.billSerialPort;
-                    if (!serialPort) {
-                        throw new Error('Serial port not selected');
-                    }
-                    return await printerInstance.serialConnect(serialPort);
-
-                default:
-                    throw new Error('Unknown connection type');
-            }
-        } catch (error) {
-            console.error('Printer connection error:', error);
-            throw error;
-        }
-    };
-
-
-
-
 
     const getSyncStatusColor = (status) => {
         switch (status) {
@@ -325,217 +222,47 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                 throw new Error('Printer settings not configured');
             }
 
-            // Attempt to connect to printer before printing
-            try {
-                await connectToPrinter(labelPrinterRef.current, labelPrinterInfo);
-            } catch (connectError) {
-                console.error('Printer connection error:', connectError);
-                throw new Error('Printer settings not configured');
-            }
+            const orderToUse = order || selectedOrder;
 
-            // Store the original order
-            const originalOrder = order || selectedOrder;
-            setPrintingOrder(originalOrder);
-
-            // Calculate total number of labels to be printed
+            // Check if order has multiple products or quantities > 1
             let totalLabels = 0;
-            if (originalOrder.products) {
-                originalOrder.products.forEach(product => {
-                    // For offline orders, each product gets one label per quantity
+            if (orderToUse.products) {
+                orderToUse.products.forEach(product => {
                     totalLabels += (product.quanlity || 1);
                 });
             }
 
-            let currentLabelIndex = 0;
+            let taskIds;
+            // Use queueMultipleLabels for orders with multiple products/quantities
+            taskIds = await global.queueMultipleLabels(orderToUse, labelPrinterInfo);
+            console.log(`Queued ${taskIds.length} label tasks:`, taskIds);
 
-            // Print each product separately
-            if (originalOrder.products) {
-                for (let i = 0; i < originalOrder.products.length; i++) {
-                    const product = originalOrder.products[i];
-                    const quantity = product.quanlity || 1;
 
-                    // Print one label for each quantity of the product
-                    for (let q = 0; q < quantity; q++) {
-                        const tempOrder = {
-                            ...originalOrder,
-                            // Basic order identification
-                            displayID: originalOrder.session,
-                            bill_id: originalOrder.session,
-                            session: originalOrder.session,
-
-                            // Service and location information
-                            serviceType: 'offline',
-                            tableName: originalOrder.shoptablename,
-                            table: originalOrder.shoptablename,
-                            shoptablename: originalOrder.shoptablename,
-                            shopTableid: originalOrder.shopTableid || "0",
-
-                            // Timing information
-                            date: originalOrder.created_at || originalOrder.timestamp || new Date().toISOString(),
-                            created_at: originalOrder.created_at || originalOrder.timestamp || new Date().toISOString(),
-                            timestamp: originalOrder.created_at || originalOrder.timestamp || new Date().toISOString(),
-
-                            // Order notes and metadata
-                            note: originalOrder.orderNote || originalOrder.note || '',
-                            orderNote: originalOrder.orderNote || originalOrder.note || '',
-
-                            // Shop and user information
-                            shopid: originalOrder.shopid || "246",
-                            userid: originalOrder.userid || "1752",
-                            roleid: originalOrder.roleid || "4",
-
-                            // Payment and pricing information
-                            price_paid: originalOrder.price_paid || originalOrder.total_amount || 0,
-                            total_amount: originalOrder.total_amount || 0,
-                            orderValue: originalOrder.total_amount || 0,
-                            transType: originalOrder.transType || "41",
-                            chanel_type_id: originalOrder.chanel_type_id || "1",
-
-                            // Channel information (for delivery apps)
-                            chanel_name: originalOrder.chanel_name || 'POS',
-                            foodapp_order_id: originalOrder.foodapp_order_id || '',
-                            package_id: originalOrder.package_id || 0,
-
-                            // Status information
-                            status: originalOrder.status || "pending",
-                            orderStatus: originalOrder.orderStatus || "Paymented",
-                            syncStatus: originalOrder.syncStatus || "pending",
-
-                            // Enhanced item information structure
-                            itemInfo: {
-                                items: [{
-                                    name: product.name,
-                                    item_name: product.name,
-                                    quantity: 1, // Each label represents 1 item
-                                    amount: 1,
-                                    fare: {
-                                        priceDisplay: product.price ? product.price.toLocaleString('vi-VN') : '0',
-                                        currencySymbol: '₫',
-                                        price: product.price || 0
-                                    },
-                                    price: product.price || 0,
-                                    comment: product.note || '',
-                                    note_prod: product.note || '',
-                                    product_id: product.product_id || product.id,
-
-                                    // Enhanced modifier information
-                                    modifierGroups: product.extras ? product.extras.map(extra => ({
-                                        modifierGroupName: extra.group_extra_name || 'Extras',
-                                        groupName: extra.group_extra_name || 'Extras',
-                                        modifiers: [{
-                                            modifierName: extra.name,
-                                            name: extra.name,
-                                            price: extra.price || 0,
-                                            priceDisplay: extra.price ? extra.price.toLocaleString('vi-VN') : '0'
-                                        }]
-                                    })) : [],
-
-                                    // Flattened modifier strings for easier template access
-                                    stringName: product.extras ? product.extras.map(extra => extra.name).join(' / ') : '',
-                                    option: product.option,
-                                    extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
-                                }],
-                                itemIdx: currentLabelIndex + 1, // Use 1-based indexing for display
-                                totalItems: totalLabels,
-                            },
-
-                            // Direct decals format for immediate template compatibility
-                            decals: [{
-                                item_name: product.name,
-                                amount: 1,
-                                note_prod: product.note || '',
-                                stringName: product.extras ? product.extras.map(extra => extra.name).join(' / ') : '',
-                                option: product.extras ? product.extras.filter(extra => extra.type === 'option').map(extra => extra.name).join(' / ') : '',
-                                extrastring: product.extras ? product.extras.filter(extra => extra.type !== 'option').map(extra => extra.name).join(' / ') : '',
-                                itemIdx: currentLabelIndex + 1, // Use 1-based indexing for display
-                                totalItems: totalLabels,
-                                price: product.price || 0,
-                                priceDisplay: product.price ? product.price.toLocaleString('vi-VN') : '0₫',
-                                product_id: product.product_id || product.id,
-                            }],
-
-                            // Customer and service information
-                            customerInfo: {
-                                name: originalOrder.shoptablename || 'Khách hàng',
-                                table: originalOrder.shoptablename,
-                                phone: originalOrder.customerPhone || '',
-                                address: originalOrder.customerAddress || '',
-                            },
-
-                            // Additional metadata for comprehensive printing
-                            products: originalOrder.products, // Keep full product array for reference
-                            offline_code: originalOrder.offline_code || originalOrder.session,
-                            offlineOrderId: originalOrder.offlineOrderId || originalOrder.session,
-
-                            // Fees and discounts
-                            svFee: originalOrder.svFee || "0",
-                            svFee_amount: originalOrder.svFee_amount || 0,
-                            phuthu: originalOrder.phuthu || 0,
-                            fix_discount: originalOrder.fix_discount || 0,
-                            perDiscount: originalOrder.perDiscount || 0,
-
-                            // Print tracking
-                            printStatus: originalOrder.printStatus || "not_printed",
-                            currentItemIndex: currentLabelIndex + 1,
-                            isPartialPrint: true, // Indicates this is one item from a multi-item order
-                        };
-
-                        // Update the ViewShot with the temporary order
-                        setPrintingOrder(tempOrder);
-
-                        // Wait for the ViewShot to be ready
-                        await new Promise(resolve => setTimeout(resolve, 500));
-
-                        // Capture and print the label
-                        const uri = await viewTemShotRef.current.capture();
-                        const imageInfo = await Image.getSize(uri);
-                        const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
-                        await labelPrinterRef.current.tsplPrintBitmap(
-                            Number(labelPrinterInfo.sWidth),
-                            Number(labelPrinterInfo.sHeight),
-                            base64,
-                            imageInfo.width
-                        );
-
-                        // Add a small delay between prints
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        currentLabelIndex++;
-                    }
-                }
-            }
-
-            // Restore the original order
-            setPrintingOrder(null);
-
-            // Update print status after successful print
-            const orderIdentifier = getOrderIdentifierForPrinting(originalOrder, true); // true for offline orders
+            // Update print status
+            const orderIdentifier = getOrderIdentifierForPrinting(orderToUse, true); // true for offline orders
             await AsyncStorage.setPrintedLabels(orderIdentifier);
             setPrintedLabelsState(prev => [...prev, orderIdentifier]);
 
             Toast.show({
                 type: 'success',
-                text1: 'In tem thành công'
+                text1: `Đã xếp hàng in ${totalLabels} tem`,
+                text2: 'Tem sẽ được in tự động',
+                position: 'top'
             });
 
-            // Refresh the data
-            if (onRefresh) {
-                onRefresh();
-            }
-
         } catch (error) {
-            console.error('Print error:', error);
+            console.error('Print queue error:', error);
             Toast.show({
                 type: 'error',
                 text1: error.message === 'Printer settings not configured' ?
                     'Vui lòng thiết lập máy in' :
-                    'Lỗi in tem: ' + error.message
+                    'Lỗi xếp hàng in: ' + error.message
             });
             if (error.message === 'Printer settings not configured' && showSettingPrinter) {
                 showSettingPrinter();
             }
         } finally {
             setLoadingVisible(false);
-            setPrintingOrder(null);
         }
     };
 
@@ -564,72 +291,37 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
             } else if (billPrinterInfo.billConnectionType === 'serial' && !billPrinterInfo.billSerialPort) {
                 throw new Error('Printer settings not configured');
             }
-            // Convert offline order to format compatible with BillTemplate
-            const billOrder = {
-                ...order,
-                displayID: order.session,
-                orderValue: order.total_amount,
-                itemInfo: {
-                    items: order.products ? order.products.map(product => ({
-                        name: product.name,
-                        quantity: product.quanlity || 1,
-                        fare: {
-                            priceDisplay: product.price ? product.price.toLocaleString('vi-VN') : '0',
-                            currencySymbol: '₫'
-                        },
-                        comment: product.note || '',
-                        option: product.option,
-                        modifierGroups: product.extras ? product.extras.map(extra => ({
-                            modifierGroupName: extra.group_extra_name || 'Extras',
-                            modifiers: [{
-                                modifierName: extra.name,
-                                price: extra.price || 0
-                            }]
-                        })) : [],
-                    })) : []
-                },
-                customerInfo: {
-                    name: order.shoptablename || 'Khách hàng',
-                },
-                serviceType: 'offline',
-                tableName: order.shoptablename,
-            };
-            // Set the order for printing
-            setPrintingOrder(billOrder);
 
-            // Wait for the ViewShot to be ready
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const orderToUse = order || selectedOrder;
 
-            // Attempt to connect to printer before printing
-            try {
-                await connectToPrinter(billPrinterRef.current, billPrinterInfo);
-            } catch (connectError) {
-                console.error('Printer connection error:', connectError);
-                throw new Error('Printer settings not configured');
-            }
+            // Add bill printing task to queue
+            const taskId = printQueueService.addPrintTask({
+                type: 'bill',
+                order: orderToUse,
+                priority: 'normal'
+            });
 
-            const imageData = await viewBillShotRef.current.capture();
-            const printerWidth = getThermalPrinterWidth(billPrinterInfo.billPaperSize);
-            await billPrinterRef.current.printBitmap(imageData, 1, printerWidth, 0);
+            console.log('Queued bill task:', taskId);
 
             Toast.show({
                 type: 'success',
-                text1: 'In hoá đơn thành công'
+                text1: 'Đã xếp hàng in hoá đơn',
+                text2: 'Hoá đơn sẽ được in tự động',
+                position: 'top'
             });
         } catch (error) {
-            console.error('Print error:', error);
+            console.error('Print queue error:', error);
             Toast.show({
                 type: 'error',
                 text1: error.message === 'Printer settings not configured' ?
                     'Vui lòng thiết lập máy in' :
-                    'Lỗi in hoá đơn: ' + error.message
+                    'Lỗi xếp hàng in: ' + error.message
             });
             if (error.message === 'Printer settings not configured' && showSettingPrinter) {
                 showSettingPrinter();
             }
         } finally {
             setLoadingVisible(false);
-            setPrintingOrder(null);
         }
     };
 
@@ -752,40 +444,6 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                     </ScrollView>
                 </View>
             </ScrollView>
-
-            <ViewShot
-                ref={viewTemShotRef}
-                options={{ format: "jpg", quality: 1.0 }}
-                style={{
-                    position: 'absolute',
-                    left: -9999,
-                    top: -9999,
-                    width: printerInfo ? mmToPixels(Number(printerInfo.sWidth) - 2) : mmToPixels(50 - 2),
-                    backgroundColor: 'white',
-                    opacity: 0,
-                    zIndex: -1,
-                    pointerEvents: 'none',
-                }}>{printingOrder && (<PrintTemplate orderPrint={printingOrder} />)}</ViewShot>
-
-            <ViewShot
-                ref={viewBillShotRef}
-                options={{ format: 'jpg', quality: 1.0, result: 'base64' }}
-                style={{
-                    position: 'absolute',
-                    left: -9999,
-                    top: -9999,
-                    width: 400,
-                    backgroundColor: 'white',
-                    opacity: 0,
-                    zIndex: -1,
-                    pointerEvents: 'none',
-                }}
-            >
-                {printingOrder && (
-                    <BillTemplate selectedOrder={printingOrder} />
-                )}
-            </ViewShot>
-
             <OrderDetailDialog
                 visible={modalVisible}
                 selectedOrder={selectedOrder}
@@ -806,7 +464,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                 <View style={styles.loadingOverlay}>
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={Colors.primary} />
-                        <TextNormal style={styles.loadingText}>Đang in ...</TextNormal>
+                        <TextNormal style={styles.loadingText}>Đang xếp hàng...</TextNormal>
                     </View>
                 </View>
             )}
