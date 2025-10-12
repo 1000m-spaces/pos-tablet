@@ -285,16 +285,20 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
                         // Add options from option array
                         if (item.option) {
+                            console.log("TemTemplate item.option:", item.option);
                             if (Array.isArray(item.option)) {
                                 // New format: array of objects
                                 const optionNames = item.option
                                     .filter(opt => opt && opt.optdetailid && opt.optdetailname)
                                     .map(opt => opt.optdetailname);
                                 allOptions.push(...optionNames);
+                                console.log("TemTemplate optionNames:", optionNames, item.option
+                                    .filter(opt => opt && opt.optdetailid && opt.optdetailname));
                             } else if (typeof item.option === 'string' && item.option.trim() !== '') {
                                 // Old format: string
                                 allOptions.push(item.option.trim());
                             }
+                            console.log("TemTemplate allOptions:", allOptions);
                         }
 
                         // Add other option fields

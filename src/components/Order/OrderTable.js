@@ -13,11 +13,6 @@ import Status from "common/Status/Status";
 
 const { width, height } = Dimensions.get("window");
 
-// Convert mm to pixels for ViewShot width calculation
-const mmToPixels = (mm, dpi = 203) => {
-    return Math.round((mm * dpi) / 25.4); // 25.4mm = 1 inch
-};
-
 const Badge = ({ text, colorText, colorBg, width }) => (
     <View style={[styles.badge, { backgroundColor: colorBg, width: width }]}>
         <Text style={[styles.badgeText, { color: colorText }]}>{text}</Text>
