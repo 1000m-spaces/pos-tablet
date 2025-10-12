@@ -56,11 +56,11 @@ const transformAppOrder = (apiOrder) => {
               modifierGroupName: 'Combo',
               modifiers: [{
                 modifierName: product.prodname, // Combo name as modifier
-                modifierPrice: extra
+                modifierPrice: extra.paid_price || 0
               }]
             }],
             fare: {
-              priceDisplay: extra.paid_price, // Individual items in combo don't have separate price
+              priceDisplay: extra.paid_price ? parseInt(extra.paid_price).toLocaleString('vi-VN') : '0', // Individual items in combo don't have separate price
               currencySymbol: '₫'
             }
           });
