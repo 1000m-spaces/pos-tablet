@@ -158,6 +158,7 @@ function* getOnlineOrderSaga({ payload }) {
         payload: result.data,
       });
     } else {
+      console.log('error:::', error);
       yield put({
         type: NEOCAFE.GET_ONLINE_ORDER_ERROR,
       });
@@ -194,6 +195,7 @@ function* confirmOrderOnlineSaga({ payload }) {
 function* getOrderShippingSaga({ payload }) {
   try {
     const result = yield call(orderController.getOrderShipping, payload);
+    console.log('result:::', result);
     if (result && result.success) {
       yield put({
         type: NEOCAFE.GET_ORDER_SHIPPING_SUCCESS,
@@ -203,6 +205,7 @@ function* getOrderShippingSaga({ payload }) {
       yield put({ type: NEOCAFE.GET_ORDER_SHIPPING_ERROR });
     }
   } catch (error) {
+    console.log('error:::', error);
     yield put({ type: NEOCAFE.GET_ORDER_SHIPPING_ERROR });
   }
 }

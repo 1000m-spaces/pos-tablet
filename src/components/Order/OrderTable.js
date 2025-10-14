@@ -452,12 +452,12 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
 
         const dataPayload = {
             branch_id: Number(order.rest_id) || 0,
-            brand_id: Number(order.partner_id) || 0, // ❓ cần xác nhận: brand_id có phải là partner_id không?
+            brand_id: Number(order.partner_id) || 0,
             brand_order_id: order.shipping_order_id || order.orderid || "string",
             drop_off: {
                 address: metadata.deliver_address || order.shipping_address || "",
                 apt_number: metadata.deliver_detail_address || "",
-                building: "", // ❓ chưa thấy thông tin building
+                building: "",
                 cod: Number(order.price_paid) || 0, // hoặc order.shipping_fee?
                 lat: metadata.deliver_latitude || "",
                 lng: metadata.deliver_longitude || "",
