@@ -186,7 +186,7 @@ const HiddenViewShotComponents = () => {
 
           // Flattened modifier strings for easier template access
           stringName: modifierStrings.stringName,
-          option: [product.option],
+          option: product.option,
           extrastring: modifierStrings.extrastring,
           itemIdx: labelIndex + 1, // Use 1-based indexing for display
           totalItems: totalLabels,
@@ -201,7 +201,7 @@ const HiddenViewShotComponents = () => {
         amount: 1,
         note_prod: productComment,
         stringName: modifierStrings.stringName,
-        option: [product.option],
+        option: product.option,
         extrastring: modifierStrings.extrastring,
         itemIdx: labelIndex + 1, // Use 1-based indexing for display
         totalItems: totalLabels,

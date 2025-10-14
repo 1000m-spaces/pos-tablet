@@ -46,6 +46,14 @@ const Orders = () => {
     }).split('/').join('-');
   };
 
+  // Helper function to parse price strings (removes thousand separator dots)
+  const parsePrice = (priceStr) => {
+    if (!priceStr) return 0;
+    // Remove dots (thousand separators) and convert to number
+    const cleaned = String(priceStr).replace(/\./g, '');
+    return Number(cleaned) || 0;
+  };
+
   // Transform new API format to match existing order structure
   const transformOrderData = (order, service = 'GRAB') => {
     return {
@@ -64,7 +72,7 @@ const Orders = () => {
           product_name: item.product_name || '',
           quantity: item.quantity || 1,
           quanlity: item.quantity || 1, // Keep both spellings for compatibility
-          price: item.price_product || '0',
+          price: (parsePrice(item.price_product) || parsePrice(item.price_paid) || 0).toString(),
           total_price: item.total_price || '0',
           note: item.note || '',
           campaign: item.campaign || '',
@@ -72,7 +80,7 @@ const Orders = () => {
           name: item.product_name || '', // Used by getOrderItems
           comment: item.note || '', // Used by getOrderItems
           fare: {
-            priceDisplay: item.price_product || '0',
+            priceDisplay: (parsePrice(item.price_product) || parsePrice(item.price_paid) || 0).toString(),
             currencySymbol: '₫'
           },
           // Transform options for OrderItems.js display - keep as option array

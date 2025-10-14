@@ -7,8 +7,9 @@ class PrintQueueService {
         // Separate queues for labels and bills to allow concurrent processing
         this.labelQueue = [];
         this.billQueue = [];
-        this.isProcessingLabels = false;
-        this.isProcessingBills = false;
+        // Lock mechanism to prevent race conditions
+        this.labelLock = null; // Promise that resolves when label processing is done
+        this.billLock = null; // Promise that resolves when bill processing is done
         this.listeners = [];
         this.maxRetries = 3;
         this.retryDelay = 2000; // 2 seconds
@@ -36,18 +37,14 @@ class PrintQueueService {
             this.labelQueue.push(printTask);
             this.notifyListeners('taskAdded', { ...printTask, queueType: 'label' });
 
-            // Start label processing if not already processing
-            if (!this.isProcessingLabels) {
-                this.processLabelQueue();
-            }
+            // Start label processing (lock mechanism ensures only one runs at a time)
+            this.processLabelQueue();
         } else if (task.type === 'bill') {
             this.billQueue.push(printTask);
             this.notifyListeners('taskAdded', { ...printTask, queueType: 'bill' });
 
-            // Start bill processing if not already processing
-            if (!this.isProcessingBills) {
-                this.processBillQueue();
-            }
+            // Start bill processing (lock mechanism ensures only one runs at a time)
+            this.processBillQueue();
         } else if (task.type === 'both') {
             // Split 'both' type into separate label and bill tasks
             const labelTaskId = taskId + '_label';
@@ -79,13 +76,9 @@ class PrintQueueService {
             this.notifyListeners('taskAdded', { ...labelTask, queueType: 'label' });
             this.notifyListeners('taskAdded', { ...billTask, queueType: 'bill' });
 
-            // Start both processing if not already processing
-            if (!this.isProcessingLabels) {
-                this.processLabelQueue();
-            }
-            if (!this.isProcessingBills) {
-                this.processBillQueue();
-            }
+            // Start both processing (lock mechanism ensures only one runs at a time for each)
+            this.processLabelQueue();
+            this.processBillQueue();
 
             return { labelTaskId, billTaskId, parentTaskId: taskId };
         } else {
@@ -95,88 +88,122 @@ class PrintQueueService {
         return taskId;
     }
 
-    // Process the label queue
+    // Process the label queue with proper locking to prevent race conditions
     async processLabelQueue() {
-        if (this.isProcessingLabels || this.labelQueue.length === 0) {
+        // If already processing (lock exists), wait for it to complete then return
+        if (this.labelLock) {
+            await this.labelLock;
             return;
         }
 
-        this.isProcessingLabels = true;
-        this.notifyListeners('processingStarted', { queueType: 'label' });
-
-        while (this.labelQueue.length > 0) {
-            const task = this.labelQueue[0];
-
-            try {
-                await this.processTask(task);
-                // Remove successful task from queue
-                this.labelQueue.shift();
-                this.notifyListeners('taskCompleted', { ...task, queueType: 'label' });
-            } catch (error) {
-                console.error('Label print task failed:', error);
-
-                // Handle retry logic
-                task.retries += 1;
-                task.lastError = error.message;
-                task.status = 'retrying';
-
-                if (task.retries >= this.maxRetries) {
-                    // Max retries reached, remove from queue and mark as failed
-                    task.status = 'failed';
-                    this.labelQueue.shift();
-                    this.notifyListeners('taskFailed', { ...task, queueType: 'label' });
-                } else {
-                    // Retry after delay
-                    this.notifyListeners('taskRetrying', { ...task, queueType: 'label' });
-                    await this.delay(this.retryDelay);
-                }
-            }
+        // Check if there's work to do
+        if (this.labelQueue.length === 0) {
+            return;
         }
 
-        this.isProcessingLabels = false;
-        this.notifyListeners('processingCompleted', { queueType: 'label' });
+        // Acquire lock by creating a promise that will be resolved when processing completes
+        let releaseLock;
+        this.labelLock = new Promise(resolve => {
+            releaseLock = resolve;
+        });
+
+        try {
+            this.notifyListeners('processingStarted', { queueType: 'label' });
+
+            while (this.labelQueue.length > 0) {
+                const task = this.labelQueue[0];
+
+                try {
+                    await this.processTask(task);
+                    // Remove successful task from queue
+                    this.labelQueue.shift();
+                    this.notifyListeners('taskCompleted', { ...task, queueType: 'label' });
+                } catch (error) {
+                    console.error('Label print task failed:', error);
+
+                    // Handle retry logic
+                    task.retries += 1;
+                    task.lastError = error.message;
+                    task.status = 'retrying';
+
+                    if (task.retries >= this.maxRetries) {
+                        // Max retries reached, remove from queue and mark as failed
+                        task.status = 'failed';
+                        this.labelQueue.shift();
+                        this.notifyListeners('taskFailed', { ...task, queueType: 'label' });
+                    } else {
+                        // Retry after delay
+                        this.notifyListeners('taskRetrying', { ...task, queueType: 'label' });
+                        await this.delay(this.retryDelay);
+                    }
+                }
+            }
+
+            this.notifyListeners('processingCompleted', { queueType: 'label' });
+        } finally {
+            // Always release lock, even if an error occurred
+            this.labelLock = null;
+            releaseLock();
+        }
     }
 
-    // Process the bill queue
+    // Process the bill queue with proper locking to prevent race conditions
     async processBillQueue() {
-        if (this.isProcessingBills || this.billQueue.length === 0) {
+        // If already processing (lock exists), wait for it to complete then return
+        if (this.billLock) {
+            await this.billLock;
             return;
         }
 
-        this.isProcessingBills = true;
-        this.notifyListeners('processingStarted', { queueType: 'bill' });
-
-        while (this.billQueue.length > 0) {
-            const task = this.billQueue[0];
-
-            try {
-                await this.processTask(task);
-                // Remove successful task from queue
-                this.billQueue.shift();
-                this.notifyListeners('taskCompleted', { ...task, queueType: 'bill' });
-            } catch (error) {
-                console.error('Bill print task failed:', error);
-
-                // Handle retry logic
-                task.retries += 1;
-                task.lastError = error.message;
-                task.status = 'retrying';
-
-                if (task.retries >= this.maxRetries) {
-                    // Max retries reached, remove from queue and mark as failed
-                    task.status = 'failed';
-                    this.billQueue.shift();
-                    this.notifyListeners('taskFailed', { ...task, queueType: 'bill' });
-                } else {
-                    // Retry after delay
-                    this.notifyListeners('taskRetrying', { ...task, queueType: 'bill' });
-                    await this.delay(this.retryDelay);
-                }
-            }
+        // Check if there's work to do
+        if (this.billQueue.length === 0) {
+            return;
         }
 
-        this.isProcessingBills = false;
-        this.notifyListeners('processingCompleted', { queueType: 'bill' });
+        // Acquire lock by creating a promise that will be resolved when processing completes
+        let releaseLock;
+        this.billLock = new Promise(resolve => {
+            releaseLock = resolve;
+        });
+
+        try {
+            this.notifyListeners('processingStarted', { queueType: 'bill' });
+
+            while (this.billQueue.length > 0) {
+                const task = this.billQueue[0];
+
+                try {
+                    await this.processTask(task);
+                    // Remove successful task from queue
+                    this.billQueue.shift();
+                    this.notifyListeners('taskCompleted', { ...task, queueType: 'bill' });
+                } catch (error) {
+                    console.error('Bill print task failed:', error);
+
+                    // Handle retry logic
+                    task.retries += 1;
+                    task.lastError = error.message;
+                    task.status = 'retrying';
+
+                    if (task.retries >= this.maxRetries) {
+                        // Max retries reached, remove from queue and mark as failed
+                        task.status = 'failed';
+                        this.billQueue.shift();
+                        this.notifyListeners('taskFailed', { ...task, queueType: 'bill' });
+                    } else {
+                        // Retry after delay
+                        this.notifyListeners('taskRetrying', { ...task, queueType: 'bill' });
+                        await this.delay(this.retryDelay);
+                    }
+                }
+            }
+
+            this.notifyListeners('processingCompleted', { queueType: 'bill' });
+        } finally {
+            // Always release lock, even if an error occurred
+            this.billLock = null;
+            releaseLock();
+        }
     }
 
     // Process individual print task
@@ -368,18 +395,18 @@ class PrintQueueService {
 
         return {
             label: {
-                isProcessing: this.isProcessingLabels,
+                isProcessing: this.labelLock !== null,
                 queueLength: this.labelQueue.length,
                 tasks: labelTasks
             },
             bill: {
-                isProcessing: this.isProcessingBills,
+                isProcessing: this.billLock !== null,
                 queueLength: this.billQueue.length,
                 tasks: billTasks
             },
             // Combined view for backward compatibility
             combined: {
-                isProcessing: this.isProcessingLabels || this.isProcessingBills,
+                isProcessing: this.labelLock !== null || this.billLock !== null,
                 queueLength: this.labelQueue.length + this.billQueue.length,
                 tasks: [...labelTasks, ...billTasks]
             }

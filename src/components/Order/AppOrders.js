@@ -27,64 +27,8 @@ const appOrderFilters = [
   { id: 2, name: 'Lịch sử' },
 ];
 
-// Function to transform new online API response to match expected order structure
-const transformOrderOnlineNew = (apiOrder) => {
-  try {
-    // Parse the request_products JSON string
-    const requestProducts = apiOrder.request_products ? JSON.parse(apiOrder.request_products) : [];
-
-    // Transform products to itemInfo.items structure
-    const items = apiOrder.products?.map((product, index) => {
-      // Find corresponding request product for additional info
-      const requestProduct = requestProducts.find(req => req.pid == product.prod_id) || {};
-
-      // Transform extras to modifierGroups
-      const modifierGroups = product.extras?.map(extra => ({
-        modifierGroupName: extra.group_extra_name || 'Extras',
-        modifiers: [{
-          modifierName: extra.name,
-          modifierPrice: extra.paid_price || 0
-        }]
-      })) || [];
-
-      return {
-        name: product.prodname,
-        quantity: parseInt(product.quantity) || 1,
-        comment: requestProduct.note || '',
-        modifierGroups: modifierGroups,
-        fare: {
-          priceDisplay: product.paid_price ? parseInt(product.paid_price).toLocaleString('vi-VN') : '0',
-          currencySymbol: '₫'
-        }
-      };
-    }) || [];
-
-    // Transform the order to match expected structure
-    return {
-      displayID: apiOrder.id,
-      state: 'ORDER_CREATED', // Default state for new orders
-      orderValue: apiOrder.price_paid ? parseInt(apiOrder.price_paid).toLocaleString('vi-VN') : '0',
-      itemInfo: {
-        items: items
-      },
-      eater: {
-        name: apiOrder.order_name || 'Khách hàng',
-        mobileNumber: apiOrder.userphone || '',
-        comment: apiOrder.description || '',
-        address: {
-          address: apiOrder.address || ''
-        }
-      },
-      // Add service info from tableName
-      service: apiOrder.table_name || apiOrder.tableName || 'Unknown',
-      // Mark as online order from new API
-      source: 'online_new'
-    };
-  } catch (error) {
-    console.error('Error transforming online order:', error);
-    return null;
-  }
-};
+// Combo product IDs constant
+const COMBO_PRODUCT_IDS = ["8121", "8134", "8172", "8173", "8200", "7737"];
 
 // Function to transform app order response to match expected order structure
 const transformAppOrder = (apiOrder) => {
@@ -93,30 +37,57 @@ const transformAppOrder = (apiOrder) => {
     const requestProducts = apiOrder.request_products ? JSON.parse(apiOrder.request_products) : [];
 
     // Transform products to itemInfo.items structure
-    const items = apiOrder.products?.map((product, index) => {
+    const items = [];
+
+    apiOrder.products?.forEach((product, index) => {
       // Find corresponding request product for additional info
       const requestProduct = requestProducts.find(req => req.pid == product.prod_id) || {};
+      const isCombo = COMBO_PRODUCT_IDS.includes(product.prod_id);
 
-      // Transform extras to modifierGroups
-      const modifierGroups = product.extras?.map(extra => ({
-        modifierGroupName: extra.group_extra_name || 'Extras',
-        modifiers: [{
-          modifierName: extra.name,
-          modifierPrice: extra.paid_price || 0
-        }]
-      })) || [];
+      if (isCombo && product.extras && product.extras.length > 0) {
+        // Split combo into multiple items - each extra becomes a separate item
+        product.extras.forEach(extra => {
+          items.push({
+            is_combo: true,
+            name: extra.name, // Name of the item in combo
+            quantity: parseInt(product.quantity) || 1,
+            comment: requestProduct.note || '',
+            modifierGroups: [{
+              modifierGroupName: 'Combo',
+              modifiers: [{
+                modifierName: product.prodname, // Combo name as modifier
+                modifierPrice: extra.paid_price || 0
+              }]
+            }],
+            fare: {
+              priceDisplay: extra.paid_price ? parseInt(extra.paid_price).toLocaleString('vi-VN') : '0', // Individual items in combo don't have separate price
+              currencySymbol: '₫'
+            }
+          });
+        });
+      } else {
+        // Regular product or combo without extras
+        const modifierGroups = product.extras?.map(extra => ({
+          modifierGroupName: extra.group_extra_name || 'Extras',
+          modifiers: [{
+            modifierName: extra.name,
+            modifierPrice: extra.paid_price || 0
+          }]
+        })) || [];
 
-      return {
-        name: product.prodname,
-        quantity: parseInt(product.quantity) || 1,
-        comment: requestProduct.note || '',
-        modifierGroups: modifierGroups,
-        fare: {
-          priceDisplay: product.paid_price ? parseInt(product.paid_price).toLocaleString('vi-VN') : '0',
-          currencySymbol: '₫'
-        }
-      };
-    }) || [];
+        items.push({
+          is_combo: isCombo,
+          name: product.prodname,
+          quantity: parseInt(product.quantity) || 1,
+          comment: requestProduct.note || '',
+          modifierGroups: modifierGroups,
+          fare: {
+            priceDisplay: product.paid_price ? parseInt(product.paid_price).toLocaleString('vi-VN') : '0',
+            currencySymbol: '₫'
+          }
+        });
+      }
+    });
 
     // Transform the order to match expected structure
     return {
@@ -254,39 +225,6 @@ const AppOrders = () => {
     }
     )
   }, [isStatustConfirmOrderOnline]);
-
-  // Trigger auto-print functionality
-  const triggerAutoPrint = async (orderData) => {
-    try {
-      // Check if auto-print is enabled
-      console.log('11111111111111')
-      const printerInfo = await AsyncStorage.getLabelPrinterInfo();
-      console.log('Triggering auto-print for order:', orderData.session);
-
-      // Use the new queueMultipleLabels function to handle multiple products and quantities
-      // Queue multiple labels for all products and quantities
-      const labelTaskIds = await global.queueMultipleLabels(orderData, printerInfo);
-      console.log(`Auto-print: Queued ${labelTaskIds.length} label tasks:`, labelTaskIds);
-
-      // Also add bill printing task
-      const billTaskId = printQueueService.addPrintTask({
-        type: 'bill',
-        order: orderData,
-        priority: 'high'
-      });
-
-      console.log('Auto-print: Queued bill task:', billTaskId);
-      console.log(`Auto-print completed - ${labelTaskIds.length} labels + 1 bill queued`);
-    } catch (error) {
-      console.error('Error triggering auto-print:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi tự động in',
-        text2: 'Không thể tự động in đơn hàng. Vui lòng in thủ công.',
-        position: 'top',
-      });
-    }
-  };
 
   useEffect(() => {
     loadDataOrderOnline();
