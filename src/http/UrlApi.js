@@ -1,5 +1,5 @@
 
-import { BASE_PATH_1000M, BASE_PATH_CAFE, BASE_PATH_MENU } from 'assets/config';
+import { BASE_PATH_1000M, BASE_PATH_CAFE, BASE_PATH_MENU, BASE_SYNTHETIC } from 'assets/config';
 // const BASE_PATH_CAFE = 'https://api.neocafe.tech/v1/';
 // https://dev-api-php.1000m.vn/api1.0.php/
 // const BASE_PATH_CASE_PROD = 'https://v01api.1000m.vn/api1.0.php/'
@@ -58,6 +58,7 @@ export const UrlApi = {
   confirmOrderOnline: BASE_PATH_MENU + 'confirmOrderOnline',
   getListHistoryOrder: BASE_PATH_MENU + 'getOrderDetail',
   callDriverBack: BASE_PATH_1000M + 'synthetic/delivery/v1/orders',
+  estimateAhamove: BASE_SYNTHETIC + 'delivery/v1/estimate-fee',
 
   orderSuccessPayment: BASE_PATH_MENU + 'getOrderPaidSuccessNew', // don da thanh toan
   orderNotComplete: BASE_PATH_MENU + 'getOrderNotCompleteNew',

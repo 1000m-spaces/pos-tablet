@@ -7,9 +7,11 @@ import OrderDetailDialog from './OrderDetailDialog';
 import printQueueService from '../../services/PrintQueueService';
 import { TextNormal } from "common/Text/TextFont";
 import { useDispatch, useSelector } from "react-redux";
-import { confirmOrderOnline, resetConfirmOrderOnline } from "store/actions";
+import { callDriverBack, confirmOrderOnline, resetConfirmOrderOnline } from "store/actions";
 import { confirmOrderOnlineStatusSelector } from "store/selectors";
 import Status from "common/Status/Status";
+import CryptoJS from 'crypto-js';
+import { PARTNER_ID, SECRET_KEY_TAX } from "assets/config";
 
 const { width, height } = Dimensions.get("window");
 
@@ -24,7 +26,7 @@ const Badge = ({ text, colorText, colorBg, width }) => (
     </View>
 );
 
-const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, confirmedOrderId, setConfirmedOrderId }) => {
+const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, dataShippingSuccess, confirmedOrderId, setConfirmedOrderId, shop }) => {
     const dispatch = useDispatch();
     const confirmOrderStatus = useSelector(confirmOrderOnlineStatusSelector);
     const [modalVisible, setModalVisible] = useState(false);
@@ -430,7 +432,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const tableData = orders?.map((order, index) => [
         ...(isFoodApp ? [] : [<View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <TouchableOpacity style={{ justifyContent: 'center', alignItems: 'center', height: '80%', width: '60%', backgroundColor: '#19b400', borderRadius: 10 }}
-                onPress={() => { !historyDelivery ? handleConfirmOrder(order.displayID) : postCallDriverBack(dataShippingSuccess[index]) }}>
+                onPress={() => { !historyDelivery ? handleConfirmOrder(order.displayID) : checkShipFee(dataShippingSuccess[index]) }}>
                 <TextNormal>{!historyDelivery ? 'Xác nhận đơn' : 'Gọi tài xế'}</TextNormal>
             </TouchableOpacity>
         </View>]),
@@ -448,7 +450,38 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         <Badge text={getStatusText(order.state)} colorText={getStatusColor(order.state)} colorBg={getStatusColorBg(order.state)} width="80%" key={order.displayID + "_status"} />
     ]);
 
+    const checkShipFee = async (order) => {
+        const metadata = order.metadata ? JSON.parse(order.metadata) : {};
+        console.log('checkShipFee order:', order, 'metadata:', metadata);
+        console.log('checkShipFee shop:', shop);
+        const body = {
+            branch_id: Number(order.rest_id) || 249,
+            brand_id: Number(PARTNER_ID) || 107,
+            merchant_id: Number(order.shopowner_id) || 133,
+            user_id: order?.cust_id || '0',
+            drop_off: {
+                address: selectedDelivery.address,
+                lat: `${selectedDelivery.lat}`,
+                lng: `${selectedDelivery.lng}`,
+                short_address: selectedDelivery.address,
+                mobile: currentUser.current?.custphone,
+            },
+            pick_up: {
+                address: currentShop.restaddr,
+                lat: currentShop.latitude,
+                lng: currentShop.longitude,
+                short_address: currentShop.restaddr,
+            },
+            quantity: order.products.length,
+            requests: ['string'],
+            service_id: 'string',
+        };
+        console.log('body ahamove estimate:', body);
+        // dispatch(getEstimateAhamove(body));
+    };
+
     const postCallDriverBack = (order) => {
+        console.log('ORDER to call driver back:', order);
         // Parse metadata và request_products nếu có
         const metadata = order.metadata ? JSON.parse(order.metadata) : {};
         const requestProducts = order.request_products
@@ -503,8 +536,22 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             user_id: order.cust_id?.toString() || "",
         };
 
+        const message =
+            SECRET_KEY_TAX +
+            '||' +
+            order?.rest_id +
+            '||' +
+            order?.partner_id +
+            '||' +
+            order?.id;
+        // Tạo HMAC-SHA256
+        const hmac = CryptoJS.HmacSHA256(message, SECRET_KEY_TAX);
+        // Chuyển sang định dạng hex
+        const hexString = hmac.toString(CryptoJS.enc.Hex);
+
         console.log('postCallDriverBack order:', dataPayload);
-        // dispatch(callDriverBack({ order_id: orderId }));
+        console.log('postCallDriverBack checksum:', hexString);
+        dispatch(callDriverBack({ order_id: order?.id }, hexString));
     }
 
 

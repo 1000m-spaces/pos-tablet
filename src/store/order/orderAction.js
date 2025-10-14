@@ -48,13 +48,19 @@ export const resetGetOrderPaidSuccess = () => ({
 });
 
 // call the driver back
-export const callDriverBack = payload => ({
+export const callDriverBack = (payload, checksum) => ({
   type: NEOCAFE.CALL_DRIVER_BACK_REQUEST,
   payload,
+  checksum,
 });
+
 export const resetCallDriverBack = () => ({
   type: NEOCAFE.CALL_DRIVER_BACK_RESET,
 });
 export const resetConfirmOrderOnline = () => ({
   type: NEOCAFE.CONFIRM_ORDER_ONLINE_RESET,
+});
+export const getEstimateAhamove = payload => ({
+  type: NEOCAFE.GET_ESTIMATE_AHAMOVE_REQUEST,
+  payload,
 });

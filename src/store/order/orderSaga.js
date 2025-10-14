@@ -234,9 +234,9 @@ function* getOrderPaidSuccessSaga({ payload }) {
   }
 }
 
-function* callDriverBackSaga({ payload }) {
+function* callDriverBackSaga({ payload, checksum }) {
   try {
-    const result = yield call(orderController.callDriverBackController, payload);
+    const result = yield call(orderController.callDriverBackController, payload, checksum);
     if (result && result.success) {
       yield put({
         type: NEOCAFE.CALL_DRIVER_BACK_SUCCESS,
@@ -250,6 +250,27 @@ function* callDriverBackSaga({ payload }) {
   }
 }
 
+function* estimateAhamove({ payload }) {
+  const selectedDelivery = yield select(state => getSelectedDelivery(state));
+  try {
+    const result = yield call(locationController.getEstimateAhamove, payload);
+    console.log(typeof result?.data?.total_price);
+    if (result && result.success) {
+      yield put({
+        type: NEOCAFE.GET_ESTIMATE_AHAMOVE_SUCCESS,
+      });
+    } else {
+      yield put({
+        type: NEOCAFE.GET_ESTIMATE_AHAMOVE_ERROR,
+      });
+    }
+  } catch (error) {
+    yield put({
+      type: NEOCAFE.GET_ESTIMATE_AHAMOVE_ERROR,
+    });
+  }
+}
+
 export default function* watcherSaga() {
   yield takeLatest(NEOCAFE.CREATE_ORDER_REQUEST, createOrderSaga);
   yield takeLatest(NEOCAFE.ADD_PRODUCT_CART_REQUEST, addProductCartSaga);
@@ -259,4 +280,5 @@ export default function* watcherSaga() {
   yield takeLatest(NEOCAFE.GET_ORDER_SHIPPING_REQUEST, getOrderShippingSaga);
   yield takeLatest(NEOCAFE.GET_ORDER_PAID_SUCCESS_REQUEST, getOrderPaidSuccessSaga);
   yield takeLatest(NEOCAFE.CALL_DRIVER_BACK_REQUEST, callDriverBackSaga);
+  yield takeLatest(NEOCAFE.GET_ESTIMATE_AHAMOVE_REQUEST, estimateAhamove);
 }

@@ -47,6 +47,7 @@ export const NEOCAFE = createRequestTypes(
     'GET_ORDER_PAID_SUCCESS',
     'CONFIRM_ORDER_ONLINE',
     'CALL_DRIVER_BACK',
+    'GET_ESTIMATE_AHAMOVE',
     // product
     'GET_MENU',
     'SET_PRODUCT',

@@ -511,6 +511,9 @@ const AppOrders = () => {
                 isFoodApp={false}
                 confirmedOrderId={confirmedOrderId}
                 setConfirmedOrderId={setConfirmedOrderId}
+                historyDelivery={orderType === 2}
+                dataShippingSuccess={isShippingOrdersSelector?.data || []}
+                shop={userShop}
               />
             )}
 

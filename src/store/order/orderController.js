@@ -91,14 +91,34 @@ class OrderController {
     }
   };
   // call the driver back
-  callDriverBackController = async payload => {
+  callDriverBackController = async (payload, checksum) => {
     try {
       console.log('payload callDriverBackController', payload);
-      const { data } = await HttpClient.post(UrlApi.callDriverBack, payload);
+      const { data } = await HttpClient.post(UrlApi.callDriverBack, payload, {
+        headers: {
+          Checksum: checksum,
+        },
+      });
+      console.log('data callDriverBackController', data);
       return { success: true, data: data };
     } catch (error) {
+      console.log('error callDriverBackController', error);
       return { success: false, error: error.message };
     }
   };
+
+  getEstimateAhamove = async body => {
+    try {
+      const { data } = await HttpClient.post(UrlApi.estimateAhamove, body);
+      console.log('GET ESTIMATE AHAMOVE DATA CONTROLLER:::', data);
+      if (data) {
+        return { success: true, data: data };
+      }
+    } catch (error) {
+      console.log('GET ESTIMATE AHAMOVE ERROR:::', error);
+      return { success: false, data: error.toString() };
+    }
+  };
+
 }
 export default new OrderController();
