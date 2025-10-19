@@ -6,8 +6,20 @@ import { setCustomText } from 'react-native-global-props';
 import 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message'
 import ImmersiveMode from 'react-native-immersive-mode';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PrinterProvider } from './services/PrinterService';
 import printingService from './services/PrintingService';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30000, // 30 seconds
+    },
+  },
+});
 
 
 const customTextProps = {
@@ -68,14 +80,16 @@ const App = () => {
   }, []);
 
   return (
-    <PrinterProvider>
-      <RootNavigation />
-      <Toast
-        position="top"
-        topOffset={50}
-        visibilityTime={4000}
-      />
-    </PrinterProvider>
+    <QueryClientProvider client={queryClient}>
+      <PrinterProvider>
+        <RootNavigation />
+        <Toast
+          position="top"
+          topOffset={50}
+          visibilityTime={4000}
+        />
+      </PrinterProvider>
+    </QueryClientProvider>
   );
 };
 

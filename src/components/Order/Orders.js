@@ -1,9 +1,9 @@
 import Svg from 'common/Svg/Svg';
 import { TextNormal } from 'common/Text/TextFont';
-import React, { useEffect, useState, useCallback } from 'react';
-import { heightDevice, widthDevice } from 'assets/constans';
+import React, { useEffect, useState } from 'react';
 import Toast from 'react-native-toast-message'
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useQuery } from '@tanstack/react-query';
 
 import {
   View,
@@ -26,26 +26,15 @@ const orderFilters = [
 
 
 const Orders = () => {
-  const [data, setData] = useState([]);
   const [orderType, setOrderType] = useState(1);
   const [printerModalVisible, setPrinterModalVisible] = useState(false);
   const [userShop, setUserShop] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [printerType, setPrinterType] = useState('label'); // 'label' or 'bill'
 
   // Printer service
   const { labelPrinterStatus, billPrinterStatus } = usePrinter();
-
-  const formatDate = (date) => {
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).split('/').join('-');
-  };
-
   // Helper function to parse price strings (removes thousand separator dots)
   const parsePrice = (priceStr) => {
     if (!priceStr) return 0;
@@ -121,114 +110,123 @@ const Orders = () => {
     };
   };
 
-  const fetchOrders = useCallback(async () => {
+  // Query function for fetching new orders
+  const fetchNewOrders = async () => {
     if (!userShop) {
-      console.log('No user shop data available');
-      return;
+      throw new Error('No user shop data available');
     }
 
-    // Prevent multiple simultaneous fetches
-    if (isLoading) {
-      return;
-    }
-
-    setIsLoading(true);
-    setData([]); // Clear data while loading
     const user = await AsyncStorage.getUser();
+    const grabOrdersRes = await orderController.fetchOrder({
+      branch_id: Number(userShop.id),
+      brand_id: Number(userShop.partnerid),
+      partner_id: Number(user.shopownerid),
+      service: "GRAB",
+    });
+    console.log('data response GRAB orders:', grabOrdersRes, userShop);
 
-    try {
-      if (orderType === 1) {
-        // Fetch GRAB orders only
-        const grabOrdersRes = await orderController.fetchOrder({
-          branch_id: Number(userShop.id),
-          brand_id: Number(userShop.partnerid),
-          partner_id: Number(user.shopownerid),
-          service: "GRAB",
-        });
-        console.log('data response GRAB orders:', grabOrdersRes, userShop);
+    if (!grabOrdersRes.success) {
+      throw new Error('Failed to fetch GRAB orders');
+    }
 
-        if (grabOrdersRes.success) {
-          const rawOrders = grabOrdersRes?.data?.grab || [];
-          // Transform each order to match expected structure
-          const transformedOrders = rawOrders.map(order => transformOrderData(order, 'GRAB'));
-          console.log('Transformed orders:', transformedOrders);
-          setData(transformedOrders);
-        } else {
-          Toast.show({
-            type: 'error',
-            text1: 'Lỗi khi tải đơn hàng GRAB',
-            position: 'bottom',
-          });
-        }
-      } else {
-        // History orders - keep existing logic
-        // Create date strings with time components in ISO format
-        const startDate = new Date(selectedDate);
-        startDate.setHours(0, 0, 0, 0);
-        const fromAt = startDate.toISOString().replace('.000Z', 'Z');
-        const endDate = new Date(selectedDate);
-        endDate.setHours(23, 59, 59, 0);
-        const toAt = endDate.toISOString().replace('.000Z', 'Z');
-        const res = await orderController.fetchOrderHistory({
-          branch_id: Number(userShop.id),
-          brand_id: Number(userShop.partnerid),
-          partner_id: Number(user.shopownerid),
-          from_at: fromAt,
-          to_at: toAt,
-          page: 1,
-          service: "GRAB",
-          size: 1000,
-        });
-        console.log('data response history orders:', res);
+    const rawOrders = grabOrdersRes?.data?.grab || [];
+    const transformedOrders = rawOrders.map(order => transformOrderData(order, 'GRAB'));
+    console.log('Transformed orders:', transformedOrders);
+    return transformedOrders;
+  };
 
-        if (res.success) {
-          const statements = res.data.statements || [];
-          try {
-            const orderDetailsPromises = statements?.map(statement =>
-              orderController.getOrderDetail({
-                order_id: statement.ID,
-                branch_id: userShop.id,
-                brand_id: userShop.partnerid,
-                service: "GRAB",
-                partner_id: Number(user.shopownerid),
-              })
-            );
-            const orderDetailsResults = await Promise.all(orderDetailsPromises);
-            const rawOrders = orderDetailsResults?.map((result, index) => ({
-              ...result?.data?.order,
-              ...statements[index]
-            }));
-            // Transform history orders to match expected structure
-            const transformedOrders = rawOrders?.map(order => transformOrderData(order, 'GRAB'));
-            console.log('Transformed history orders:', transformedOrders);
-            setData(transformedOrders);
-          } catch (error) {
-            console.error('Error fetching order details:', error);
-            Toast.show({
-              type: 'error',
-              text1: 'Lỗi khi tải chi tiết đơn hàng',
-              position: 'bottom',
-            });
-          }
-        } else {
-          Toast.show({
-            type: 'error',
-            text1: 'Lỗi khi tải lịch sử đơn hàng',
-            position: 'bottom',
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching orders:', error);
+  // Helper function to format date to UTC+7 timezone
+  const formatToUTC7 = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+  };
+
+  // Query function for fetching history orders
+  const fetchHistoryOrders = async () => {
+    if (!userShop) {
+      throw new Error('No user shop data available');
+    }
+
+    const user = await AsyncStorage.getUser();
+    const startDate = new Date(selectedDate);
+    startDate.setHours(0, 0, 0, 0);
+    const fromAt = formatToUTC7(startDate);
+    const endDate = new Date(selectedDate);
+    endDate.setHours(23, 59, 59, 0);
+    const toAt = formatToUTC7(endDate);
+    const res = await orderController.fetchOrderHistory({
+      branch_id: Number(userShop.id),
+      brand_id: Number(userShop.partnerid),
+      partner_id: Number(user.shopownerid),
+      from_at: fromAt,
+      to_at: toAt,
+      page: 1,
+      service: "GRAB",
+      size: 1000,
+    });
+    console.log('data response history orders:', res);
+    if (!res.success) {
+      throw new Error('Failed to fetch order history');
+    }
+    const statements = res.data.grab || [];
+    const orderDetailsPromises = statements?.map(statement =>
+      orderController.getOrderDetail({
+        order_id: statement.ID,
+        branch_id: userShop.id,
+        brand_id: userShop.partnerid,
+        service: "GRAB",
+        partner_id: Number(user.shopownerid),
+      })
+    );
+    const orderDetailsResults = await Promise.all(orderDetailsPromises);
+    const rawOrders = orderDetailsResults?.map((result, index) => ({
+      ...result?.data?.order,
+      ...statements[index]
+    }));
+    const transformedOrders = rawOrders?.map(order => transformOrderData(order, 'GRAB'));
+    console.log('Transformed history orders:', transformedOrders);
+    return transformedOrders;
+  };
+
+  // Use React Query for new orders
+  const newOrdersQuery = useQuery({
+    queryKey: ['orders', 'new', userShop?.id],
+    queryFn: fetchNewOrders,
+    enabled: orderType === 1 && !!userShop,
+    refetchInterval: orderType === 1 ? 120000 : false, // Auto-refetch every 2 minutes for new orders
+    onError: (error) => {
+      console.error('Error fetching new orders:', error);
       Toast.show({
         type: 'error',
-        text1: 'Lỗi khi tải đơn hàng',
+        text1: 'Lỗi khi tải đơn hàng GRAB',
         position: 'bottom',
       });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userShop, orderType, selectedDate, isLoading]);
+    },
+  });
+
+  // Use React Query for history orders
+  const historyOrdersQuery = useQuery({
+    queryKey: ['orders', 'history', userShop?.id, selectedDate.toISOString()],
+    queryFn: fetchHistoryOrders,
+    enabled: orderType === 2 && !!userShop,
+    onError: (error) => {
+      console.error('Error fetching history orders:', error);
+      Toast.show({
+        type: 'error',
+        text1: error.message === 'Failed to fetch order history' ? 'Lỗi khi tải lịch sử đơn hàng' : 'Lỗi khi tải chi tiết đơn hàng',
+        position: 'bottom',
+      });
+    },
+  });
+
+  // Determine which query to use based on orderType
+  const currentQuery = orderType === 1 ? newOrdersQuery : historyOrdersQuery;
+  const { data = [], isLoading, error } = currentQuery;
 
   const loadUserShop = async () => {
     const user = await AsyncStorage.getUser();
@@ -244,23 +242,7 @@ const Orders = () => {
     loadUserShop();
   }, []);
 
-  useEffect(() => {
-    if (userShop) {
-      // Initial fetch
-      fetchOrders();
-      if (orderType !== 1) {
-        return;
-      }
-      // Set up interval for fetching orders every 30 seconds
-      const intervalId = setInterval(() => {
-        if (!isLoading) {
-          fetchOrders();
-        }
-      }, 120000);
-      // Clean up interval on component unmount
-      return () => clearInterval(intervalId);
-    }
-  }, [userShop, orderType, selectedDate]);
+  // React Query handles refetching automatically, so no manual intervals needed
 
   // Handle printer settings saved
   const handlePrinterSettingsSaved = (printerSettings) => {
@@ -274,7 +256,7 @@ const Orders = () => {
         key={item.id}
         onPress={() => {
           if (!isLoading) {
-            setOrderType(item.id)
+            setOrderType(item.id);
           }
         }}
         style={[
