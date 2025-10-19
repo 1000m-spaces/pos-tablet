@@ -158,17 +158,12 @@ const AppOrders = () => {
 
     try {
       if (orderType === 1) {
-        const transformedAppOrders = isOnlineOrderSelector
-          .map(transformAppOrder)
+        const transformedAppOrders = isOnlineOrderSelector?.map(transformAppOrder)
           .filter(order => order !== null);
 
         setData(transformedAppOrders);
-        // dispatch(resetGetOnlineOrder());
-        // }
       } else {
-        // Fetch paid success orders (Lịch sử)
-        const transformedOrders = isShippingOrdersSelector.data
-          .map(transformAppOrder)
+        const transformedOrders = isShippingOrdersSelector?.data?.map(transformAppOrder)
           .filter(order => order !== null);
         setData(transformedOrders)
       }
@@ -204,7 +199,6 @@ const AppOrders = () => {
         rest_id: userShop.id
       }))
       dispatch(getOnlineOrder({ rest_id: userShop.id }));
-
     }
   }, [userShop, orderType]);
 
@@ -276,47 +270,15 @@ const AppOrders = () => {
     }
   };
 
-  // Handle Redux state updates
-  // useEffect(() => {
-  //   if (orderType === 1 && isStatusGetOnlineOrder === 'SUCCESS') {
-  //     if (isShippingOrdersSelector?.status && isShippingOrdersSelector?.data) {
-  //       const transformedAppOrders = isShippingOrdersSelector.data
-  //         .map(transformAppOrder)
-  //         .filter(order => order !== null);
-
-  //       // Combine with existing online orders (if any were set by direct API call)
-  //       setData(prevData => {
-  //         // Filter out any app orders to avoid duplicates, keep online orders
-  //         const onlineOrders = prevData.filter(order => order.source === 'online_new');
-  //         return [...transformedAppOrders, ...onlineOrders];
-  //       });
-  //     } else if (isShippingOrdersSelector?.status === false) {
-  //       Toast.show({
-  //         type: 'error',
-  //         text1: isShippingOrdersSelector?.error || 'Lỗi khi tải đơn hàng mới',
-  //         position: 'bottom',
-  //       });
-  //     }
-  //     setIsLoading(false);
-  //   } else if (isStatusGetOnlineOrder === 'ERROR') {
-  //     Toast.show({
-  //       type: 'error',
-  //       text1: 'Lỗi khi tải đơn hàng mới',
-  //       position: 'bottom',
-  //     });
-  //     setIsLoading(false);
-  //   }
-  // }, [isShippingOrdersStatus, isShippingOrdersSelector, orderType]);
-
   useEffect(() => {
     if (orderType === 2 && isShippingOrdersStatus === 'SUCCESS') {
       dispatch(resetGetOrderShipping());
       if (isShippingOrdersSelector?.status && isShippingOrdersSelector?.data) {
-        const transformedOrders = isShippingOrdersSelector.data
-          .map(transformAppOrder)
+        const transformedOrders = isShippingOrdersSelector.data?.map(transformAppOrder)
           .filter(order => order !== null);
         setData(transformedOrders);
       } else if (isShippingOrdersSelector?.status === false) {
+        console.log('isShippingOrdersSelector:::', isShippingOrdersSelector)
         Toast.show({
           type: 'error',
           text1: isShippingOrdersSelector?.error || 'Lỗi khi tải lịch sử đơn hàng',
@@ -325,6 +287,7 @@ const AppOrders = () => {
       }
       setIsLoading(false);
     } else if (isShippingOrdersStatus === 'ERROR') {
+      console.log('isShippingOrdersSelector:::', isShippingOrdersSelector)
       Toast.show({
         type: 'error',
         text1: 'Lỗi khi tải lịch sử đơn hàng',

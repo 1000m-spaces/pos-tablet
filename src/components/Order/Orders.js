@@ -134,6 +134,7 @@ const Orders = () => {
 
     setIsLoading(true);
     setData([]); // Clear data while loading
+    const user = await AsyncStorage.getUser();
 
     try {
       if (orderType === 1) {
@@ -141,10 +142,10 @@ const Orders = () => {
         const grabOrdersRes = await orderController.fetchOrder({
           branch_id: Number(userShop.id),
           brand_id: Number(userShop.partnerid),
-          merchant_id: Number(userShop.partnerid),
+          partner_id: Number(user.shopownerid),
           service: "GRAB",
         });
-        console.log('data response GRAB orders:', grabOrdersRes);
+        console.log('data response GRAB orders:', grabOrdersRes, userShop);
 
         if (grabOrdersRes.success) {
           const rawOrders = grabOrdersRes?.data?.grab || [];
@@ -165,7 +166,7 @@ const Orders = () => {
         const res = await orderController.fetchOrderHistory({
           branch_id: Number(userShop.id),
           brand_id: Number(userShop.partnerid),
-          merchant_id: Number(userShop.partnerid),
+          partner_id: Number(user.shopownerid),
           from_at: formattedDate,
           to_at: formattedDate,
           page: 1,
@@ -176,22 +177,22 @@ const Orders = () => {
         if (res.success) {
           const statements = res.data.statements || [];
           try {
-            const orderDetailsPromises = statements.map(statement =>
+            const orderDetailsPromises = statements?.map(statement =>
               orderController.getOrderDetail({
                 order_id: statement.ID,
                 branch_id: userShop.id,
                 brand_id: userShop.partnerid,
                 service: "GRAB",
-                merchant_id: userShop.partnerid,
+                partner_id: Number(user.shopownerid),
               })
             );
             const orderDetailsResults = await Promise.all(orderDetailsPromises);
-            const rawOrders = orderDetailsResults.map((result, index) => ({
+            const rawOrders = orderDetailsResults?.map((result, index) => ({
               ...result?.data?.order,
               ...statements[index]
             }));
             // Transform history orders to match expected structure
-            const transformedOrders = rawOrders.map(order => transformOrderData(order, 'GRAB'));
+            const transformedOrders = rawOrders?.map(order => transformOrderData(order, 'GRAB'));
             console.log('Transformed history orders:', transformedOrders);
             setData(transformedOrders);
           } catch (error) {

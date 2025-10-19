@@ -18,6 +18,7 @@ class OrderController {
       console.log('getOrder Shipping and Pick up payload', payload);
       return { success: true, data };
     } catch (error) {
+      console.log('error getOrder Shipping and Pick up controller:', error, UrlApi.getOrderShipping);
       return { success: false, error: error.message };
     }
   };
