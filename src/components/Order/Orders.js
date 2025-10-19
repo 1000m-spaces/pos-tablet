@@ -162,17 +162,24 @@ const Orders = () => {
         }
       } else {
         // History orders - keep existing logic
-        const formattedDate = formatDate(selectedDate);
+        // Create date strings with time components in ISO format
+        const startDate = new Date(selectedDate);
+        startDate.setHours(0, 0, 0, 0);
+        const fromAt = startDate.toISOString().replace('.000Z', 'Z');
+        const endDate = new Date(selectedDate);
+        endDate.setHours(23, 59, 59, 0);
+        const toAt = endDate.toISOString().replace('.000Z', 'Z');
         const res = await orderController.fetchOrderHistory({
           branch_id: Number(userShop.id),
           brand_id: Number(userShop.partnerid),
           partner_id: Number(user.shopownerid),
-          from_at: formattedDate,
-          to_at: formattedDate,
+          from_at: fromAt,
+          to_at: toAt,
           page: 1,
           service: "GRAB",
           size: 1000,
         });
+        console.log('data response history orders:', res);
 
         if (res.success) {
           const statements = res.data.statements || [];
