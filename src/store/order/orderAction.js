@@ -64,3 +64,6 @@ export const getEstimateAhamove = payload => ({
   type: NEOCAFE.GET_ESTIMATE_AHAMOVE_REQUEST,
   payload,
 });
+export const resetEstimateAhamove = () => ({
+  type: NEOCAFE.GET_ESTIMATE_AHAMOVE_RESET,
+});

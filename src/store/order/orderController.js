@@ -34,6 +34,7 @@ class OrderController {
   getOnlineOrder = async payload => {
     try {
       const { data } = await HttpClient.post(UrlApi.getOnlineOrder, payload);
+      console.log('all data getOnlineOrderRRRRRR', data);
       return { success: true, data: data.data };
     } catch (error) {
       return { success: false, error: error.message };

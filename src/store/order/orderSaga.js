@@ -251,13 +251,13 @@ function* callDriverBackSaga({ payload, checksum }) {
 }
 
 function* estimateAhamove({ payload }) {
-  const selectedDelivery = yield select(state => getSelectedDelivery(state));
   try {
-    const result = yield call(locationController.getEstimateAhamove, payload);
+    const result = yield call(orderController.getEstimateAhamove, payload);
     console.log(typeof result?.data?.total_price);
     if (result && result.success) {
       yield put({
         type: NEOCAFE.GET_ESTIMATE_AHAMOVE_SUCCESS,
+        payload: result.data,
       });
     } else {
       yield put({

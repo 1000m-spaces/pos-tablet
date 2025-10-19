@@ -7,8 +7,8 @@ import OrderDetailDialog from './OrderDetailDialog';
 import printQueueService from '../../services/PrintQueueService';
 import { TextNormal } from "common/Text/TextFont";
 import { useDispatch, useSelector } from "react-redux";
-import { callDriverBack, confirmOrderOnline, resetConfirmOrderOnline } from "store/actions";
-import { confirmOrderOnlineStatusSelector } from "store/selectors";
+import { callDriverBack, confirmOrderOnline, getEstimateAhamove, resetConfirmOrderOnline, resetEstimateAhamove } from "store/actions";
+import { confirmOrderOnlineStatusSelector, getResultEsstimate, getStatusEstimateAhamove } from "store/selectors";
 import Status from "common/Status/Status";
 import CryptoJS from 'crypto-js';
 import { PARTNER_ID, SECRET_KEY_TAX } from "assets/config";
@@ -24,14 +24,18 @@ const Badge = ({ text, colorText, colorBg, width }) => (
 const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, dataShippingSuccess, confirmedOrderId, setConfirmedOrderId, shop }) => {
     const dispatch = useDispatch();
     const confirmOrderStatus = useSelector(confirmOrderOnlineStatusSelector);
+    const isResultEsstimate = useSelector(getResultEsstimate);
+    const isStatusEstimateAhamove = useSelector(getStatusEstimateAhamove);
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [printedLabels, setPrintedLabelsState] = useState([]);
     const [isAutoPrinting, setIsAutoPrinting] = useState(false);
+    const [currenData, setCurrentData] = useState([]);
+    const [count, setCount] = useState(1);
     const confirmedOrderIdRef = useRef(null); // Use ref to store order ID immediately
 
-    const tableHead = [...(isFoodApp ? [] : ["Xác nhận"]), "Đối tác", "Mã đơn hàng", "Tổng tiền", "Số món", "Tem", "Trạng thái đơn"];
+    const tableHead = [...(isFoodApp ? [] : historyDelivery ? ["Call"] : ["Xác nhận"]), "Đối tác", "Mã đơn hàng", "Tổng tiền", ...(isFoodApp ? [] : historyDelivery ? ['Sdt tài xế'] : []), "Số món", "Tem", "Trạng thái đơn"];
     const numColumns = tableHead.length;
 
     const [tableWidth, setTableWidth] = useState([])
@@ -162,13 +166,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const getStatusText = (status) => {
         switch (status) {
             case "ORDER_CREATED": return "Đơn hàng mới";
-            case "ORDER_IN_PREPARE": return "Đang chuẩn bị";
-            case "ORDER_READY": return "Sẵn sàng giao";
-            case "ORDER_PICKED_UP": return "Đã nhận hàng";
-            case "ORDER_DELIVERED": return "Đã giao hàng";
-            case "ORDER_CANCELLED": return "Đã hủy";
-            case "ORDER_REJECTED": return "Đã từ chối";
-            case "ORDER_FAILED": return "Giao hàng thất bại";
+            case "ASSIGNING": return "Đang tìm tài xế";
+            case "COMPLETED": return "Đã hoàn thành";
+            case "IN PROCESS": return "Đơn đang giao";
+            case "ACCEPTED": return "Tài xế đã nhận";
+            case "CANCELLED": return "Không tìm thấy Tài Xế";
             default: return "Không xác định";
         }
     };
@@ -374,35 +376,35 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     };
 
     // Monitor orders for new unprinted items
-    useEffect(() => {
-        const checkAndPrintNewOrders = async () => {
-            const labels = await AsyncStorage.getPrintedLabels();
-            if (isAutoPrinting || !orders.length) return;
+    // useEffect(() => {
+    //     const checkAndPrintNewOrders = async () => {
+    //         const labels = await AsyncStorage.getPrintedLabels();
+    //         if (isAutoPrinting || !orders.length) return;
 
-            if (orderType != 1) {
-                return;
-            }
-            // Check if auto-print is enabled in printer settings
-            const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
-            if (!labelPrinterInfo?.autoPrint) return;
+    //         if (orderType != 1) {
+    //             return;
+    //         }
+    //         // Check if auto-print is enabled in printer settings
+    //         const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
+    //         if (!labelPrinterInfo?.autoPrint) return;
 
-            setIsAutoPrinting(true);
-            try {
-                for (const order of orders) {
-                    if (order && !labels.includes(order.displayID)) {
-                        console.log("Auto print order:", order.displayID);
-                        await autoPrintOrder(order);
-                        // Add a small delay between prints
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
-                }
-            } finally {
-                setIsAutoPrinting(false);
-            }
-        };
+    //         setIsAutoPrinting(true);
+    //         try {
+    //             for (const order of orders) {
+    //                 if (order && !labels.includes(order.displayID)) {
+    //                     console.log("Auto print order:", order.displayID);
+    //                     await autoPrintOrder(order);
+    //                     // Add a small delay between prints
+    //                     await new Promise(resolve => setTimeout(resolve, 1000));
+    //                 }
+    //             }
+    //         } finally {
+    //             setIsAutoPrinting(false);
+    //         }
+    //     };
 
-        checkAndPrintNewOrders();
-    }, [orders, orderType]);
+    //     checkAndPrintNewOrders();
+    // }, [orders, orderType]);
 
     // confirm order
     const handleConfirmOrder = (orderId) => {
@@ -425,15 +427,16 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     };
 
     const tableData = orders?.map((order, index) => [
-        ...(isFoodApp ? [] : [<View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        ...(isFoodApp ? [] : (order.is_complete == 0 && order.shipping_status == 'CANCELLED' || !historyDelivery) ? [<View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             <TouchableOpacity style={{ justifyContent: 'center', alignItems: 'center', height: '80%', width: '60%', backgroundColor: '#19b400', borderRadius: 10 }}
                 onPress={() => { !historyDelivery ? handleConfirmOrder(order.displayID) : checkShipFee(dataShippingSuccess[index]) }}>
                 <TextNormal>{!historyDelivery ? 'Xác nhận đơn' : 'Gọi tài xế'}</TextNormal>
             </TouchableOpacity>
-        </View>]),
-        order.service || "GRAB",
+        </View>] : ' '),
+        order.service + ' - ' + order?.shipping_provider,
         order.displayID,
         order.orderValue,
+        ...(isFoodApp ? [] : historyDelivery ? order.shipper_phone ? [order.shipper_phone] : ['Chưa tìm thấy'] : []),
         order.itemInfo?.items?.length,
         <Badge
             text={printedLabels.includes(order.displayID) ? "Đã in" : "Chưa in"}
@@ -446,6 +449,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     ]);
 
     const checkShipFee = async (order) => {
+        setCurrentData(order);
         const metadata = order.metadata ? JSON.parse(order.metadata) : {};
         console.log('checkShipFee order:', order, 'metadata:', metadata);
         console.log('checkShipFee shop:', shop);
@@ -455,98 +459,110 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             merchant_id: Number(order.shopowner_id) || 133,
             user_id: order?.cust_id || '0',
             drop_off: {
-                address: selectedDelivery.address,
-                lat: `${selectedDelivery.lat}`,
-                lng: `${selectedDelivery.lng}`,
-                short_address: selectedDelivery.address,
-                mobile: currentUser.current?.custphone,
+                address: metadata.deliver_address,
+                lat: `${metadata.deliver_latitude}`,
+                lng: `${metadata.deliver_longitude}`,
+                short_address: metadata.deliver_address,
+                mobile: order.userphone,
             },
             pick_up: {
-                address: currentShop.restaddr,
-                lat: currentShop.latitude,
-                lng: currentShop.longitude,
-                short_address: currentShop.restaddr,
+                address: shop.addr,
+                lat: shop.latitude,
+                lng: shop.longitude,
+                short_address: shop.addr,
             },
             quantity: order.products.length,
             requests: ['string'],
             service_id: 'string',
         };
         console.log('body ahamove estimate:', body);
-        // dispatch(getEstimateAhamove(body));
+        dispatch(getEstimateAhamove(body));
     };
 
-    const postCallDriverBack = (order) => {
-        console.log('ORDER to call driver back:', order);
+    // Gọi tài xế Ahamove
+    useEffect(() => {
+        if (isStatusEstimateAhamove === Status.SUCCESS) {
+            dispatch(resetEstimateAhamove());
+            console.log('Dispatch callDriverBack with estimate:', isResultEsstimate);
+            postCallDriverBack();
+        }
+    }, [isStatusEstimateAhamove]);
+
+    const postCallDriverBack = () => {
+        console.log('ORDER to call driver backKKKKKKKKKKKKKK:', currenData);
+        console.log('ESTIMMMMM:', isResultEsstimate);
+        setCount(count + 1);
         // Parse metadata và request_products nếu có
-        const metadata = order.metadata ? JSON.parse(order.metadata) : {};
-        const requestProducts = order.request_products
-            ? JSON.parse(order.request_products)
+        const metadata = currenData.metadata ? JSON.parse(currenData.metadata) : {};
+        const requestProducts = currenData.request_products
+            ? JSON.parse(currenData.request_products)
             : [];
 
         const dataPayload = {
-            branch_id: Number(order.rest_id) || 0,
-            brand_id: Number(order.partner_id) || 0, // ❓ cần xác nhận: brand_id có phải là partner_id không?
-            brand_order_id: order.shipping_order_id || order.orderid || "string",
+            branch_id: Number(currenData.rest_id) || 0,
+            brand_id: Number(currenData.partner_id) || 0, // ❓ cần xác nhận: brand_id có phải là partner_id không?
+            brand_order_id: currenData.id + '-' + count || currenData.orderid + '-' + count || "",
             drop_off: {
-                address: metadata.deliver_address || order.shipping_address || "",
+                address: metadata.deliver_address || currenData.shipping_address || "",
                 apt_number: metadata.deliver_detail_address || "",
                 building: "", // ❓ chưa thấy thông tin building
-                cod: Number(order.price_paid) || 0, // hoặc order.shipping_fee?
+                cod: Number(currenData.price_paid) || 0, // hoặc currenData.shipping_fee?
                 lat: metadata.deliver_latitude || "",
                 lng: metadata.deliver_longitude || "",
-                mobile: metadata.deliver_phone || order.userphone || "",
+                mobile: metadata.deliver_phone || currenData.userphone || "",
                 name: metadata.deliver_name || "",
-                remarks: order.note_manager || "",
+                remarks: currenData.note_manager || "",
                 require_pod: true, // mặc định true như mẫu
             },
             images: [], // ❓ không thấy thông tin hình ảnh
-            items: (order.products || []).map((p) => ({
+            items: (currenData.products || []).map((p) => ({
                 _id: p.prod_id || "string",
                 name: p.prodname || "",
                 num: Number(p.quantity) || 0,
                 price: Number(p.paid_price) || 0,
             })),
-            merchant_id: Number(order.shopowner_id) || 0,
-            note: order.description || "",
-            partner_user_id: metadata.partner_user_id || order.partner_user_id || "",
+            merchant_id: Number(currenData.shopowner_id) || 0,
+            note: currenData.description || "",
+            partner_user_id: isResultEsstimate.partner_user_id || "",
             pick_up: {
-                address: "Kho cửa hàng / chi nhánh", // ❓ không có thông tin pickup → có thể lấy từ cấu hình
+                address: shop.addr, // ❓ không có thông tin pickup → có thể lấy từ cấu hình
                 apt_number: "",
                 building: "",
                 cod: 0,
-                lat: "", // ❓ nếu có toạ độ cửa hàng
-                lng: "",
-                mobile: "", // ❓ số điện thoại cửa hàng
-                name: order.tableName || "Store",
+                lat: shop.latitude, // ❓ nếu có toạ độ cửa hàng
+                lng: shop.longitude,
+                mobile: shop.mobile, // ❓ số điện thoại cửa hàng
+                name: currenData.tableName || "Store",
                 remarks: "",
                 require_pod: true,
             },
             promo_code: "", // ❓ không thấy mã giảm giá
-            remarks: order.note_manager || "",
+            remarks: currenData.note_manager || "",
             requests: requestProducts.map((r) => ({
                 _id: r.pid?.toString() || "",
                 num: Number(r.quantity) || 0,
             })),
-            total_price: Number(order.price_total) || 0,
-            user_id: order.cust_id?.toString() || "",
+            total_price: Number(currenData.price_total) || 0,
+            user_id: currenData.cust_id?.toString() || "",
         };
 
         const message =
             SECRET_KEY_TAX +
             '||' +
-            order?.rest_id +
+            currenData?.partner_id +
             '||' +
-            order?.partner_id +
+            currenData?.rest_id +
             '||' +
-            order?.id;
+            currenData?.id + '-' + count;
         // Tạo HMAC-SHA256
+        console.log('message:', message);
         const hmac = CryptoJS.HmacSHA256(message, SECRET_KEY_TAX);
         // Chuyển sang định dạng hex
         const hexString = hmac.toString(CryptoJS.enc.Hex);
 
-        console.log('postCallDriverBack order:', dataPayload);
+        console.log('postCallDriverBack currenData:', dataPayload);
         console.log('postCallDriverBack checksum:', hexString);
-        dispatch(callDriverBack({ order_id: order?.id }, hexString));
+        dispatch(callDriverBack(dataPayload, hexString));
     }
 
 

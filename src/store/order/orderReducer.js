@@ -25,10 +25,30 @@ const initializeState = {
   //order
   statusCreateOrder: Status.DEFAULT,
   order: null,
+  statusGetEstimateAhamove: Status.DEFAULT,
+  resultEsstimate: {},
 };
 
 export default (state = initializeState, { type, payload }) => {
   switch (type) {
+    case NEOCAFE.GET_ESTIMATE_AHAMOVE_SUCCESS:
+      return {
+        ...state,
+        statusGetEstimateAhamove: Status.SUCCESS,
+        resultEsstimate: payload,
+      }
+    case NEOCAFE.GET_ESTIMATE_AHAMOVE_ERROR:
+      return {
+        ...state,
+        statusGetEstimateAhamove: Status.ERROR,
+        resultEsstimate: {},
+      }
+    case NEOCAFE.GET_ESTIMATE_AHAMOVE_RESET:
+      return {
+        ...state,
+        statusGetEstimateAhamove: Status.DEFAULT,
+        resultEsstimate: {},
+      }
     // GET ONLINE ORDER
     case NEOCAFE.GET_ONLINE_ORDER_REQUEST:
       return {
