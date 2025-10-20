@@ -433,7 +433,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 <TextNormal>{!historyDelivery ? 'Xác nhận đơn' : 'Gọi tài xế'}</TextNormal>
             </TouchableOpacity>
         </View>] : ' '),
-        order.service + ' - ' + order?.shipping_provider,
+        (order?.shipping_provider && !isFoodApp) ? (order.service + ' - ' + order?.shipping_provider) : order.service,
         order.displayID,
         order.orderValue,
         ...(isFoodApp ? [] : historyDelivery ? order.shipper_phone ? [order.shipper_phone] : ['Chưa tìm thấy'] : []),
