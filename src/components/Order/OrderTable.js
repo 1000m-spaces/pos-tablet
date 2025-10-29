@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform } from "react-native";
+import { ScrollView, View, Dimensions, StyleSheet, Text, TouchableOpacity, Platform, Image } from "react-native";
 import { Table, Row } from "react-native-table-component";
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import brandLogos from 'assets/brand_logos';
 import AsyncStorage from 'store/async_storage/index'
 import Toast from 'react-native-toast-message'
 import OrderDetailDialog from './OrderDetailDialog';
@@ -20,6 +22,80 @@ const Badge = ({ text, colorText, colorBg, width }) => (
         <Text style={[styles.badgeText, { color: colorText }]}>{text}</Text>
     </View>
 );
+
+const ServiceIcon = ({ service, shipping_provider, isFoodApp }) => {
+    const getServiceConfig = () => {
+        const serviceUpper = service?.toUpperCase() || '';
+        // For GRAB orders
+        if (serviceUpper.includes('GRAB')) {
+            return {
+                logo: brandLogos.GRAB,
+                icon: 'motorbike',
+                color: '#00B14F',
+                label: 'GRAB'
+            };
+        }
+
+        // For BE (Baemin) orders
+        if (serviceUpper.includes('BE')) {
+            return {
+                logo: brandLogos.BE,
+                icon: 'motorbike',
+                color: '#3AC5C9',
+                label: 'BE'
+            };
+        }
+
+        // For Delivery orders
+        if (serviceUpper.includes('DELIVERY')) {
+            return {
+                logo: brandLogos.DELIVERY,
+                icon: 'truck-delivery',
+                color: '#FF6B35',
+                label: 'Delivery'
+            };
+        }
+
+        // For Pick up orders
+        if (serviceUpper.includes('PICK')) {
+            return {
+                logo: brandLogos.PICKUP || brandLogos['PICK UP'],
+                icon: 'store',
+                color: '#6C5CE7',
+                label: 'Pick up'
+            };
+        }
+
+        // Default
+        return {
+            logo: null,
+            icon: 'food',
+            color: '#666',
+            label: service || 'N/A'
+        };
+    };
+
+    const config = getServiceConfig();
+
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 4 }}>
+            {config.logo ? (
+                // Display brand logo if available
+                <Image
+                    source={config.logo}
+                    style={{ width: 32, height: 32, resizeMode: 'contain' }}
+                />
+            ) : (
+                // Fallback to icon if no logo
+                <MaterialCommunityIcons
+                    name={config.icon}
+                    size={24}
+                    color={config.color}
+                />
+            )}
+        </View>
+    );
+};
 
 const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, dataShippingSuccess, confirmedOrderId, setConfirmedOrderId, shop }) => {
     const dispatch = useDispatch();
@@ -437,7 +513,12 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const tableData = orders?.map((order, index) => {
         const row = [
             // Đối tác
-            (order?.shipping_provider && !isFoodApp) ? (order.service + ' - ' + order?.shipping_provider) : order.service,
+            <ServiceIcon
+                service={order.service}
+                shipping_provider={order?.shipping_provider}
+                isFoodApp={isFoodApp}
+                key={order.displayID + "_service"}
+            />,
             // Mã đơn hàng
             order.displayID,
             // Tem
