@@ -11,7 +11,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView, ActivityIndicator, Platform
+  SafeAreaView, ActivityIndicator, Platform, TextInput
 } from 'react-native';
 import orderController from 'store/order/orderController';
 import Colors from 'theme/Colors';
@@ -33,6 +33,7 @@ const Orders = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [printerType, setPrinterType] = useState('label'); // 'label' or 'bill'
+  const [searchText, setSearchText] = useState('');
 
   // Printer service
   const { labelPrinterStatus, billPrinterStatus } = usePrinter();
@@ -186,8 +187,17 @@ const Orders = () => {
       ...statements[index]
     }));
     const transformedOrders = rawOrders?.map(order => transformOrderData(order, order.service));
-    console.log('Transformed history orders:', transformedOrders);
-    return transformedOrders;
+
+    // Sort by completion time (newest to oldest)
+    // Assuming orders have a completion time field - check rawData for actual field name
+    const sortedOrders = transformedOrders?.sort((a, b) => {
+      const timeA = a.rawData?.updated_at || a.rawData?.created_at || 0;
+      const timeB = b.rawData?.updated_at || b.rawData?.created_at || 0;
+      return new Date(timeB) - new Date(timeA);
+    });
+
+    console.log('Transformed and sorted history orders:', sortedOrders);
+    return sortedOrders;
   };
 
   // Use React Query for new orders
@@ -224,6 +234,37 @@ const Orders = () => {
   // Determine which query to use based on orderType
   const currentQuery = orderType === 1 ? newOrdersQuery : historyOrdersQuery;
   const { data = [], isLoading, error } = currentQuery;
+
+  // Filter orders based on search text (last 3 digits of order code)
+  const filteredOrders = React.useMemo(() => {
+    if (orderType === 2 && searchText.trim()) {
+      return data.filter(order => {
+        const displayID = order.displayID || '';
+        const deliveryId = order.deliveryId || '';
+        // Check if last 3 digits match
+        const last3OfDisplayID = displayID.slice(-3);
+        const last3OfDeliveryID = deliveryId.slice(-3);
+        return last3OfDisplayID.includes(searchText) || last3OfDeliveryID.includes(searchText) || displayID.includes(searchText) || deliveryId.includes(searchText);
+      });
+    }
+    return data;
+  }, [data, searchText, orderType]);
+
+  // Calculate total revenue for history orders
+  const totalRevenue = React.useMemo(() => {
+    if (orderType === 2) {
+      return filteredOrders.reduce((sum, order) => {
+        const orderValue = parsePrice(order.orderValue || order.totalPrice || '0');
+        return sum + orderValue;
+      }, 0);
+    }
+    return 0;
+  }, [filteredOrders, orderType]);
+
+  // Format currency
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+  };
 
   const loadUserShop = async () => {
     const user = await AsyncStorage.getUser();
@@ -385,24 +426,20 @@ const Orders = () => {
                       {selectedDate.toLocaleDateString('en-GB')}
                     </TextNormal>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.searchInput, isLoading && styles.disabledInput]}
-                    disabled={isLoading}
-                  >
+                  <View style={[styles.searchInput, { flex: 2 }]}>
                     <Svg name={'search'} size={20} color={'gray'} />
-                    <TextNormal style={styles.searchInputText}>
-                      {'All'}
-                    </TextNormal>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.searchInput, { flex: 2 }, isLoading && styles.disabledInput]}
-                    disabled={isLoading}
-                  >
-                    <Svg name={'search'} size={20} />
-                    <TextNormal style={styles.searchInputText}>
-                      {' Tìm kiếm theo mã đơn hàng'}
-                    </TextNormal>
-                  </TouchableOpacity>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Tìm kiếm theo mã đơn hàng"
+                      value={searchText}
+                      onChangeText={setSearchText}
+                      editable={!isLoading}
+                    />
+                  </View>
+                  <View style={[styles.revenueContainer]}>
+                    <TextNormal style={styles.revenueLabel}>Tổng doanh thu: </TextNormal>
+                    <TextNormal style={styles.revenueValue}>{formatCurrency(totalRevenue)}</TextNormal>
+                  </View>
                 </View>
               )}
             </View>
@@ -414,7 +451,7 @@ const Orders = () => {
                 </TextNormal>
               </View>
             ) : (
-              <OrderTable orderType={orderType} orders={data} showSettingPrinter={() => setPrinterModalVisible(true)} isFoodApp={true} />
+              <OrderTable orderType={orderType} orders={filteredOrders} showSettingPrinter={() => setPrinterModalVisible(true)} isFoodApp={true} />
             )}
             {/* Printer Settings Modal */}
             <PrinterSettingsModal
@@ -598,6 +635,34 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderColor: 'gray',
     paddingLeft: 10,
+  },
+  textInput: {
+    flex: 1,
+    marginLeft: 10,
+    borderLeftWidth: 1,
+    borderColor: 'gray',
+    paddingLeft: 10,
+    fontSize: 14,
+    outlineWidth: 0,
+  },
+  revenueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginLeft: 10,
+  },
+  revenueLabel: {
+    color: Colors.whiteColor,
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  revenueValue: {
+    color: Colors.whiteColor,
+    fontWeight: '700',
+    fontSize: 16,
   },
 
 });
