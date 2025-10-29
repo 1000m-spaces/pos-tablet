@@ -583,6 +583,8 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   actionButtonText: {
     marginRight: 10,
