@@ -77,6 +77,7 @@ import invoice_pos from './svgs/invoice_pos.svg';
 import icon_print from './svgs/icon_print.svg';
 import icon_print_warning from './svgs/icon_print_warning.svg';
 import success from './svgs/success.svg';
+import refresh from './svgs/refresh.svg';
 export default {
   // POS
   icon_login_logo,
@@ -102,6 +103,7 @@ export default {
   icon_print,
   icon_print_warning,
   success,
+  refresh,
 
   // APP MOBLIE
   // icon_star_review,

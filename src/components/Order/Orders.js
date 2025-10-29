@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Toast from 'react-native-toast-message'
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useQuery } from '@tanstack/react-query';
+import { useFocusEffect } from '@react-navigation/native';
 
 import {
   View,
@@ -121,16 +122,13 @@ const Orders = () => {
       branch_id: Number(userShop.id),
       brand_id: Number(userShop.partnerid),
       partner_id: Number(user.shopownerid),
-      service: "GRAB",
     });
     console.log('data response GRAB orders:', grabOrdersRes, userShop);
-
     if (!grabOrdersRes.success) {
       throw new Error('Failed to fetch GRAB orders');
     }
-
-    const rawOrders = grabOrdersRes?.data?.grab || [];
-    const transformedOrders = rawOrders.map(order => transformOrderData(order, 'GRAB'));
+    const rawOrders = grabOrdersRes?.data?.orders || [];
+    const transformedOrders = rawOrders.map(order => transformOrderData(order, order.service || 'GRAB'));
     console.log('Transformed orders:', transformedOrders);
     return transformedOrders;
   };
@@ -166,20 +164,19 @@ const Orders = () => {
       from_at: fromAt,
       to_at: toAt,
       page: 1,
-      service: "GRAB",
       size: 1000,
     });
     console.log('data response history orders:', res);
-    if (!res.success) {
+    if (!res.succes) {
       throw new Error('Failed to fetch order history');
     }
-    const statements = res.data.grab || [];
+    const statements = res.data?.orders || [];
     const orderDetailsPromises = statements?.map(statement =>
       orderController.getOrderDetail({
         order_id: statement.ID,
         branch_id: userShop.id,
         brand_id: userShop.partnerid,
-        service: "GRAB",
+        service: statement.service,
         partner_id: Number(user.shopownerid),
       })
     );
@@ -188,7 +185,7 @@ const Orders = () => {
       ...result?.data?.order,
       ...statements[index]
     }));
-    const transformedOrders = rawOrders?.map(order => transformOrderData(order, 'GRAB'));
+    const transformedOrders = rawOrders?.map(order => transformOrderData(order, order.service));
     console.log('Transformed history orders:', transformedOrders);
     return transformedOrders;
   };
@@ -198,12 +195,12 @@ const Orders = () => {
     queryKey: ['orders', 'new', userShop?.id],
     queryFn: fetchNewOrders,
     enabled: orderType === 1 && !!userShop,
-    refetchInterval: orderType === 1 ? 120000 : false, // Auto-refetch every 2 minutes for new orders
+    refetchInterval: orderType === 1 ? 60000 : false, // Auto-refetch every 1 minute for new orders
     onError: (error) => {
       console.error('Error fetching new orders:', error);
       Toast.show({
         type: 'error',
-        text1: 'Lỗi khi tải đơn hàng GRAB',
+        text1: 'Lỗi khi tải đơn hàng',
         position: 'bottom',
       });
     },
@@ -241,6 +238,20 @@ const Orders = () => {
   useEffect(() => {
     loadUserShop();
   }, []);
+
+  // Auto-refresh when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (userShop) {
+        // Refetch the active query when screen gains focus
+        if (orderType === 1) {
+          newOrdersQuery.refetch();
+        } else if (orderType === 2) {
+          historyOrdersQuery.refetch();
+        }
+      }
+    }, [orderType, userShop])
+  );
 
   // React Query handles refetching automatically, so no manual intervals needed
 
@@ -320,6 +331,20 @@ const Orders = () => {
                       {userShop ? userShop.name_vn : 'Loading...'}
                     </TextNormal>
                   </View>
+                  {orderType === 1 && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, { opacity: isLoading ? 0.5 : 1 }]}
+                      onPress={() => {
+                        if (!isLoading) {
+                          newOrdersQuery.refetch();
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <Svg name={'refresh'} size={24} />
+                      <TextNormal style={styles.actionButtonText}>Làm mới</TextNormal>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={[styles.actionButton, { opacity: isLoading ? 0.5 : 1 }]}
                     onPress={() => {

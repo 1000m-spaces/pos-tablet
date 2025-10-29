@@ -18,7 +18,6 @@ import PrinterSettingsModal from 'common/PrinterSettingsModal';
 import AsyncStorage from 'store/async_storage/index';
 import { getOrderShipping, resetGetOrderShipping, getOnlineOrder, resetGetOnlineOrder } from 'store/order/orderAction';
 import { usePrinter } from '../../services/PrinterService';
-import orderController from 'store/order/orderController';
 import { confirmOrderOnlineStatusSelector, getStatusGetOnlineOrder, onlineOrderSelector, shippingOrdersSelector, shippingOrdersStatusSelector } from 'store/selectors';
 import Status from 'common/Status/Status';
 
@@ -28,7 +27,7 @@ const appOrderFilters = [
 ];
 
 // Combo product IDs constant
-const COMBO_PRODUCT_IDS = ["8121", "8134", "8172", "8173", "8200", "7737"];
+const COMBO_PRODUCT_IDS = ["8121", "8134", "8172", "8173", "8200", "7737", "8174"];
 
 // Function to transform app order response to match expected order structure
 const transformAppOrder = (apiOrder) => {
