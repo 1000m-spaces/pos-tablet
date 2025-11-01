@@ -460,35 +460,37 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     };
 
     // Monitor orders for new unprinted items
-    // useEffect(() => {
-    //     const checkAndPrintNewOrders = async () => {
-    //         const labels = await AsyncStorage.getPrintedLabels();
-    //         if (isAutoPrinting || !orders.length) return;
+    useEffect(() => {
+        const checkAndPrintNewOrders = async () => {
+            const labels = await AsyncStorage.getPrintedLabels();
+            if (isAutoPrinting || !orders.length) return;
 
-    //         if (orderType != 1) {
-    //             return;
-    //         }
-    //         // Check if auto-print is enabled in printer settings
-    //         const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
-    //         if (!labelPrinterInfo?.autoPrint) return;
+            if (orderType != 1) {
+                return;
+            }
+            // Check if auto-print is enabled in printer settings
+            const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
+            if (!labelPrinterInfo?.autoPrint) return;
 
-    //         setIsAutoPrinting(true);
-    //         try {
-    //             for (const order of orders) {
-    //                 if (order && !labels.includes(order.displayID)) {
-    //                     console.log("Auto print order:", order.displayID);
-    //                     await autoPrintOrder(order);
-    //                     // Add a small delay between prints
-    //                     await new Promise(resolve => setTimeout(resolve, 1000));
-    //                 }
-    //             }
-    //         } finally {
-    //             setIsAutoPrinting(false);
-    //         }
-    //     };
+            setIsAutoPrinting(true);
+            try {
+                for (const order of orders) {
+                    if (order && !labels.includes(order.displayID)) {
+                        console.log("Auto print order:", order.displayID);
+                        await autoPrintOrder(order);
+                        // Add a small delay between prints
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+            } finally {
+                setIsAutoPrinting(false);
+            }
+        };
 
-    //     checkAndPrintNewOrders();
-    // }, [orders, orderType]);
+        if (isFoodApp) {
+            checkAndPrintNewOrders();
+        }
+    }, [orders, orderType]);
 
     // confirm order
     const handleConfirmOrder = (orderId) => {
