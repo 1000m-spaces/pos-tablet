@@ -205,7 +205,7 @@ const Orders = () => {
     queryKey: ['orders', 'new', userShop?.id],
     queryFn: fetchNewOrders,
     enabled: orderType === 1 && !!userShop,
-    refetchInterval: orderType === 1 ? 30000 : false, // Auto-refetch every 1 minute for new orders
+    refetchInterval: orderType === 1 ? 15000 : false, // Auto-refetch every 15s for new orders
     onError: (error) => {
       console.error('Error fetching new orders:', error);
       Toast.show({
