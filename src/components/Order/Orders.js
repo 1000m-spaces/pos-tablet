@@ -168,9 +168,13 @@ const Orders = () => {
       size: 1000,
     });
     console.log('data response history orders:', res);
-    if (!res.succes) {
+    if (!res.success) {
       throw new Error('Failed to fetch order history');
     }
+
+    // Extract total revenue from API response
+    const totalRevenue = res.data?.total_revenue || 0;
+
     const statements = res.data?.orders || [];
     const orderDetailsPromises = statements?.map(statement =>
       orderController.getOrderDetail({
@@ -197,7 +201,13 @@ const Orders = () => {
     });
 
     console.log('Transformed and sorted history orders:', sortedOrders);
-    return sortedOrders;
+    console.log('Total revenue from API:', totalRevenue);
+
+    // Return both orders and total revenue
+    return {
+      orders: sortedOrders,
+      totalRevenue: totalRevenue
+    };
   };
 
   // Use React Query for new orders
@@ -233,7 +243,16 @@ const Orders = () => {
 
   // Determine which query to use based on orderType
   const currentQuery = orderType === 1 ? newOrdersQuery : historyOrdersQuery;
-  const { data = [], isLoading, error } = currentQuery;
+
+  // Extract data based on query type
+  const data = orderType === 1
+    ? (newOrdersQuery.data || [])
+    : (historyOrdersQuery.data?.orders || []);
+  const isLoading = currentQuery.isLoading;
+  const error = currentQuery.error;
+
+  // Get total revenue from history query response
+  const apiTotalRevenue = historyOrdersQuery.data?.totalRevenue || 0;
 
   // Filter orders based on search text (last 3 digits of order code)
   const filteredOrders = React.useMemo(() => {
@@ -250,16 +269,14 @@ const Orders = () => {
     return data;
   }, [data, searchText, orderType]);
 
-  // Calculate total revenue for history orders
+  // Use total revenue from API response for history orders
   const totalRevenue = React.useMemo(() => {
     if (orderType === 2) {
-      return filteredOrders.reduce((sum, order) => {
-        const orderValue = parsePrice(order.orderValue || order.totalPrice || '0');
-        return sum + orderValue;
-      }, 0);
+      // Use total revenue from API response instead of calculating
+      return apiTotalRevenue;
     }
     return 0;
-  }, [filteredOrders, orderType]);
+  }, [orderType, apiTotalRevenue]);
 
   // Format currency
   const formatCurrency = (value) => {
