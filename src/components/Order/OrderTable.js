@@ -6,6 +6,7 @@ import brandLogos from 'assets/brand_logos';
 import AsyncStorage from 'store/async_storage/index'
 import Toast from 'react-native-toast-message'
 import OrderDetailDialog from './OrderDetailDialog';
+import TableSelector from '../Home/TableSelector';
 import printQueueService from '../../services/PrintQueueService';
 import { TextNormal } from "common/Text/TextFont";
 import { useDispatch, useSelector } from "react-redux";
@@ -97,7 +98,7 @@ const ServiceIcon = ({ service, shipping_provider, isFoodApp }) => {
     );
 };
 
-const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, dataShippingSuccess, confirmedOrderId, setConfirmedOrderId, shop }) => {
+const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, dataShippingSuccess, confirmedOrderId, setConfirmedOrderId, orderTableMapRef, shop }) => {
     const dispatch = useDispatch();
     const confirmOrderStatus = useSelector(confirmOrderOnlineStatusSelector);
     const isResultEsstimate = useSelector(getResultEsstimate);
@@ -110,6 +111,12 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const [currenData, setCurrentData] = useState([]);
     const [count, setCount] = useState(1);
     const confirmedOrderIdRef = useRef(null); // Use ref to store order ID immediately
+    const [showTableSelector, setShowTableSelector] = useState(false);
+    const [orderToConfirm, setOrderToConfirm] = useState(null);
+    // orderTableMapRef is now passed as prop from parent to persist across unmounts
+    // Fallback to local ref if not provided (for backward compatibility)
+    const localOrderTableMapRef = useRef({});
+    const tableMapRef = orderTableMapRef || localOrderTableMapRef;
 
     // Build table header based on order type
     const tableHead = ["Đối tác", "Mã đơn hàng", "Tem", "Trạng thái đơn", "Số món", "Số tiền"];
@@ -166,6 +173,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     console.warn('Confirmed order not found in orders list:', orderId);
                     confirmedOrderIdRef.current = null;
                     setConfirmedOrderId(null);
+                    // Clean up table info from map
+                    if (orderId && tableMapRef.current[orderId]) {
+                        delete tableMapRef.current[orderId];
+                        console.log('Cleaned up table info for missing order:', orderId);
+                    }
                     dispatch(resetConfirmOrderOnline());
                     return;
                 }
@@ -186,11 +198,29 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 });
 
                 try {
+                    // Get table info from map using orderId
+                    const orderKey = String(orderId); // Ensure consistent string comparison
+                    const tableInfo = tableMapRef.current[orderKey];
+                    // Merge table info into order before printing
+                    let orderWithTableInfo;
+                    if (tableInfo) {
+                        orderWithTableInfo = {
+                            ...confirmedOrder,
+                            shopTableid: tableInfo.shoptableid || confirmedOrder.shopTableid || "0",
+                            shopTableName: tableInfo.shoptablename || confirmedOrder.shopTableName || "",
+                            shoptablename: tableInfo.shoptablename || confirmedOrder.shoptablename || "",
+                            table: tableInfo.shoptablename || confirmedOrder.table || "",
+                            tableName: tableInfo.shoptablename || confirmedOrder.tableName || ""
+                        };
+                    } else {
+                        orderWithTableInfo = confirmedOrder;
+                    }
+
                     // Auto-print label first
-                    await printTem(confirmedOrder);
+                    await printTem(orderWithTableInfo);
 
                     // Then auto-print bill
-                    await printBill(confirmedOrder);
+                    await printBill(orderWithTableInfo);
 
                     console.log('Auto-print completed for order:', orderId);
                 } catch (error) {
@@ -199,6 +229,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     setIsAutoPrinting(false);
                     confirmedOrderIdRef.current = null;
                     setConfirmedOrderId(null);
+                    // Clean up table info from map after printing
+                    if (orderId && tableMapRef.current[orderId]) {
+                        delete tableMapRef.current[orderId];
+                        console.log('Cleaned up table info for order:', orderId);
+                    }
                     // Reset confirm status
                     dispatch(resetConfirmOrderOnline());
                 }
@@ -211,6 +246,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 });
                 confirmedOrderIdRef.current = null;
                 setConfirmedOrderId(null);
+                // Clean up table info from map on error
+                if (orderId && tableMapRef.current[orderId]) {
+                    delete tableMapRef.current[orderId];
+                    console.log('Cleaned up table info for failed order:', orderId);
+                }
                 dispatch(resetConfirmOrderOnline());
             }
         };
@@ -492,24 +532,84 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         }
     }, [orders, orderType]);
 
-    // confirm order
+    // confirm order - require table selection first
     const handleConfirmOrder = (orderId) => {
         console.log('handleConfirmOrder called with orderId:', orderId);
+        // Find the order
+        const order = orders.find(o => o.displayID === orderId);
+        if (!order) {
+            Toast.show({
+                type: 'error',
+                text1: 'Không tìm thấy đơn hàng',
+                position: 'bottom',
+            });
+            return;
+        }
+        // Store order and show table selector
+        setOrderToConfirm(order);
+        setShowTableSelector(true);
+    };
+
+    // Handle table selection for order confirmation
+    const onSelectTable = (table) => {
+        setShowTableSelector(false);
+
+        if (!orderToConfirm) {
+            Toast.show({
+                type: 'error',
+                text1: 'Không có đơn hàng để xác nhận',
+                position: 'bottom',
+            });
+            return;
+        }
+
+        console.log('Confirming order with table:', table);
+        console.log('Order to confirm:', orderToConfirm);
+        console.log('Order displayID:', orderToConfirm.displayID, 'Type:', typeof orderToConfirm.displayID);
+
+        // Store table info in map keyed by order ID - this persists across re-renders
+        const tableInfo = {
+            shoptableid: table.shoptableid,
+            shoptablename: table.shoptablename
+        };
+
+        // Store with the EXACT order ID from the order object
+        const orderKey = String(orderToConfirm.displayID); // Ensure it's a string
+        tableMapRef.current[orderKey] = tableInfo;
+        console.log('✓ Table info STORED in map with key:', orderKey, 'Value:', tableInfo);
+        console.log('Full orderTableMap after store:', JSON.stringify(tableMapRef.current));
+
         // Set ref immediately (synchronous) - survives re-renders
-        confirmedOrderIdRef.current = orderId;
-        console.log('confirmedOrderIdRef set to:', orderId);
+        confirmedOrderIdRef.current = orderToConfirm.displayID;
+        console.log('confirmedOrderIdRef set to:', orderToConfirm.displayID);
+
         // Set lifted state if available (from AppOrders)
         if (setConfirmedOrderId) {
-            setConfirmedOrderId(orderId);
-            console.log('Lifted state setConfirmedOrderId called with:', orderId);
+            setConfirmedOrderId(orderToConfirm.displayID);
+            console.log('Lifted state setConfirmedOrderId called with:', orderToConfirm.displayID);
         }
-        // Dispatch action
-        dispatch(confirmOrderOnline({ order_id: orderId }));
+
+        // Dispatch action with table info
+        dispatch(confirmOrderOnline({
+            order_id: orderToConfirm.displayID,
+            shopTableid: table.shoptableid,
+            shopTableName: table.shoptablename
+        }));
+
         Toast.show({
             type: 'info',
-            text1: 'Đang xác nhận đơn hàng...',
+            text1: `Đang xác nhận đơn hàng cho bàn ${table.shoptablename}...`,
             position: 'bottom',
         });
+
+        // Clear order to confirm
+        setOrderToConfirm(null);
+    };
+
+    // Close table selector modal
+    const closeTableSelector = () => {
+        setShowTableSelector(false);
+        setOrderToConfirm(null);
     };
 
     const tableData = orders?.map((order, index) => {
@@ -722,6 +822,18 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 onConfirm={onConfirmOrder ? () => onConfirmOrder(selectedOrder) : undefined}
                 loadingVisible={loadingVisible}
             />
+
+            <TableSelector
+                isVisible={showTableSelector}
+                close={closeTableSelector}
+                currentOrder={{
+                    orderType: "1", // Force table selection requirement
+                    table: "",
+                    tableId: ""
+                }}
+                onSelectTable={onSelectTable}
+            />
+
             <Toast
                 position="top"
                 topOffset={50}

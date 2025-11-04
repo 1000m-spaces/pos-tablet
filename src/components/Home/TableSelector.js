@@ -9,7 +9,7 @@ import { getTablesSelector } from 'store/tables/tableSelector';
 import AsyncStorage from 'store/async_storage/index';
 import Colors from 'theme/Colors';
 
-const TableSelector = ({ isVisible, close, currentOrder }) => {
+const TableSelector = ({ isVisible, close, currentOrder, onSelectTable: onSelectTableProp }) => {
   const dispatch = useDispatch();
   const tables = useSelector((state) => getTablesSelector(state));
   const [blockedTables, setBlockedTables] = useState({});
@@ -27,12 +27,18 @@ const TableSelector = ({ isVisible, close, currentOrder }) => {
   }, [isVisible]);
 
   const onSelectTable = (table) => {
-    close();
-    dispatch(setOrderAction({
-      ...currentOrder,
-      table: table.shoptablename,
-      tableId: table.shoptableid
-    }));
+    // If custom callback is provided (e.g., from order confirmation), use it
+    if (onSelectTableProp) {
+      onSelectTableProp(table);
+    } else {
+      // Default behavior: update Redux state and close modal
+      close();
+      dispatch(setOrderAction({
+        ...currentOrder,
+        table: table.shoptablename,
+        tableId: table.shoptableid
+      }));
+    }
   };
 
   return (

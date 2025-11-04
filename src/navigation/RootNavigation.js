@@ -122,15 +122,9 @@ const HiddenViewShotComponents = () => {
 
       // Service and location information
       serviceType: isOnlineOrder ? 'online' : 'offline',
-      tableName: isOnlineOrder ?
-        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') :
-        (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table),
-      table: isOnlineOrder ?
-        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') :
-        (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table),
-      shopTableName: isOnlineOrder ?
-        (originalOrder.service || originalOrder.eater?.name || 'Khách hàng') :
-        (originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table),
+      tableName: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
+      table: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
+      shopTableName: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
       shopTableid: originalOrder.shopTableid || "0",
 
       // Timing information

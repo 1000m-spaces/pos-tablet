@@ -131,6 +131,7 @@ const AppOrders = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [printerType, setPrinterType] = useState('label');
   const [confirmedOrderId, setConfirmedOrderId] = useState(null); // Lifted state for order confirmation
+  const orderTableMapRef = React.useRef({}); // Persistent ref for table info across OrderTable unmounts
 
   // Printer service
   const { labelPrinterStatus, billPrinterStatus } = usePrinter();
@@ -414,6 +415,7 @@ const AppOrders = () => {
                 isFoodApp={false}
                 confirmedOrderId={confirmedOrderId}
                 setConfirmedOrderId={setConfirmedOrderId}
+                orderTableMapRef={orderTableMapRef}
                 historyDelivery={orderType === 2}
                 dataShippingSuccess={isShippingOrdersSelector?.data || []}
                 shop={userShop}
