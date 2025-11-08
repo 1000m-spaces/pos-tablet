@@ -4,11 +4,16 @@ import { useSelector } from 'react-redux';
 import { getOrderChannelsSelector, getPaymentChannelsSelector } from 'store/selectors';
 import AsyncStorage from 'store/async_storage/index';
 import QRCode from 'react-native-qrcode-svg';
+import { useWifiInfo } from '../../hooks/useWifiInfo';
 
 const BillTemplate = ({ selectedOrder }) => {
     console.log('BillTemplate: selectedOrder:', selectedOrder);
     const paymentChannels = useSelector(state => getPaymentChannelsSelector(state));
     const orderChannels = useSelector(state => getOrderChannelsSelector(state));
+    const [restId, setRestId] = useState(null);
+    
+    // Fetch WiFi info using React Query
+    const { data: wifiInfo } = useWifiInfo(restId);
     const [fontSizes, setFontSizes] = useState({
         header: 24,
         content: 16,
@@ -52,6 +57,10 @@ const BillTemplate = ({ selectedOrder }) => {
         const loadUserInfo = async () => {
             try {
                 const user = await AsyncStorage.getUser();
+                // Set restId to fetch WiFi info
+                if (user?.shifts?.rest_id) {
+                    setRestId(user.shifts.rest_id);
+                }
                 if (user && user.shops) {
                     setUserInfos({
                         partnerid: user.partnerid || user.shops.partnerid || '',
@@ -64,8 +73,8 @@ const BillTemplate = ({ selectedOrder }) => {
                         name: user.shops.name_vn || shopData.name || 'NEOCAFE',
                         address: user.shops.addr || shopData.address || '',
                         phone: user.shops.mobile || shopData.phone || '',
-                        wifi_name: shopData.wifi_name || 'NEOCAFE_WIFI',
-                        wifi_pass: shopData.wifi_pass || '12345678',
+                        wifi_name: wifiInfo?.wifi_name || shopData.wifi_name || 'NEOCAFE_WIFI',
+                        wifi_pass: wifiInfo?.wifi_password || shopData.wifi_pass || '12345678',
                         id: user.shops.id || user.shopid || ''
                     });
                     console.log('BillTemplate: User shop loaded:', user.shops);
@@ -84,8 +93,8 @@ const BillTemplate = ({ selectedOrder }) => {
                         name: shopData.name || 'NEOCAFE',
                         address: shopData.address || '',
                         phone: shopData.phone || '',
-                        wifi_name: shopData.wifi_name || 'NEOCAFE_WIFI',
-                        wifi_pass: shopData.wifi_pass || '12345678',
+                        wifi_name: wifiInfo?.wifi_name || shopData.wifi_name || 'NEOCAFE_WIFI',
+                        wifi_pass: wifiInfo?.wifi_password || shopData.wifi_pass || '12345678',
                         id: shopData.id || ''
                     });
                 }
@@ -95,8 +104,8 @@ const BillTemplate = ({ selectedOrder }) => {
                     name: 'NEOCAFE',
                     address: '',
                     phone: '',
-                    wifi_name: 'NEOCAFE_WIFI',
-                    wifi_pass: '12345678',
+                    wifi_name: wifiInfo?.wifi_name || 'NEOCAFE_WIFI',
+                    wifi_pass: wifiInfo?.wifi_password || '12345678',
                     id: ''
                 });
             }
@@ -105,6 +114,17 @@ const BillTemplate = ({ selectedOrder }) => {
         loadBillPrinterSettings();
         loadUserInfo();
     }, []);
+
+    // Update shopInfo when wifiInfo changes from Redux
+    useEffect(() => {
+        if (wifiInfo) {
+            setShopInfo(prevState => ({
+                ...prevState,
+                wifi_name: wifiInfo.wifi_name || prevState.wifi_name,
+                wifi_pass: wifiInfo.wifi_password || prevState.wifi_pass,
+            }));
+        }
+    }, [wifiInfo]);
 
     const formatCurrency = (amount) => {
         try {
@@ -445,17 +465,19 @@ const BillTemplate = ({ selectedOrder }) => {
             </View>
 
             {/* Dotted Line */}
-            {/* <View style={styles.dottedLine} /> */}
+            <View style={styles.dottedLine} />
 
             {/* WiFi Information */}
-            {/* <View style={styles.wifiSection}>
-                <Text style={[styles.wifiText, { fontSize: fontSizes.content }]}>
-                    Wifi: {shopInfo.wifi_name}
-                </Text>
-                <Text style={[styles.wifiText, { fontSize: fontSizes.content }]}>
-                    Pass: {shopInfo.wifi_pass}
-                </Text>
-            </View> */}
+            {shopInfo.wifi_name && shopInfo.wifi_pass && (
+                <View style={styles.wifiSection}>
+                    <Text style={[styles.wifiText, { fontSize: fontSizes.content }]}>
+                        Wifi: {shopInfo.wifi_name}
+                    </Text>
+                    <Text style={[styles.wifiText, { fontSize: fontSizes.content }]}>
+                        Pass: {shopInfo.wifi_pass}
+                    </Text>
+                </View>
+            )}
 
             {/* Dotted Line */}
             <View style={styles.dottedLine} />
