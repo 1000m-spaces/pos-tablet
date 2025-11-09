@@ -296,7 +296,7 @@ const Invoice = () => {
 
                             <View style={styles.tableInfo}>
                                 <TextNormal style={styles.tableInfoText}>
-                                    Bàn đang phục vụ: {Object.keys(blockedTables).length}
+                                    Thẻ đang phục vụ: {Object.keys(blockedTables).length}
                                 </TextNormal>
                             </View>
                         </View>

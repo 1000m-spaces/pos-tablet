@@ -555,7 +555,7 @@ const PrinterSettingsModal = ({
                                     </TextNormal>
                                     {task.orderInfo?.shopTableName && (
                                         <TextNormal style={styles.failedTaskTable}>
-                                            Bàn: {task.orderInfo.shopTableName}
+                                            Thẻ: {task.orderInfo.shopTableName}
                                         </TextNormal>
                                     )}
                                     <TextNormal style={styles.failedTaskError} numberOfLines={2}>
