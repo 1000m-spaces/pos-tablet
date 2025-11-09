@@ -502,6 +502,27 @@ const getPrintRecords = async () => {
   return [];
 };
 
+// Failed Print Tasks Management
+const setFailedPrintTasks = async (failedTasks) => {
+  try {
+    await AsyncStorage.setItem('failedPrintTasks', JSON.stringify(failedTasks));
+  } catch (error) {
+    console.error('Error setting failed print tasks:', error);
+  }
+};
+
+const getFailedPrintTasks = async () => {
+  try {
+    const value = await AsyncStorage.getItem('failedPrintTasks');
+    if (value !== null) {
+      return JSON.parse(value);
+    }
+  } catch (error) {
+    console.error('Error getting failed print tasks:', error);
+  }
+  return [];
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -540,4 +561,6 @@ export default {
   getOfflineOrderCounter,
   setPrintRecords,
   getPrintRecords,
+  setFailedPrintTasks,
+  getFailedPrintTasks,
 };
