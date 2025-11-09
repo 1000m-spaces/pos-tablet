@@ -194,11 +194,31 @@ const BillTemplate = ({ selectedOrder }) => {
     };
 
     const getOrderTypeText = (order) => {
-        if (order.chanel_type_id) {
-            var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id) || { name_vn: 'Mang đi', name: 'Mang đi' }
-            return orderType?.name_vn || orderType?.name || 'Mang đi';
+        // For online orders, prioritize service field
+        const isOnlineOrder = order.source === 'app_order' || order.source === 'online_new';
+        if (isOnlineOrder && order.service) {
+            return order.service;
         }
-        return order.service;
+
+        // For offline orders, map chanel_type_id directly
+        if (order.chanel_type_id) {
+            // Direct mapping based on user selection in Cart/TableSelector
+            if (order.chanel_type_id === "1" || order.chanel_type_id === 1) {
+                return "Tại quán";
+            }
+            if (order.chanel_type_id === "2" || order.chanel_type_id === 2) {
+                return "Mang đi";
+            }
+            
+            // Fallback to orderChannels lookup for other types
+            var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id);
+            if (orderType) {
+                return orderType?.name_vn || orderType?.name;
+            }
+        }
+
+        // Final fallback
+        return order.service || 'Mang đi';
     };
 
     const getTransType = (order) => {

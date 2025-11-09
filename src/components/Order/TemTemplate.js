@@ -235,13 +235,24 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             return order.service;
         }
 
-        // For offline orders, use channel type lookup
+        // For offline orders, map chanel_type_id directly
         if (order.chanel_type_id) {
-            var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id) || { name_vn: 'Mang đi', name: 'Mang đi' }
-            return orderType?.name_vn || orderType?.name || 'Mang đi';
+            // Direct mapping based on user selection in Cart/TableSelector
+            if (order.chanel_type_id === "1" || order.chanel_type_id === 1) {
+                return "Tại quán";
+            }
+            if (order.chanel_type_id === "2" || order.chanel_type_id === 2) {
+                return "Mang đi";
+            }
+
+            // Fallback to orderChannels lookup for other types
+            var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id);
+            if (orderType) {
+                return orderType?.name_vn || orderType?.name;
+            }
         }
 
-        // Fallback to service field
+        // Final fallback
         return order.service || 'Mang đi';
     };
 
