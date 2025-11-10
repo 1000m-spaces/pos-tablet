@@ -13,6 +13,7 @@ import { screenSelector } from 'store/selectors';
 import { widthDevice } from 'assets/constans';
 import { syncPendingOrdersAction } from 'store/actions';
 import Toast from 'react-native-toast-message';
+import printQueueService from '../../services/PrintQueueService';
 
 
 const Main = () => {
