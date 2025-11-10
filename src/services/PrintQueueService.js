@@ -7,18 +7,45 @@ class PrintQueueService {
         // Separate queues for labels and bills to allow concurrent processing
         this.labelQueue = [];
         this.billQueue = [];
+        // Failed tasks storage
+        this.failedTasks = [];
         // Lock mechanism to prevent race conditions
         this.labelLock = null; // Promise that resolves when label processing is done
         this.billLock = null; // Promise that resolves when bill processing is done
         this.listeners = [];
-        this.maxRetries = 3;
+        this.maxRetries = 5; // Increased to 5 retries
         this.retryDelay = 2000; // 2 seconds
         this.captureCallback = null; // Callback function to request snapshots from Main component
+        // Load failed tasks from storage
+        this.loadFailedTasks();
     }
 
     // Set capture callback function from Main component
     setCaptureCallback(callback) {
         this.captureCallback = callback;
+    }
+
+    // Load failed tasks from AsyncStorage
+    async loadFailedTasks() {
+        try {
+            const storedFailedTasks = await AsyncStorage.getFailedPrintTasks();
+            if (storedFailedTasks && Array.isArray(storedFailedTasks)) {
+                this.failedTasks = storedFailedTasks;
+                console.log(`Loaded ${this.failedTasks.length} failed print tasks from storage`);
+            }
+        } catch (error) {
+            console.error('Error loading failed tasks:', error);
+            this.failedTasks = [];
+        }
+    }
+
+    // Save failed tasks to AsyncStorage
+    async saveFailedTasks() {
+        try {
+            await AsyncStorage.setFailedPrintTasks(this.failedTasks);
+        } catch (error) {
+            console.error('Error saving failed tasks:', error);
+        }
     }
 
     // Add a print task to the appropriate queue
@@ -129,8 +156,20 @@ class PrintQueueService {
                     if (task.retries >= this.maxRetries) {
                         // Max retries reached, remove from queue and mark as failed
                         task.status = 'failed';
+                        task.failedAt = new Date().toISOString();
                         this.labelQueue.shift();
-                        this.notifyListeners('taskFailed', { ...task, queueType: 'label' });
+
+                        // Add to failed tasks list
+                        this.failedTasks.push({ ...task, queueType: 'label' });
+                        await this.saveFailedTasks();
+
+                        // Notify listeners with dialog flag
+                        this.notifyListeners('taskFailed', {
+                            ...task,
+                            queueType: 'label',
+                            showDialog: true,
+                            totalFailed: this.failedTasks.length
+                        });
                     } else {
                         // Retry after delay
                         this.notifyListeners('taskRetrying', { ...task, queueType: 'label' });
@@ -188,8 +227,20 @@ class PrintQueueService {
                     if (task.retries >= this.maxRetries) {
                         // Max retries reached, remove from queue and mark as failed
                         task.status = 'failed';
+                        task.failedAt = new Date().toISOString();
                         this.billQueue.shift();
-                        this.notifyListeners('taskFailed', { ...task, queueType: 'bill' });
+
+                        // Add to failed tasks list
+                        this.failedTasks.push({ ...task, queueType: 'bill' });
+                        await this.saveFailedTasks();
+
+                        // Notify listeners with dialog flag
+                        this.notifyListeners('taskFailed', {
+                            ...task,
+                            queueType: 'bill',
+                            showDialog: true,
+                            totalFailed: this.failedTasks.length
+                        });
                     } else {
                         // Retry after delay
                         this.notifyListeners('taskRetrying', { ...task, queueType: 'bill' });
@@ -413,28 +464,116 @@ class PrintQueueService {
         };
     }
 
-    // Clear failed tasks from both queues
-    clearFailedTasks() {
-        const beforeLabelLength = this.labelQueue.length;
-        const beforeBillLength = this.billQueue.length;
+    // Get all failed tasks
+    getFailedTasks() {
+        return this.failedTasks.map(task => ({
+            id: task.id,
+            type: task.type,
+            queueType: task.queueType,
+            status: task.status,
+            retries: task.retries,
+            lastError: task.lastError,
+            createdAt: task.createdAt,
+            failedAt: task.failedAt,
+            orderInfo: {
+                session: task.order?.session,
+                displayID: task.order?.displayID,
+                total_amount: task.order?.total_amount,
+                shopTableName: task.order?.shopTableName
+            },
+            metadata: task.metadata
+        }));
+    }
 
-        this.labelQueue = this.labelQueue.filter(task => task.status !== 'failed');
-        this.billQueue = this.billQueue.filter(task => task.status !== 'failed');
+    // Retry a specific failed task
+    async retryFailedTask(taskId) {
+        const taskIndex = this.failedTasks.findIndex(t => t.id === taskId);
+        if (taskIndex === -1) {
+            throw new Error('Failed task not found');
+        }
 
-        const afterLabelLength = this.labelQueue.length;
-        const afterBillLength = this.billQueue.length;
+        const failedTask = this.failedTasks[taskIndex];
 
-        const labelRemoved = beforeLabelLength - afterLabelLength;
-        const billRemoved = beforeBillLength - afterBillLength;
-        const totalRemoved = labelRemoved + billRemoved;
+        // Reset task for retry
+        const retryTask = {
+            ...failedTask,
+            status: 'queued',
+            retries: 0,
+            lastError: null,
+            failedAt: null
+        };
 
-        if (totalRemoved > 0) {
+        // Remove from failed tasks
+        this.failedTasks.splice(taskIndex, 1);
+        await this.saveFailedTasks();
+
+        // Add back to appropriate queue
+        if (retryTask.queueType === 'label') {
+            this.labelQueue.push(retryTask);
+            this.notifyListeners('taskAdded', { ...retryTask, queueType: 'label' });
+            this.processLabelQueue();
+        } else {
+            this.billQueue.push(retryTask);
+            this.notifyListeners('taskAdded', { ...retryTask, queueType: 'bill' });
+            this.processBillQueue();
+        }
+
+        return taskId;
+    }
+
+    // Retry all failed tasks
+    async retryAllFailedTasks() {
+        if (this.failedTasks.length === 0) {
+            return { retriedCount: 0 };
+        }
+
+        const tasksToRetry = [...this.failedTasks];
+        const retriedIds = [];
+
+        for (const failedTask of tasksToRetry) {
+            try {
+                await this.retryFailedTask(failedTask.id);
+                retriedIds.push(failedTask.id);
+            } catch (error) {
+                console.error(`Error retrying task ${failedTask.id}:`, error);
+            }
+        }
+
+        this.notifyListeners('failedTasksRetried', {
+            retriedCount: retriedIds.length,
+            retriedIds
+        });
+
+        return { retriedCount: retriedIds.length, retriedIds };
+    }
+
+    // Clear failed tasks from storage
+    async clearFailedTasks() {
+        const clearedCount = this.failedTasks.length;
+        this.failedTasks = [];
+        await this.saveFailedTasks();
+
+        if (clearedCount > 0) {
             this.notifyListeners('failedTasksCleared', {
-                removed: totalRemoved,
-                labelRemoved,
-                billRemoved
+                removed: clearedCount
             });
         }
+
+        return { clearedCount };
+    }
+
+    // Clear specific failed task
+    async clearFailedTask(taskId) {
+        const taskIndex = this.failedTasks.findIndex(t => t.id === taskId);
+        if (taskIndex === -1) {
+            return false;
+        }
+
+        this.failedTasks.splice(taskIndex, 1);
+        await this.saveFailedTasks();
+
+        this.notifyListeners('failedTaskCleared', { taskId });
+        return true;
     }
 
     // Utility function for delays

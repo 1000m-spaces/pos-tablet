@@ -25,7 +25,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
     const [printedLabels, setPrintedLabelsState] = useState([]);
     const dispatch = useDispatch();
 
-    const tableHead = ["Mã đơn hàng", "Bàn/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Bill", "Đồng bộ", "Thời gian"];
+    const tableHead = ["Mã đơn hàng", "Thẻ/Khách", "Tổng tiền", "Số món", "Trạng thái", "Tem", "Bill", "Đồng bộ", "Thời gian"];
     const numColumns = tableHead.length;
 
     const [widthArr, setWidthArr] = useState([]);

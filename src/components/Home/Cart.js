@@ -143,7 +143,11 @@ const Cart = ({ showTable }) => {
           }}>
           {item.id === "1" || item.id === 1
             ? currentOrder.table && currentOrder.table !== ''
-              ? `Bàn ${currentOrder.table}`
+              ? `Tại quán/ ${currentOrder.table}`
+              : displayName
+            : item.id === "2" || item.id === 2
+            ? currentOrder.table && currentOrder.table !== ''
+              ? `Mang đi/ ${currentOrder.table}`
               : displayName
             : displayName}
         </TextNormal>
@@ -215,12 +219,6 @@ const Cart = ({ showTable }) => {
           renderItem={renderOrderType}
         />
       </View>
-      {currentOrder && currentOrder?.table && currentOrder?.table !== '' && (
-        <View style={styles.tableNumberContainer}>
-          <Text style={styles.tableLabel}>Bàn:</Text>
-          <Text style={styles.tableNumber}>{currentOrder?.table}</Text>
-        </View>
-      )}
       <FlatList
         data={currentOrder.products}
         keyExtractor={(i, idx) =>
@@ -294,28 +292,6 @@ const styles = StyleSheet.create({
   },
   productName: { fontSize: 16, marginBottom: 4 },
   productPrice: { color: Colors.primary, fontWeight: 'bold' },
-  tableNumberContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  tableLabel: {
-    color: 'black',
-    fontSize: 16,
-    fontWeight: '600',
-    fontStyle: 'bold',
-    lineHeight: 22.4,
-  },
-  tableNumber: {
-    color: 'black',
-    fontStyle: 'bold',
-    fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 22.4,
-  },
   orderTypeSelectionContainer: {
     flex: 1,
     justifyContent: 'center',

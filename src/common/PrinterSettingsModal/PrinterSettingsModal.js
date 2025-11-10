@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TextInput, Text, Switch, TouchableOpacity, Platform, ActivityIndicator, ScrollView } from 'react-native';
+import { View, StyleSheet, TextInput, Text, Switch, TouchableOpacity, Platform, ActivityIndicator, ScrollView, Alert } from 'react-native';
 import Modal from 'react-native-modal';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from 'store/async_storage/index';
@@ -7,6 +7,7 @@ import Colors from 'theme/Colors';
 import { TextNormal } from 'common/Text/TextFont';
 import { getUsbDevices, getSerialDevices } from 'rn-xprinter';
 import { usePrinter } from '../../services/PrinterService';
+import printQueueService from '../../services/PrintQueueService';
 
 const PrinterSettingsModal = ({
     visible,
@@ -72,11 +73,17 @@ const PrinterSettingsModal = ({
     const [errors, setErrors] = useState({});
     const [isSaving, setIsSaving] = useState(false);
     const [printerType, setPrinterType] = useState(initialPrinterType); // 'label' or 'bill'
+    
+    // Failed print tasks state
+    const [failedTasks, setFailedTasks] = useState([]);
+    const [showFailedTasks, setShowFailedTasks] = useState(false);
+    const [isRetrying, setIsRetrying] = useState(false);
 
     // Load printer settings when modal opens
     useEffect(() => {
         if (visible) {
             loadPrinterSettings();
+            loadFailedTasks();
             // Load device lists when modal opens
             if (Platform.OS === 'android') {
                 scanUsbDevices();
@@ -85,10 +92,49 @@ const PrinterSettingsModal = ({
         }
     }, [visible]);
 
+    // Listen to print queue events
+    useEffect(() => {
+        const unsubscribe = printQueueService.addListener((event, data) => {
+            if (event === 'taskFailed' && data?.showDialog) {
+                // Show alert when a task fails after all retries
+                Alert.alert(
+                    'In thất bại',
+                    `Không thể in ${data.queueType === 'label' ? 'tem' : 'bill'} sau ${printQueueService.maxRetries} lần thử.\n\nLỗi: ${data.lastError}\n\nTổng số tác vụ thất bại: ${data.totalFailed}`,
+                    [
+                        { text: 'Đóng', style: 'cancel' },
+                        { 
+                            text: 'Xem chi tiết', 
+                            onPress: () => {
+                                loadFailedTasks();
+                                setShowFailedTasks(true);
+                            }
+                        }
+                    ]
+                );
+            }
+            
+            // Refresh failed tasks list when tasks are retried or cleared
+            if (event === 'failedTasksRetried' || event === 'failedTasksCleared' || event === 'failedTaskCleared') {
+                loadFailedTasks();
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
     // Update printer type when initialPrinterType changes
     useEffect(() => {
         setPrinterType(initialPrinterType);
     }, [initialPrinterType]);
+
+    const loadFailedTasks = async () => {
+        try {
+            const tasks = printQueueService.getFailedTasks();
+            setFailedTasks(tasks);
+        } catch (error) {
+            console.error('Error loading failed tasks:', error);
+        }
+    };
 
     const loadPrinterSettings = async () => {
         try {
@@ -475,6 +521,206 @@ const PrinterSettingsModal = ({
         );
     };
 
+    // Render failed tasks section
+    const renderFailedTasksSection = () => {
+        if (failedTasks.length === 0) return null;
+
+        return (
+            <View style={styles.failedTasksSection}>
+                <TouchableOpacity
+                    style={styles.failedTasksHeader}
+                    onPress={() => setShowFailedTasks(!showFailedTasks)}
+                >
+                    <View style={styles.failedTasksHeaderLeft}>
+                        <View style={styles.failedTasksBadge}>
+                            <TextNormal style={styles.failedTasksBadgeText}>{failedTasks.length}</TextNormal>
+                        </View>
+                        <TextNormal style={styles.failedTasksTitle}>Tác vụ in thất bại</TextNormal>
+                    </View>
+                    <TextNormal style={styles.failedTasksToggle}>
+                        {showFailedTasks ? '▼' : '▶'}
+                    </TextNormal>
+                </TouchableOpacity>
+
+                {showFailedTasks && (
+                    <View style={styles.failedTasksList}>
+                        {failedTasks.map((task, index) => (
+                            <View key={task.id} style={styles.failedTaskItem}>
+                                <View style={styles.failedTaskInfo}>
+                                    <TextNormal style={styles.failedTaskType}>
+                                        {task.queueType === 'label' ? '📄 Tem' : '🧾 Bill'}
+                                    </TextNormal>
+                                    <TextNormal style={styles.failedTaskOrder}>
+                                        Đơn: {task.orderInfo?.displayID || task.orderInfo?.session || 'N/A'}
+                                    </TextNormal>
+                                    {task.orderInfo?.shopTableName && (
+                                        <TextNormal style={styles.failedTaskTable}>
+                                            Thẻ: {task.orderInfo.shopTableName}
+                                        </TextNormal>
+                                    )}
+                                    <TextNormal style={styles.failedTaskError} numberOfLines={2}>
+                                        Lỗi: {task.lastError}
+                                    </TextNormal>
+                                    <TextNormal style={styles.failedTaskTime}>
+                                        {new Date(task.failedAt).toLocaleString('vi-VN')}
+                                    </TextNormal>
+                                </View>
+                                <View style={styles.failedTaskActions}>
+                                    <TouchableOpacity
+                                        style={styles.retryButton}
+                                        onPress={() => handleRetryTask(task.id)}
+                                        disabled={isRetrying}
+                                    >
+                                        <TextNormal style={styles.retryButtonText}>↻</TextNormal>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.deleteButton}
+                                        onPress={() => handleDeleteTask(task.id)}
+                                    >
+                                        <TextNormal style={styles.deleteButtonText}>×</TextNormal>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        ))}
+
+                        <View style={styles.failedTasksFooter}>
+                            <TouchableOpacity
+                                style={[styles.bulkActionButton, styles.retryAllButton]}
+                                onPress={handleRetryAllTasks}
+                                disabled={isRetrying}
+                            >
+                                <TextNormal style={styles.bulkActionButtonText}>
+                                    {isRetrying ? 'Đang thử lại...' : 'Thử lại tất cả'}
+                                </TextNormal>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.bulkActionButton, styles.clearAllButton]}
+                                onPress={handleClearAllTasks}
+                            >
+                                <TextNormal style={styles.bulkActionButtonText}>
+                                    Xóa tất cả
+                                </TextNormal>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+            </View>
+        );
+    };
+
+    // Handle retry single task
+    const handleRetryTask = async (taskId) => {
+        try {
+            setIsRetrying(true);
+            await printQueueService.retryFailedTask(taskId);
+            Toast.show({
+                type: 'success',
+                text1: 'Đã thêm vào hàng đợi in',
+                position: 'bottom',
+            });
+            loadFailedTasks();
+        } catch (error) {
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi thử lại in',
+                text2: error.message,
+                position: 'bottom',
+            });
+        } finally {
+            setIsRetrying(false);
+        }
+    };
+
+    // Handle retry all tasks
+    const handleRetryAllTasks = async () => {
+        try {
+            setIsRetrying(true);
+            const result = await printQueueService.retryAllFailedTasks();
+            Toast.show({
+                type: 'success',
+                text1: `Đã thêm ${result.retriedCount} tác vụ vào hàng đợi`,
+                position: 'bottom',
+            });
+            loadFailedTasks();
+        } catch (error) {
+            Toast.show({
+                type: 'error',
+                text1: 'Lỗi thử lại in',
+                text2: error.message,
+                position: 'bottom',
+            });
+        } finally {
+            setIsRetrying(false);
+        }
+    };
+
+    // Handle delete single task
+    const handleDeleteTask = async (taskId) => {
+        Alert.alert(
+            'Xác nhận xóa',
+            'Bạn có chắc muốn xóa tác vụ này?',
+            [
+                { text: 'Hủy', style: 'cancel' },
+                {
+                    text: 'Xóa',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await printQueueService.clearFailedTask(taskId);
+                            Toast.show({
+                                type: 'success',
+                                text1: 'Đã xóa tác vụ',
+                                position: 'bottom',
+                            });
+                            loadFailedTasks();
+                        } catch (error) {
+                            Toast.show({
+                                type: 'error',
+                                text1: 'Lỗi xóa tác vụ',
+                                text2: error.message,
+                                position: 'bottom',
+                            });
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    // Handle clear all tasks
+    const handleClearAllTasks = async () => {
+        Alert.alert(
+            'Xác nhận xóa',
+            `Bạn có chắc muốn xóa tất cả ${failedTasks.length} tác vụ thất bại?`,
+            [
+                { text: 'Hủy', style: 'cancel' },
+                {
+                    text: 'Xóa tất cả',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await printQueueService.clearFailedTasks();
+                            Toast.show({
+                                type: 'success',
+                                text1: 'Đã xóa tất cả tác vụ thất bại',
+                                position: 'bottom',
+                            });
+                            loadFailedTasks();
+                            setShowFailedTasks(false);
+                        } catch (error) {
+                            Toast.show({
+                                type: 'error',
+                                text1: 'Lỗi xóa tác vụ',
+                                text2: error.message,
+                                position: 'bottom',
+                            });
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const renderConnectionTypeSelector = (connectionType, setConnectionType, printerTypePrefix = '') => (
         <View style={styles.inputGroup}>
             <TextNormal style={styles.label}>{"Loại kết nối"}</TextNormal>
@@ -627,6 +873,9 @@ const PrinterSettingsModal = ({
                     showsVerticalScrollIndicator={true}
                     nestedScrollEnabled={true}
                 >
+                    {/* Failed Tasks Section */}
+                    {renderFailedTasksSection()}
+
                     {printerType === 'label' ? (
                         // Label Printer Settings
                         <>
@@ -1183,6 +1432,148 @@ const styles = StyleSheet.create({
         backgroundColor: '#FF9800',
     },
     connectionButtonText: {
+        color: Colors.whiteColor,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    // Failed tasks section styles
+    failedTasksSection: {
+        backgroundColor: '#FFF3CD',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#FFC107',
+    },
+    failedTasksHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    failedTasksHeaderLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    failedTasksBadge: {
+        backgroundColor: '#F44336',
+        borderRadius: 12,
+        minWidth: 24,
+        height: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 8,
+    },
+    failedTasksBadgeText: {
+        color: Colors.whiteColor,
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    failedTasksTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#856404',
+    },
+    failedTasksToggle: {
+        fontSize: 14,
+        color: '#856404',
+    },
+    failedTasksList: {
+        marginTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#FFC107',
+        paddingTop: 12,
+    },
+    failedTaskItem: {
+        backgroundColor: Colors.whiteColor,
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 8,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        borderLeftWidth: 3,
+        borderLeftColor: '#F44336',
+    },
+    failedTaskInfo: {
+        flex: 1,
+        marginRight: 8,
+    },
+    failedTaskType: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: Colors.textPrimary,
+        marginBottom: 4,
+    },
+    failedTaskOrder: {
+        fontSize: 13,
+        color: Colors.textPrimary,
+        marginBottom: 2,
+    },
+    failedTaskTable: {
+        fontSize: 12,
+        color: Colors.textSecondary,
+        marginBottom: 4,
+    },
+    failedTaskError: {
+        fontSize: 12,
+        color: '#F44336',
+        marginBottom: 4,
+        fontStyle: 'italic',
+    },
+    failedTaskTime: {
+        fontSize: 11,
+        color: Colors.textSecondary,
+    },
+    failedTaskActions: {
+        flexDirection: 'column',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    retryButton: {
+        backgroundColor: '#4CAF50',
+        borderRadius: 6,
+        width: 36,
+        height: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    retryButtonText: {
+        color: Colors.whiteColor,
+        fontSize: 20,
+        fontWeight: '600',
+    },
+    deleteButton: {
+        backgroundColor: '#F44336',
+        borderRadius: 6,
+        width: 36,
+        height: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    deleteButtonText: {
+        color: Colors.whiteColor,
+        fontSize: 24,
+        fontWeight: '600',
+    },
+    failedTasksFooter: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 12,
+    },
+    bulkActionButton: {
+        flex: 1,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    retryAllButton: {
+        backgroundColor: '#4CAF50',
+    },
+    clearAllButton: {
+        backgroundColor: '#F44336',
+    },
+    bulkActionButtonText: {
         color: Colors.whiteColor,
         fontSize: 14,
         fontWeight: '600',

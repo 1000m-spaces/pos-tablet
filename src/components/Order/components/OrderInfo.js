@@ -20,7 +20,7 @@ const OrderInfo = ({
             <InfoCard.DetailRow label="Mã đơn:" value={identifier} />
 
             {isOfflineOrder && tableInfo && (
-                <InfoCard.DetailRow label="Bàn/Khách:" value={tableInfo} />
+                <InfoCard.DetailRow label="Thẻ/Khách:" value={tableInfo} />
             )}
 
             {isOfflineOrder && orderNote && orderNote.trim() !== '' && (

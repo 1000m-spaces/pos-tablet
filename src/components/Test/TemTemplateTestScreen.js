@@ -130,7 +130,7 @@ const TemTemplateTestScreen = () => {
     "svFee": "0",
     "svFee_amount": 0,
     "shopTableid": "28685",
-    "shoptablename": "Bàn 15",
+    "shoptablename": "Thẻ 15",
     "orderNote": "",
     "products": [
         {
@@ -242,10 +242,10 @@ const TemTemplateTestScreen = () => {
         ]
     },
     "customerInfo": {
-        "name": "Bàn 15"
+        "name": "Thẻ 15"
     },
     "serviceType": "offline",
-    "tableName": "Bàn 15"
+    "tableName": "Thẻ 15"
 }`
         }
     ];

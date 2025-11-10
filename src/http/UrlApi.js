@@ -102,6 +102,9 @@ export const UrlApi = {
   // ----------------------- TABLES ----------------------------
   getListShopTable: BASE_PATH_MENU + 'getListShopTable',
 
+  // ----------------------- SHOP INFO ----------------------------
+  getWifi: BASE_PATH_MENU + 'getWifi',
+
   // ----------------------- PAYMENT & ORDER CHANNELS ------------------
   getTransType: BASE_PATH_MENU + 'getTransType', // Payment methods (cash, card, etc.)
 

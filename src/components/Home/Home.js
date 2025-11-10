@@ -4,6 +4,7 @@ import { FlatList, SafeAreaView, TouchableOpacity, View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMenuAction, setProductAction, getShopTablesAction, getPaymentChannelsAction } from 'store/actions';
 import { currentOrderSelector, productMenuSelector } from 'store/selectors';
+import { useWifiInfo } from '../../hooks/useWifiInfo';
 import ProductItemMenu from './ProductItemMenu';
 import Colors from 'theme/Colors';
 import { asyncStorage } from 'store/index';
@@ -11,7 +12,6 @@ import Header from './Header';
 import DetailProduct from './DetailProduct';
 import Cart from './Cart';
 import TableSelector from './TableSelector';
-import { ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { widthDevice } from 'assets/constans';
 import { TextSmallTwelve } from 'common/Text/TextFont';
@@ -28,6 +28,10 @@ const Home = ({ navigation }) => {
   const [filteredProductMenu, setFilteredProductMenu] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const currentOrder = useSelector(state => currentOrderSelector(state));
+  const [restId, setRestId] = useState(null);
+
+  // Fetch WiFi info using React Query
+  const { data: wifiInfo, isLoading: wifiLoading } = useWifiInfo(restId);
 
   // Printer service
   const { labelPrinterStatus, billPrinterStatus } = usePrinter();
@@ -49,6 +53,8 @@ const Home = ({ navigation }) => {
       dispatch(getShopTablesAction({
         rest_id: user?.shifts.rest_id,
       }));
+      // Set restId to trigger WiFi info fetch via React Query
+      setRestId(user?.shifts.rest_id);
     };
     initData();
   }, []);

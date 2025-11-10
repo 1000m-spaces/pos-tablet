@@ -234,7 +234,7 @@ const Profile = ({ navigation }) => {
                         </View>
 
                         <View style={styles.infoItem}>
-                            <TextNormal style={styles.infoLabel}>Bàn số:</TextNormal>
+                            <TextNormal style={styles.infoLabel}>Thẻ số:</TextNormal>
                             <TextNormal style={styles.infoValue}>
                                 {currentOrder.table || 'Chưa chọn'}
                             </TextNormal>
