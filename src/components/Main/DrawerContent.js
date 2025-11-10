@@ -1,7 +1,7 @@
 /* eslint-disable react-native/no-inline-styles */
 /* eslint-disable react/no-unstable-nested-components */
-import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, StyleSheet, Text, Animated } from 'react-native';
 import { DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 // import {Avatar, Title} from 'react-native-paper';
 import { TouchableOpacity } from 'react-native-gesture-handler';
@@ -13,8 +13,9 @@ import Icons from 'common/Icons/Icons';
 import Colors from 'theme/Colors';
 import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_APP_ORDER, NAVIGATION_INVOICE, NAVIGATION_PROFILE } from 'navigation/routes';
 import { useDispatch, useSelector } from 'react-redux';
-import { screenSelector } from 'store/selectors';
-import { setScreenAction, logout } from 'store/actions';
+import { screenSelector, onlineOrderSelector } from 'store/selectors';
+import { setScreenAction, logout, getOnlineOrder } from 'store/actions';
+import AsyncStorage from 'store/async_storage/index';
 import { NAVIGATION_LOGIN } from 'navigation/routes';
 import { versionNameApp, versionDisplayApp, versionSystem, widthDevice } from 'assets/constans';
 const DrawerList = [
@@ -24,8 +25,34 @@ const DrawerList = [
   { icon: 'invoice_pos', label: 'Hóa Đơn', navigateTo: NAVIGATION_INVOICE },
   { icon: 'account_pos', label: 'Tài khoản', navigateTo: NAVIGATION_PROFILE },
 ];
-const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation }) => {
+const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation, hasDeliveryOrders }) => {
   const dispatch = useDispatch();
+  const blinkAnim = useRef(new Animated.Value(1)).current;
+
+  // Blinking animation for delivery notification
+  useEffect(() => {
+    // Only animate when there are NEW unviewed delivery orders
+    if (hasDeliveryOrders && navigateTo === NAVIGATION_APP_ORDER) {
+      const blinkAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(blinkAnim, {
+            toValue: 0.2,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(blinkAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      blinkAnimation.start();
+      return () => blinkAnimation.stop();
+    } else {
+      blinkAnim.setValue(1);
+    }
+  }, [hasDeliveryOrders, navigateTo, blinkAnim]);
 
   const handlePress = () => {
     console.log('DrawerLayout: Attempting to navigate to:', navigateTo);
@@ -56,34 +83,39 @@ const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation }) =>
   return (
     <DrawerItem
       icon={() => (
-        <View
+        <Animated.View
           style={{
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor:
               currentScreen && currentScreen === navigateTo
                 ? Colors.primary
-                : 'transparent',
+                : hasDeliveryOrders && navigateTo === NAVIGATION_APP_ORDER
+                  ? 'rgba(255, 0, 0, 0.8)'
+                  : 'transparent',
             width: 70,
             height: 60,
             borderRadius: 12,
-            marginLeft: 30
+            marginLeft: 30,
+            opacity: hasDeliveryOrders && navigateTo === NAVIGATION_APP_ORDER ? blinkAnim : 1,
           }}>
           <Svg
             name={icon}
             size={24}
-            color={currentScreen === navigateTo ? 'white' : '#B9B9B9'}
+            color={currentScreen === navigateTo || (hasDeliveryOrders && navigateTo === NAVIGATION_APP_ORDER) ? 'white' : '#B9B9B9'}
           />
           <TextNormal
             style={{
               color:
                 currentScreen && currentScreen === navigateTo
                   ? Colors.whiteColor
-                  : '#B9B9B9',
+                  : hasDeliveryOrders && navigateTo === NAVIGATION_APP_ORDER
+                    ? Colors.whiteColor
+                    : '#B9B9B9',
             }}>
             {label}
           </TextNormal>
-        </View>
+        </Animated.View>
       )}
       label={''}
       activeTintColor={Colors.whiteColor}
@@ -93,7 +125,7 @@ const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation }) =>
   );
 };
 
-const DrawerItems = ({ currentScreen, navigation }) => {
+const DrawerItems = ({ currentScreen, navigation, hasDeliveryOrders }) => {
   return DrawerList.map((el, i) => {
     return (
       <DrawerLayout
@@ -103,6 +135,7 @@ const DrawerItems = ({ currentScreen, navigation }) => {
         icon={el.icon}
         label={el.label}
         navigateTo={el.navigateTo}
+        hasDeliveryOrders={hasDeliveryOrders}
       />
     );
   });
@@ -111,10 +144,84 @@ const DrawerItems = ({ currentScreen, navigation }) => {
 const DrawerContent = props => {
   const dispatch = useDispatch();
   const currentScreen = useSelector(state => screenSelector(state));
+  const onlineOrders = useSelector(state => onlineOrderSelector(state));
+  const [previousOrderIds, setPreviousOrderIds] = useState(new Set());
+  const [viewedDeliveryOrderIds, setViewedDeliveryOrderIds] = useState(new Set());
+  const [userShop, setUserShop] = useState(null);
 
-  console.log('DrawerContent: Rendering with props:', props);
-  console.log('DrawerContent: Current screen from selector:', currentScreen);
-  console.log('DrawerContent: Props navigation:', props.navigation);
+  // Load user shop data
+  useEffect(() => {
+    const loadUserShop = async () => {
+      const user = await AsyncStorage.getUser();
+      if (user && user.shops) {
+        setUserShop(user.shops);
+      }
+    };
+    loadUserShop();
+  }, []);
+
+  // Fetch orders every 1 minute
+  useEffect(() => {
+    if (!userShop?.id) return;
+
+    // Initial fetch
+    dispatch(getOnlineOrder({ rest_id: userShop.id }));
+
+    // Set up interval for every 1 minute (60000ms)
+    const intervalId = setInterval(() => {
+      dispatch(getOnlineOrder({ rest_id: userShop.id }));
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [userShop, dispatch]);
+
+  // Check for NEW unviewed delivery orders
+  const hasNewDeliveryOrders = React.useMemo(() => {
+    if (!onlineOrders || onlineOrders.length === 0) {
+      return false;
+    }
+    // Get current delivery order IDs
+    const currentDeliveryOrderIds = onlineOrders
+      .filter(order => order.is_delivery === '1')
+      .map(order => order.id);
+    
+    // Check if there are any new delivery orders that haven't been viewed
+    return currentDeliveryOrderIds.some(orderId => !viewedDeliveryOrderIds.has(orderId));
+  }, [onlineOrders, viewedDeliveryOrderIds]);
+
+  // Mark delivery orders as viewed when user navigates to Đơn online screen
+  useEffect(() => {
+    if (currentScreen === NAVIGATION_APP_ORDER && onlineOrders && onlineOrders.length > 0) {
+      const currentDeliveryOrderIds = new Set(
+        onlineOrders
+          .filter(order => order.is_delivery === '1')
+          .map(order => order.id)
+      );
+      setViewedDeliveryOrderIds(currentDeliveryOrderIds);
+    }
+  }, [currentScreen, onlineOrders]);
+
+  // Clear viewed orders when all delivery orders are gone
+  useEffect(() => {
+    if (!onlineOrders || onlineOrders.length === 0) {
+      setViewedDeliveryOrderIds(new Set());
+      setPreviousOrderIds(new Set());
+      return;
+    }
+
+    const currentDeliveryOrderIds = new Set(
+      onlineOrders
+        .filter(order => order.is_delivery === '1')
+        .map(order => order.id)
+    );
+
+    // Update previous order IDs
+    setPreviousOrderIds(currentDeliveryOrderIds);
+  }, [onlineOrders]);
+
+  console.log('DrawerContent: Has new delivery orders:', hasNewDeliveryOrders);
+  console.log('DrawerContent: Total delivery orders:', onlineOrders?.filter(o => o.is_delivery === '1').length || 0);
+  console.log('DrawerContent: Viewed order IDs:', Array.from(viewedDeliveryOrderIds));
 
   const handleLogout = () => {
     dispatch(logout());
@@ -133,7 +240,7 @@ const DrawerContent = props => {
             <Svg name={'logo_menu'} size={60} />
           </TouchableOpacity>
           <View style={styles.drawerSection}>
-            <DrawerItems currentScreen={currentScreen} navigation={props.navigation} />
+            <DrawerItems currentScreen={currentScreen} navigation={props.navigation} hasDeliveryOrders={hasNewDeliveryOrders} />
           </View>
         </View>
       </DrawerContentScrollView>
