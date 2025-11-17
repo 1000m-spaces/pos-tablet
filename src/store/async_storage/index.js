@@ -165,61 +165,97 @@ const setListRecommned = async listProduct => {
   }
 };
 
-const setPrintedLabels = async (orderId) => {
+// Helper function to get current date string in YYYY-MM-DD format
+const getCurrentDateString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const setPrintedLabels = async (orderId, dateString = null) => {
   try {
     if (!orderId) {
       console.warn('setPrintedLabels called with empty orderId');
       return;
     }
 
-    const existingLabels = await AsyncStorage.getItem('printedLabels');
-    const printedLabels = existingLabels ? JSON.parse(existingLabels) : [];
+    const date = dateString || getCurrentDateString();
+    const existingData = await AsyncStorage.getItem('printedLabels');
+    const printedLabels = existingData ? JSON.parse(existingData) : {};
 
-    if (!printedLabels.includes(orderId)) {
-      printedLabels.push(orderId);
+    // Initialize array for this date if it doesn't exist
+    if (!printedLabels[date]) {
+      printedLabels[date] = [];
+    }
+
+    // Add orderId if not already present for this date
+    if (!printedLabels[date].includes(orderId)) {
+      printedLabels[date].push(orderId);
       await AsyncStorage.setItem('printedLabels', JSON.stringify(printedLabels));
-      console.log(`Marked labels as printed for order: ${orderId}`);
+      console.log(`Marked labels as printed for order: ${orderId} on ${date}`);
     } else {
-      console.log(`Labels already marked as printed for order: ${orderId}`);
+      console.log(`Labels already marked as printed for order: ${orderId} on ${date}`);
     }
   } catch (error) {
     console.error('Error setting printed labels:', error);
   }
 };
 
-const getPrintedLabels = async () => {
+const getPrintedLabels = async (dateString = null) => {
   try {
-    const printedLabels = await AsyncStorage.getItem('printedLabels');
-    return printedLabels ? JSON.parse(printedLabels) : [];
+    const date = dateString || getCurrentDateString();
+    const existingData = await AsyncStorage.getItem('printedLabels');
+    const printedLabels = existingData ? JSON.parse(existingData) : {};
+    return printedLabels[date] || [];
   } catch (error) {
     console.error('Error getting printed labels:', error);
     return [];
   }
 };
 
-const clearPrintedLabels = async () => {
+const clearPrintedLabels = async (dateString = null) => {
   try {
-    await AsyncStorage.removeItem('printedLabels');
-    console.log('Cleared all printed labels');
+    if (dateString) {
+      // Clear labels for specific date
+      const existingData = await AsyncStorage.getItem('printedLabels');
+      const printedLabels = existingData ? JSON.parse(existingData) : {};
+      delete printedLabels[dateString];
+      await AsyncStorage.setItem('printedLabels', JSON.stringify(printedLabels));
+      console.log(`Cleared printed labels for date: ${dateString}`);
+    } else {
+      // Clear current date's labels
+      const date = getCurrentDateString();
+      const existingData = await AsyncStorage.getItem('printedLabels');
+      const printedLabels = existingData ? JSON.parse(existingData) : {};
+      delete printedLabels[date];
+      await AsyncStorage.setItem('printedLabels', JSON.stringify(printedLabels));
+      console.log(`Cleared printed labels for current date: ${date}`);
+    }
   } catch (error) {
     console.error('Error clearing printed labels:', error);
   }
 };
 
-const removePrintedLabel = async (orderId) => {
+const removePrintedLabel = async (orderId, dateString = null) => {
   try {
     if (!orderId) {
       console.warn('removePrintedLabel called with empty orderId');
       return;
     }
 
-    const existingLabels = await AsyncStorage.getItem('printedLabels');
-    const printedLabels = existingLabels ? JSON.parse(existingLabels) : [];
+    const date = dateString || getCurrentDateString();
+    const existingData = await AsyncStorage.getItem('printedLabels');
+    const printedLabels = existingData ? JSON.parse(existingData) : {};
 
-    const filteredLabels = printedLabels.filter(id => id !== orderId);
-    if (filteredLabels.length !== printedLabels.length) {
-      await AsyncStorage.setItem('printedLabels', JSON.stringify(filteredLabels));
-      console.log(`Removed printed label status for order: ${orderId}`);
+    if (printedLabels[date]) {
+      const filteredLabels = printedLabels[date].filter(id => id !== orderId);
+      if (filteredLabels.length !== printedLabels[date].length) {
+        printedLabels[date] = filteredLabels;
+        await AsyncStorage.setItem('printedLabels', JSON.stringify(printedLabels));
+        console.log(`Removed printed label status for order: ${orderId} on ${date}`);
+      }
     }
   } catch (error) {
     console.error('Error removing printed label:', error);

@@ -168,7 +168,6 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             if (confirmOrderStatus === Status.SUCCESS) {
                 // Find the confirmed order
                 const confirmedOrder = orders.find(order => order.displayID === orderId);
-
                 if (!confirmedOrder) {
                     console.warn('Confirmed order not found in orders list:', orderId);
                     confirmedOrderIdRef.current = null;
@@ -457,18 +456,12 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             } else if (labelPrinterInfo.connectionType === 'serial' && !labelPrinterInfo.serialPort) {
                 throw new Error('Printer settings not configured');
             }
-
-            console.log('Auto-queueing label print for order:', order);
-
             // Use global.queueMultipleLabels for multiple products if available
             if (global.queueMultipleLabels && order.itemInfo?.items && order.itemInfo.items.length > 0) {
                 const labelTaskIds = await global.queueMultipleLabels(order, labelPrinterInfo);
-                console.log(`Auto-queued ${labelTaskIds.length} label tasks:`, labelTaskIds);
-
                 // Update print status
                 await AsyncStorage.setPrintedLabels(order.displayID);
                 setPrintedLabelsState(prev => [...prev, order.displayID]);
-
                 Toast.show({
                     type: 'success',
                     text1: `Đã tự động xếp hàng in ${labelTaskIds.length} tem cho đơn ${order.displayID}`
@@ -562,11 +555,6 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             });
             return;
         }
-
-        console.log('Confirming order with table:', table);
-        console.log('Order to confirm:', orderToConfirm);
-        console.log('Order displayID:', orderToConfirm.displayID, 'Type:', typeof orderToConfirm.displayID);
-
         // Store table info in map keyed by order ID - this persists across re-renders
         const tableInfo = {
             shoptableid: table.shoptableid,
@@ -576,17 +564,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         // Store with the EXACT order ID from the order object
         const orderKey = String(orderToConfirm.displayID); // Ensure it's a string
         tableMapRef.current[orderKey] = tableInfo;
-        console.log('✓ Table info STORED in map with key:', orderKey, 'Value:', tableInfo);
-        console.log('Full orderTableMap after store:', JSON.stringify(tableMapRef.current));
-
         // Set ref immediately (synchronous) - survives re-renders
         confirmedOrderIdRef.current = orderToConfirm.displayID;
-        console.log('confirmedOrderIdRef set to:', orderToConfirm.displayID);
-
         // Set lifted state if available (from AppOrders)
         if (setConfirmedOrderId) {
             setConfirmedOrderId(orderToConfirm.displayID);
-            console.log('Lifted state setConfirmedOrderId called with:', orderToConfirm.displayID);
         }
 
         // Dispatch action with table info
@@ -595,13 +577,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             shopTableid: table.shoptableid,
             shopTableName: table.shoptablename
         }));
-
         Toast.show({
             type: 'info',
             text1: `Đang xác nhận đơn hàng cho bàn ${table.shoptablename}...`,
             position: 'bottom',
         });
-
         // Clear order to confirm
         setOrderToConfirm(null);
     };
@@ -704,14 +684,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     useEffect(() => {
         if (isStatusEstimateAhamove === Status.SUCCESS) {
             dispatch(resetEstimateAhamove());
-            console.log('Dispatch callDriverBack with estimate:', isResultEsstimate);
             postCallDriverBack();
         }
     }, [isStatusEstimateAhamove]);
 
     const postCallDriverBack = () => {
-        console.log('ORDER to call driver backKKKKKKKKKKKKKK:', currenData);
-        console.log('ESTIMMMMM:', isResultEsstimate);
         setCount(count + 1);
         // Parse metadata và request_products nếu có
         const metadata = currenData.metadata ? JSON.parse(currenData.metadata) : {};
