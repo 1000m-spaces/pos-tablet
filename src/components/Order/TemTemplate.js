@@ -26,11 +26,11 @@ const getDefaultSettings = (dpi = 72) => ({
     height: mmToPixels(30, dpi), // 30mm
     fontSize: {
         storeName: calculateDynamicFontSize(12),
-        orderNumber: calculateDynamicFontSize(12),
+        orderNumber: calculateDynamicFontSize(13),
         tableInfo: calculateDynamicFontSize(10),
         dateTime: calculateDynamicFontSize(8),
         priceText: calculateDynamicFontSize(8),
-        pageCounter: calculateDynamicFontSize(8),
+        pageCounter: calculateDynamicFontSize(10),
         itemName: calculateDynamicFontSize(12),
         modifier: calculateDynamicFontSize(10),
         note: calculateDynamicFontSize(10),
@@ -60,11 +60,11 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                         dpi: dpi,
                         fontSize: {
                             storeName: calculateDynamicFontSize(12),
-                            orderNumber: calculateDynamicFontSize(12),
+                            orderNumber: calculateDynamicFontSize(13),
                             tableInfo: calculateDynamicFontSize(10),
                             dateTime: calculateDynamicFontSize(8),
                             priceText: calculateDynamicFontSize(8),
-                            pageCounter: calculateDynamicFontSize(8),
+                            pageCounter: calculateDynamicFontSize(10),
                             itemName: calculateDynamicFontSize(12),
                             modifier: calculateDynamicFontSize(10),
                             note: calculateDynamicFontSize(10),
@@ -126,7 +126,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         },
         pageCounter: {
             fontSize: config.fontSize.pageCounter,
-            fontWeight: '700',
+            fontWeight: '900',
             color: '#000',
             marginLeft: 4,
         },
