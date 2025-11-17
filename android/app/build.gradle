@@ -121,6 +121,12 @@ android {
         versionCode getVersionCode()
         versionName getVersionName()
     }
+    
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
