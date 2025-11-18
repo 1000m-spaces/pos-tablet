@@ -137,7 +137,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
     const getOrderStatusColor = (status) => {
         switch (status) {
             case "WaitingForPayment": return "#FF5722";    // Deep Orange
-            case "Paymented": return "#2196F3";           // Blue
+            case "Paymented": return "#4CAF50";           // Blue
             case "WaitingForServe": return "#FF9800";     // Orange
             case "Completed": return "#4CAF50";           // Green
             case "Canceled": return "#F44336";            // Red
@@ -148,7 +148,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
     const getOrderStatusColorBg = (status) => {
         switch (status) {
             case "WaitingForPayment": return "#FFCCBC";   // Light Deep Orange
-            case "Paymented": return "#E3F2FD";          // Light Blue
+            case "Paymented": return "#E8F5E9";          // Light Blue
             case "WaitingForServe": return "#FFF3E0";     // Light Orange
             case "Completed": return "#E8F5E9";          // Light Green
             case "Canceled": return "#FFEBEE";           // Light Red

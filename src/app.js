@@ -66,18 +66,18 @@ const App = () => {
     };
   }, []);
 
-  useEffect(() => {
-    // Cho phép layout tràn màn hình
-    ImmersiveMode.fullLayout(true);
-    // Ẩn cả status bar + navigation bar theo kiểu sticky
-    ImmersiveMode.setBarMode('FullSticky');
+  // useEffect(() => {
+  //   // Cho phép layout tràn màn hình
+  //   ImmersiveMode.fullLayout(true);
+  //   // Ẩn cả status bar + navigation bar theo kiểu sticky
+  //   ImmersiveMode.setBarMode('FullSticky');
 
-    return () => {
-      // Khôi phục khi unmount (tùy bạn có cần hay không)
-      ImmersiveMode.setBarMode('Normal');
-      ImmersiveMode.fullLayout(false);
-    };
-  }, []);
+  //   return () => {
+  //     // Khôi phục khi unmount (tùy bạn có cần hay không)
+  //     ImmersiveMode.setBarMode('Normal');
+  //     ImmersiveMode.fullLayout(false);
+  //   };
+  // }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
