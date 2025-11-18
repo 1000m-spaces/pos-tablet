@@ -118,13 +118,13 @@ android {
         applicationId "com.postablet"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "0.0.1"
+        versionCode 12
+        versionName "0.0.3"
     }
     
     packagingOptions {
         jniLibs {
-            useLegacyPackaging = true
+            useLegacyPackaging = false
         }
     }
     signingConfigs {
