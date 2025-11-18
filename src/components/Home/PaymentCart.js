@@ -205,7 +205,7 @@ const PaymentCart = () => {
       // Calculate totals
       const price_paid = transformedProducts.reduce((sum, product) => sum + product.amount, 0);
 
-      // Generate auto-increment order ID by date (format: 4-digit counter only)
+      // Generate random 4-character order ID (uppercase letters and numbers)
       const generateOfflineOrderId = async () => {
         const now = new Date();
         const year = String(now.getFullYear()).slice(-2); // Last 2 digits of year
@@ -213,43 +213,66 @@ const PaymentCart = () => {
         const day = String(now.getDate()).padStart(2, '0');
         const currentDateKey = `${year}${month}${day}`;
 
+        // Characters pool: uppercase letters and numbers (A-Z, 0-9)
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+        // Function to generate random 4-character code
+        const generateRandomCode = () => {
+          let code = '';
+          for (let i = 0; i < 4; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          return code;
+        };
+
         try {
           // Get stored counter data
           const counterData = await AsyncStorage.getOfflineOrderCounter();
-          let counter = 1;
-
+          let usedCodes = [];
           if (counterData) {
-            const { lastDate, lastCounter } = counterData;
-
-            // If same date, increment counter; if different date, reset to 1
+            const { lastDate, codes } = counterData;
+            // If same date, use existing codes list; if different date, reset
             if (lastDate === currentDateKey) {
-              counter = lastCounter + 1;
+              usedCodes = codes || [];
             } else {
-              counter = 1; // Reset counter for new date
+              usedCodes = []; // Clear codes for new date
             }
           }
+          // Generate unique code (max 100 attempts to prevent infinite loop)
+          let newCode;
+          let attempts = 0;
+          do {
+            newCode = generateRandomCode();
+            attempts++;
+          } while (usedCodes.includes(newCode) && attempts < 100);
 
-          // Store updated counter
+          // If couldn't generate unique code after 100 attempts, force add timestamp
+          if (usedCodes.includes(newCode)) {
+            console.warn('Could not generate unique code, adding timestamp suffix');
+            newCode = generateRandomCode();
+          }
+
+          // Add new code to used codes list
+          usedCodes.push(newCode);
+
+          // Store updated counter with codes list
           await AsyncStorage.setOfflineOrderCounter({
             lastDate: currentDateKey,
-            lastCounter: counter
+            codes: usedCodes
           });
 
-          // Format: 4-digit counter only (e.g., 0001, 0002, 0003...)
-          const paddedCounter = String(counter).padStart(4, '0');
-
-          return paddedCounter;
+          return newCode;
 
         } catch (error) {
-          console.error('Error generating auto-increment order ID:', error);
-          // Fallback to 4-digit random number if AsyncStorage fails
-          const fallbackId = String(Math.floor(Math.random() * 9999) + 1).padStart(4, '0');
+          console.error('Error generating offline order ID:', error);
+          // Fallback to random 4-character code if AsyncStorage fails
+          const fallbackId = generateRandomCode();
           return fallbackId;
         }
       };
 
       const offlineOrderId = await generateOfflineOrderId();
-      const session = `M-${offlineOrderId}`;
+      const session = `POS-${offlineOrderId}`;
 
       // Create order object
       console.log('Selected payment method for order:', paymentMethod);

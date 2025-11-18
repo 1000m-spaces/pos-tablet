@@ -121,6 +121,12 @@ android {
         versionCode 3
         versionName "0.0.1"
     }
+    
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
