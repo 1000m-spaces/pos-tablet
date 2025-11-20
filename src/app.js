@@ -5,7 +5,7 @@ import { LogBox, TextInput, StatusBar, Dimensions, AppState } from 'react-native
 import { setCustomText } from 'react-native-global-props';
 import 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message'
-import ImmersiveMode from 'react-native-immersive-mode';
+// import ImmersiveMode from 'react-native-immersive-mode';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PrinterProvider } from './services/PrinterService';
 import printingService from './services/PrintingService';
