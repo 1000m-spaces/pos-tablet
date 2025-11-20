@@ -140,6 +140,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         setWidthArr(Array(numColumns).fill(columnWidth));
     }, [])
 
+    // Load printed labels on mount for initial render state
     useEffect(() => {
         const loadPrintedLabels = async () => {
             const labels = await AsyncStorage.getPrintedLabels();
@@ -473,11 +474,9 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     order: order,
                     priority: 'high'
                 });
-
                 // Update print status
                 await AsyncStorage.setPrintedLabels(order.displayID);
                 setPrintedLabelsState(prev => [...prev, order.displayID]);
-
                 Toast.show({
                     type: 'success',
                     text1: `Đã tự động xếp hàng in tem cho đơn ${order.displayID}`
@@ -495,20 +494,22 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     // Monitor orders for new unprinted items
     useEffect(() => {
         const checkAndPrintNewOrders = async () => {
-            const labels = await AsyncStorage.getPrintedLabels();
+            // Early return checks before any async operations
             if (isAutoPrinting || !orders.length) return;
+            if (orderType != 1) return;
 
-            if (orderType != 1) {
-                return;
-            }
             // Check if auto-print is enabled in printer settings
             const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
             if (!labelPrinterInfo?.autoPrint) return;
 
             setIsAutoPrinting(true);
             try {
+                // Get fresh printed labels from AsyncStorage (date-aware, returns today's labels only)
+                const currentPrintedLabels = await AsyncStorage.getPrintedLabels();
+
                 for (const order of orders) {
-                    if (order && !labels.includes(order.displayID)) {
+                    // Check against fresh data from AsyncStorage
+                    if (order && !currentPrintedLabels.includes(order.displayID)) {
                         console.log("Auto print order:", order.displayID);
                         await autoPrintOrder(order);
                         // Add a small delay between prints
