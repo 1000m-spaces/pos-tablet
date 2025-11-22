@@ -8,18 +8,65 @@ function* getMenuSaga({ payload }) {
     const result = yield call(ProductController.getProductMenu, payload);
     console.log('result::', result)
     if (result.success) {
+      // Cache the menu data on successful API call
+      yield call(asyncStorage.setCachedMenu, result.categories);
+
       yield put({
         type: NEOCAFE.GET_MENU_SUCCESS,
         payload: result.categories,
       });
+    } else {
+      // API call failed, try to get cached data
+      console.log('API call failed, attempting to retrieve cached menu data');
+      const cachedMenu = yield call(asyncStorage.getCachedMenu);
+
+      if (cachedMenu) {
+        console.log('Using cached menu data for offline mode');
+        yield put({
+          type: NEOCAFE.GET_MENU_SUCCESS,
+          payload: cachedMenu,
+        });
+      } else {
+        console.log('No cached menu data available');
+        yield put({
+          type: NEOCAFE.GET_MENU_ERROR,
+          payload: {
+            errorMsg: 'No internet connection and no cached data available',
+          },
+        });
+      }
     }
   } catch (error) {
-    yield put({
-      type: NEOCAFE.GET_MENU_ERROR,
-      payload: {
-        errorMsg: error,
-      },
-    });
+    console.log('Menu API error, attempting to retrieve cached data:', error);
+
+    // Try to get cached data on network error
+    try {
+      const cachedMenu = yield call(asyncStorage.getCachedMenu);
+
+      if (cachedMenu) {
+        console.log('Using cached menu data due to network error');
+        yield put({
+          type: NEOCAFE.GET_MENU_SUCCESS,
+          payload: cachedMenu,
+        });
+      } else {
+        console.log('No cached menu data available for offline use');
+        yield put({
+          type: NEOCAFE.GET_MENU_ERROR,
+          payload: {
+            errorMsg: 'Network error and no cached data available',
+          },
+        });
+      }
+    } catch (cacheError) {
+      console.error('Error accessing cached menu data:', cacheError);
+      yield put({
+        type: NEOCAFE.GET_MENU_ERROR,
+        payload: {
+          errorMsg: error,
+        },
+      });
+    }
   }
 }
 function* setProductSaga({ payload }) {

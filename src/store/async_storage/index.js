@@ -559,6 +559,115 @@ const getFailedPrintTasks = async () => {
   return [];
 };
 
+// Offline Cache Management for Static Data
+const setCachedMenu = async (menuData) => {
+  try {
+    const cacheData = {
+      data: menuData,
+      timestamp: new Date().toISOString(),
+    };
+    await AsyncStorage.setItem('cachedMenu', JSON.stringify(cacheData));
+    console.log('Menu data cached successfully');
+  } catch (error) {
+    console.error('Error caching menu data:', error);
+  }
+};
+
+const getCachedMenu = async () => {
+  try {
+    const value = await AsyncStorage.getItem('cachedMenu');
+    if (value !== null) {
+      const cacheData = JSON.parse(value);
+      console.log('Retrieved cached menu data from:', cacheData.timestamp);
+      return cacheData.data;
+    }
+  } catch (error) {
+    console.error('Error getting cached menu data:', error);
+  }
+  return null;
+};
+
+const setCachedShopTables = async (tablesData) => {
+  try {
+    const cacheData = {
+      data: tablesData,
+      timestamp: new Date().toISOString(),
+    };
+    await AsyncStorage.setItem('cachedShopTables', JSON.stringify(cacheData));
+    console.log('Shop tables data cached successfully');
+  } catch (error) {
+    console.error('Error caching shop tables data:', error);
+  }
+};
+
+const getCachedShopTables = async () => {
+  try {
+    const value = await AsyncStorage.getItem('cachedShopTables');
+    if (value !== null) {
+      const cacheData = JSON.parse(value);
+      console.log('Retrieved cached shop tables data from:', cacheData.timestamp);
+      return cacheData.data;
+    }
+  } catch (error) {
+    console.error('Error getting cached shop tables data:', error);
+  }
+  return null;
+};
+
+const setCachedPaymentChannels = async (paymentData) => {
+  try {
+    const cacheData = {
+      data: paymentData,
+      timestamp: new Date().toISOString(),
+    };
+    await AsyncStorage.setItem('cachedPaymentChannels', JSON.stringify(cacheData));
+    console.log('Payment channels data cached successfully');
+  } catch (error) {
+    console.error('Error caching payment channels data:', error);
+  }
+};
+
+const getCachedPaymentChannels = async () => {
+  try {
+    const value = await AsyncStorage.getItem('cachedPaymentChannels');
+    if (value !== null) {
+      const cacheData = JSON.parse(value);
+      console.log('Retrieved cached payment channels data from:', cacheData.timestamp);
+      return cacheData.data;
+    }
+  } catch (error) {
+    console.error('Error getting cached payment channels data:', error);
+  }
+  return null;
+};
+
+const setCachedOrderChannels = async (orderChannelsData) => {
+  try {
+    const cacheData = {
+      data: orderChannelsData,
+      timestamp: new Date().toISOString(),
+    };
+    await AsyncStorage.setItem('cachedOrderChannels', JSON.stringify(cacheData));
+    console.log('Order channels data cached successfully');
+  } catch (error) {
+    console.error('Error caching order channels data:', error);
+  }
+};
+
+const getCachedOrderChannels = async () => {
+  try {
+    const value = await AsyncStorage.getItem('cachedOrderChannels');
+    if (value !== null) {
+      const cacheData = JSON.parse(value);
+      console.log('Retrieved cached order channels data from:', cacheData.timestamp);
+      return cacheData.data;
+    }
+  } catch (error) {
+    console.error('Error getting cached order channels data:', error);
+  }
+  return null;
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -599,4 +708,13 @@ export default {
   getPrintRecords,
   setFailedPrintTasks,
   getFailedPrintTasks,
+  // Offline cache functions
+  setCachedMenu,
+  getCachedMenu,
+  setCachedShopTables,
+  getCachedShopTables,
+  setCachedPaymentChannels,
+  getCachedPaymentChannels,
+  setCachedOrderChannels,
+  getCachedOrderChannels,
 };

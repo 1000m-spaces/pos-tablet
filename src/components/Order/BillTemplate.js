@@ -11,7 +11,7 @@ const BillTemplate = ({ selectedOrder }) => {
     const paymentChannels = useSelector(state => getPaymentChannelsSelector(state));
     const orderChannels = useSelector(state => getOrderChannelsSelector(state));
     const [restId, setRestId] = useState(null);
-    
+
     // Fetch WiFi info using React Query
     const { data: wifiInfo } = useWifiInfo(restId);
     const [fontSizes, setFontSizes] = useState({
@@ -70,11 +70,11 @@ const BillTemplate = ({ selectedOrder }) => {
                     // Update shopInfo with user's shop data - following same pattern as Orders.js
                     const shopData = await AsyncStorage.getShopInfo?.() || {};
                     setShopInfo({
-                        name: user.shops.name_vn || shopData.name || 'NEOCAFE',
+                        name: user.shops.name_vn || shopData.name,
                         address: user.shops.addr || shopData.address || '',
                         phone: user.shops.mobile || shopData.phone || '',
-                        wifi_name: wifiInfo?.wifi_name || shopData.wifi_name || 'NEOCAFE_WIFI',
-                        wifi_pass: wifiInfo?.wifi_password || shopData.wifi_pass || '12345678',
+                        wifi_name: wifiInfo?.wifi_name || shopData.wifi_name,
+                        wifi_pass: wifiInfo?.wifi_password || shopData.wifi_pass,
                         id: user.shops.id || user.shopid || ''
                     });
                     console.log('BillTemplate: User shop loaded:', user.shops);
@@ -90,22 +90,22 @@ const BillTemplate = ({ selectedOrder }) => {
                     // Fallback if no user shop data
                     const shopData = await AsyncStorage.getShopInfo?.() || {};
                     setShopInfo({
-                        name: shopData.name || 'NEOCAFE',
+                        name: shopData.name,
                         address: shopData.address || '',
                         phone: shopData.phone || '',
-                        wifi_name: wifiInfo?.wifi_name || shopData.wifi_name || 'NEOCAFE_WIFI',
-                        wifi_pass: wifiInfo?.wifi_password || shopData.wifi_pass || '12345678',
+                        wifi_name: wifiInfo?.wifi_name || shopData.wifi_name,
+                        wifi_pass: wifiInfo?.wifi_password || shopData.wifi_pass,
                         id: shopData.id || ''
                     });
                 }
             } catch (error) {
                 console.error('Error loading user/shop info:', error);
                 setShopInfo({
-                    name: 'NEOCAFE',
+                    name: '',
                     address: '',
                     phone: '',
-                    wifi_name: wifiInfo?.wifi_name || 'NEOCAFE_WIFI',
-                    wifi_pass: wifiInfo?.wifi_password || '12345678',
+                    wifi_name: wifiInfo?.wifi_name,
+                    wifi_pass: wifiInfo?.wifi_password,
                     id: ''
                 });
             }
@@ -209,7 +209,7 @@ const BillTemplate = ({ selectedOrder }) => {
             if (order.chanel_type_id === "2" || order.chanel_type_id === 2) {
                 return "Mang đi";
             }
-            
+
             // Fallback to orderChannels lookup for other types
             var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id);
             if (orderType) {
