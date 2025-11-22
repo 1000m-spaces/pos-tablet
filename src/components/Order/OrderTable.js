@@ -508,6 +508,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     useEffect(() => {
         const checkAndPrintNewOrders = async () => {
             // Synchronous lock check - prevents race conditions
+            console.log("checkAndPrintNewOrders");
+
             if (autoPrintLockRef.current) {
                 console.log("Auto-print already running, skipping this execution");
                 return;

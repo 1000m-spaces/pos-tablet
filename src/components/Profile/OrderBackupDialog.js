@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Modal,
@@ -35,7 +35,7 @@ const OrderBackupDialog = ({ visible, onClose }) => {
             // Reset sync status when opening dialog
             dispatch(resetSyncOrdersAction());
         }
-    }, [visible]);
+    }, [visible, loadBackupOrders, dispatch]);
 
     useEffect(() => {
         if (syncStatus?.isSuccess) {
@@ -47,6 +47,8 @@ const OrderBackupDialog = ({ visible, onClose }) => {
             });
             setSelectedOrders([]);
             loadBackupOrders();
+            // Reset sync status after handling to prevent re-trigger
+            dispatch(resetSyncOrdersAction());
         } else if (syncStatus?.isError) {
             Toast.show({
                 type: 'error',
@@ -54,17 +56,70 @@ const OrderBackupDialog = ({ visible, onClose }) => {
                 text2: 'Vui lòng thử lại sau',
                 position: 'top',
             });
+            // Reset sync status after handling
+            dispatch(resetSyncOrdersAction());
         }
-    }, [syncStatus]);
+    }, [syncStatus, selectedOrders.length, loadBackupOrders, dispatch]);
 
-    const loadBackupOrders = async () => {
+    const normalizeToISO = useCallback((dateString) => {
+        if (!dateString) return new Date().toISOString();
+        // dateString format "YYYY-MM-DD HH:mm:ss"
+        const [datePart, timePart] = dateString.split(" ");
+        if (!datePart || !timePart) return new Date().toISOString();
+        return `${datePart}T${timePart}+07:00`; // Vietnam timezone
+    }, []);
+
+    const loadBackupOrders = useCallback(async () => {
         try {
             setIsLoading(true);
             const orders = await AsyncStorage.getBackupOrders();
             const meta = await AsyncStorage.getBackupOrdersMetadata();
             console.log('Loaded backup orders:', orders.length, 'orders');
             console.log('Backup metadata:', meta);
-            setBackupOrders(orders);
+
+            if (orders.length > 0) {
+                console.log('Sample raw backup order:', orders[0]);
+                console.log('Raw backup order keys:', Object.keys(orders[0]));
+                console.log('Amount fields check:', {
+                    totalAmount: orders[0].totalAmount,
+                    total_amount: orders[0].total_amount,
+                    price_paid: orders[0].price_paid,
+                    total: orders[0].total,
+                    subPrice: orders[0].subPrice,
+                    orderValue: orders[0].orderValue,
+                    amount: orders[0].amount,
+                });
+            }
+
+            // Enhance orders with proper field mapping (same as Invoice.js)
+            const enhancedOrders = orders.map(order => ({
+                ...order,
+                syncStatus: order.syncStatus || 'pending',
+                orderStatus: order.orderStatus || 'Paymented',
+                created_at: order.created_at || (order.ordertime && normalizeToISO(order.ordertime)) || new Date().toISOString(),
+                updated_at: order.updated_at || order.created_at || new Date().toISOString(),
+                // Map different field name variations to consistent names
+                session: order.session,
+                displayID: order.displayID || order.session,
+                totalAmount: order.totalAmount || order.total_amount || order.price_paid || order.total || order.subPrice || order.orderValue || order.amount || 0,
+                products: order.products || [],
+                customerName: order.customerName || order.customer_name || order.guest_name || '',
+                shoptablename: order.shoptablename || order.shopTableName || 'N/A',
+                tableId: order.tableId || null,
+            }));
+
+            if (enhancedOrders.length > 0) {
+                console.log('Sample enhanced backup order:', {
+                    displayID: enhancedOrders[0].displayID,
+                    totalAmount: enhancedOrders[0].totalAmount,
+                    products: enhancedOrders[0].products?.length,
+                    customerName: enhancedOrders[0].customerName,
+                    created_at: enhancedOrders[0].created_at,
+                    shoptablename: enhancedOrders[0].shoptablename,
+                });
+            }
+
+            setBackupOrders(enhancedOrders);
             setMetadata(meta);
         } catch (error) {
             console.error('Error loading backup orders:', error);
@@ -77,7 +132,7 @@ const OrderBackupDialog = ({ visible, onClose }) => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [normalizeToISO]);
 
     const handleManualBackup = async () => {
         try {
@@ -378,12 +433,18 @@ const OrderBackupDialog = ({ visible, onClose }) => {
 
                                         <View style={styles.orderInfo}>
                                             <TextNormal style={styles.orderInfoText}>
-                                                {order.products?.length || 0} món • {formatCurrency(order.totalAmount || order.total || 0)}
+                                                {order.products?.length || 0} món • {formatCurrency(order.totalAmount || 0)}
                                             </TextNormal>
                                             <TextNormal style={styles.orderInfoText}>
-                                                {formatDate(order.created_at || order.updated_at)}
+                                                {formatDate(order.created_at)}
                                             </TextNormal>
                                         </View>
+
+                                        {order.shoptablename && order.shoptablename !== 'N/A' && (
+                                            <TextNormal style={styles.tableInfo}>
+                                                Bàn: {order.shoptablename}
+                                            </TextNormal>
+                                        )}
 
                                         {order.customerName && (
                                             <TextNormal style={styles.customerName}>
