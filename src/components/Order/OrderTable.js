@@ -149,6 +149,21 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         loadPrintedLabels();
     }, []);
 
+    // Listen for print queue task completion to update UI in real-time
+    useEffect(() => {
+        const handlePrintQueueEvent = async (event, data) => {
+            if (event === 'taskCompleted' && data?.queueType === 'label') {
+                // Reload printed labels from storage when a label task completes
+                const labels = await AsyncStorage.getPrintedLabels();
+                setPrintedLabelsState(labels);
+                console.log('OrderTable: Updated printed labels after task completion');
+            }
+        };
+
+        const unsubscribe = printQueueService.addListener(handlePrintQueueEvent);
+        return () => unsubscribe();
+    }, []);
+
     // Sync ref with prop (lifted state from AppOrders)
     useEffect(() => {
         confirmedOrderIdRef.current = confirmedOrderId;
@@ -338,13 +353,10 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 const labelTaskIds = await global.queueMultipleLabels(targetOrder, labelPrinterInfo);
                 console.log(`Queued ${labelTaskIds.length} label tasks:`, labelTaskIds);
 
-                // Update print status
-                await AsyncStorage.setPrintedLabels(targetOrder.displayID);
-                setPrintedLabelsState(prev => [...prev, targetOrder.displayID]);
-
                 Toast.show({
                     type: 'success',
-                    text1: `Đã xếp hàng in ${labelTaskIds.length} tem`
+                    text1: `Đã xếp hàng in ${labelTaskIds.length} tem`,
+                    text2: 'Tem sẽ được in tự động'
                 });
             } else {
                 // Fallback to single label task
@@ -354,13 +366,10 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     priority: 'high'
                 });
 
-                // Update print status
-                await AsyncStorage.setPrintedLabels(targetOrder.displayID);
-                setPrintedLabelsState(prev => [...prev, targetOrder.displayID]);
-
                 Toast.show({
                     type: 'success',
-                    text1: 'Đã xếp hàng in tem'
+                    text1: 'Đã xếp hàng in tem',
+                    text2: 'Tem sẽ được in tự động'
                 });
                 console.log('Label print task queued with ID:', taskId);
             }
@@ -460,12 +469,10 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             // Use global.queueMultipleLabels for multiple products if available
             if (global.queueMultipleLabels && order.itemInfo?.items && order.itemInfo.items.length > 0) {
                 const labelTaskIds = await global.queueMultipleLabels(order, labelPrinterInfo);
-                // Update print status
-                await AsyncStorage.setPrintedLabels(order.displayID);
-                setPrintedLabelsState(prev => [...prev, order.displayID]);
                 Toast.show({
                     type: 'success',
-                    text1: `Đã tự động xếp hàng in ${labelTaskIds.length} tem cho đơn ${order.displayID}`
+                    text1: `Đã tự động xếp hàng in ${labelTaskIds.length} tem cho đơn ${order.displayID}`,
+                    text2: 'Tem sẽ được in tự động'
                 });
             } else {
                 // Fallback to single label task
@@ -474,9 +481,6 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     order: order,
                     priority: 'high'
                 });
-                // Update print status
-                await AsyncStorage.setPrintedLabels(order.displayID);
-                setPrintedLabelsState(prev => [...prev, order.displayID]);
                 Toast.show({
                     type: 'success',
                     text1: `Đã tự động xếp hàng in tem cho đơn ${order.displayID}`
@@ -508,23 +512,40 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 const currentPrintedLabels = await AsyncStorage.getPrintedLabels();
 
                 for (const order of orders) {
-                    // Check against fresh data from AsyncStorage
-                    if (order && !currentPrintedLabels.includes(order.displayID)) {
-                        console.log("Auto print order:", order.displayID);
+                    if (!order || !order.displayID) continue;
+                    const orderIdentifier = order.displayID;
+                    // Multiple checks to prevent duplicate printing:
+                    // 1. Check if already printed (from AsyncStorage)
+                    const isAlreadyPrinted = currentPrintedLabels.includes(orderIdentifier);
+                    // 2. Check if already in print queue (any queue type)
+                    const isInQueue = printQueueService.isOrderInAnyQueue(orderIdentifier);
+                    // 3. Check against current component state for additional safety
+                    const isInLocalState = printedLabels.includes(orderIdentifier);
+                    if (!isAlreadyPrinted && !isInQueue && !isInLocalState) {
+                        console.log("Auto print order:", orderIdentifier, {
+                            printed: isAlreadyPrinted,
+                            inQueue: isInQueue,
+                            inLocalState: isInLocalState
+                        });
                         await autoPrintOrder(order);
-                        // Add a small delay between prints
+                        // Add a small delay between prints to prevent overwhelming the queue
                         await new Promise(resolve => setTimeout(resolve, 1000));
+                    } else {
+                        console.log("Skipping auto print for order:", orderIdentifier, {
+                            alreadyPrinted: isAlreadyPrinted,
+                            inQueue: isInQueue,
+                            inLocalState: isInLocalState
+                        });
                     }
                 }
             } finally {
                 setIsAutoPrinting(false);
             }
         };
-
         if (isFoodApp) {
             checkAndPrintNewOrders();
         }
-    }, [orders, orderType]);
+    }, [orders, orderType, printedLabels]); // Added printedLabels to dependencies
 
     // confirm order - require table selection first
     const handleConfirmOrder = (orderId) => {

@@ -74,6 +74,20 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
         loadPrintedLabels();
     }, []);
 
+    useEffect(() => {
+        const handlePrintQueueEvent = async (event, data) => {
+            if (event === 'taskCompleted' && data?.queueType === 'label') {
+                // Reload printed labels from storage when a label task completes
+                const labels = await AsyncStorage.getPrintedLabels();
+                setPrintedLabelsState(labels);
+                console.log('OfflineOrderTable: Updated printed labels after task completion');
+            }
+        };
+
+        const unsubscribe = printQueueService.addListener(handlePrintQueueEvent);
+        return () => unsubscribe();
+    }, []);
+
     const getSyncStatusColor = (status) => {
         switch (status) {
             case "pending": return "#FF9800";      // Orange
@@ -236,12 +250,6 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
             // Use queueMultipleLabels for orders with multiple products/quantities
             taskIds = await global.queueMultipleLabels(orderToUse, labelPrinterInfo);
             console.log(`Queued ${taskIds.length} label tasks:`, taskIds);
-
-
-            // Update print status
-            const orderIdentifier = getOrderIdentifierForPrinting(orderToUse, true); // true for offline orders
-            await AsyncStorage.setPrintedLabels(orderIdentifier);
-            setPrintedLabelsState(prev => [...prev, orderIdentifier]);
 
             Toast.show({
                 type: 'success',

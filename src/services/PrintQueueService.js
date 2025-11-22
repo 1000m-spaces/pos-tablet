@@ -424,6 +424,20 @@ class PrintQueueService {
         });
     }
 
+    // Check if an order is already in the queue (by order identifier)
+    isOrderInQueue(orderIdentifier, queueType = 'label') {
+        const queue = queueType === 'label' ? this.labelQueue : this.billQueue;
+        return queue.some(task => {
+            const taskOrderId = task.order?.displayID || task.order?.session || task.order?.offlineOrderId;
+            return taskOrderId === orderIdentifier;
+        });
+    }
+
+    // Check if an order is in any queue (label or bill)
+    isOrderInAnyQueue(orderIdentifier) {
+        return this.isOrderInQueue(orderIdentifier, 'label') || this.isOrderInQueue(orderIdentifier, 'bill');
+    }
+
     // Get queue status for both queues
     getQueueStatus() {
         const labelTasks = this.labelQueue.map(task => ({
