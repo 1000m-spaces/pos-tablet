@@ -119,7 +119,14 @@ const OrderBackupDialog = ({ visible, onClose }) => {
                 });
             }
 
-            setBackupOrders(enhancedOrders);
+            // Sort orders by created_at in descending order (newest first)
+            const sortedOrders = enhancedOrders.sort((a, b) => {
+                const dateA = new Date(a.created_at);
+                const dateB = new Date(b.created_at);
+                return dateB - dateA; // Descending order
+            });
+
+            setBackupOrders(sortedOrders);
             setMetadata(meta);
         } catch (error) {
             console.error('Error loading backup orders:', error);
