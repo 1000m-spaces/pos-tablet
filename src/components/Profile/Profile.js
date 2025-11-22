@@ -18,6 +18,7 @@ import {
 } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
 import Colors from 'theme/Colors';
+import OrderBackupDialog from './OrderBackupDialog';
 import styles from './styles';
 
 const Profile = ({ navigation }) => {
@@ -33,6 +34,11 @@ const Profile = ({ navigation }) => {
         lastOrderTime: null,
     });
     const [isLoading, setIsLoading] = useState(true);
+
+    // Hidden admin feature: Tap profile icon 5 times to show backup dialog
+    const [tapCount, setTapCount] = useState(0);
+    const [tapTimeout, setTapTimeout] = useState(null);
+    const [showBackupDialog, setShowBackupDialog] = useState(false);
 
     // Load user info and order statistics
     useEffect(() => {
@@ -140,14 +146,41 @@ const Profile = ({ navigation }) => {
         );
     };
 
+    const handleProfileIconTap = () => {
+        // Clear existing timeout
+        if (tapTimeout) {
+            clearTimeout(tapTimeout);
+        }
+
+        const newTapCount = tapCount + 1;
+        setTapCount(newTapCount);
+
+        // Show backup dialog after 5 taps
+        if (newTapCount >= 5) {
+            setShowBackupDialog(true);
+            setTapCount(0);
+            return;
+        }
+
+        // Reset tap count after 2 seconds of inactivity
+        const timeout = setTimeout(() => {
+            setTapCount(0);
+        }, 2000);
+        setTapTimeout(timeout);
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView style={styles.scrollView}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <View style={styles.profileIconContainer}>
+                    <TouchableOpacity
+                        style={styles.profileIconContainer}
+                        onPress={handleProfileIconTap}
+                        activeOpacity={0.8}
+                    >
                         <Svg name={'account_pos'} size={80} color={Colors.primary} />
-                    </View>
+                    </TouchableOpacity>
                     <TextSemiBold style={styles.username}>
                         {user?.username || 'Người dùng'}
                     </TextSemiBold>
@@ -334,6 +367,12 @@ const Profile = ({ navigation }) => {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+
+            {/* Hidden Admin Dialog - Order Backup */}
+            <OrderBackupDialog
+                visible={showBackupDialog}
+                onClose={() => setShowBackupDialog(false)}
+            />
         </SafeAreaView>
     );
 };

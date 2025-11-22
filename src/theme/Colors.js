@@ -25,6 +25,12 @@ const Colors = {
   borderColor: '#E0E0E0',
   textPrimary: '#212121',
   textSecondary: '#757575',
+  white: '#FFFFFF',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  border: '#E0E0E0',
+  backgroundSecondary: '#F5F5F5',
+  primaryLight: '#FFE8E3',
 };
 
 export default Colors;

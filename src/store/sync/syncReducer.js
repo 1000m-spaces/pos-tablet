@@ -16,6 +16,7 @@ const syncReducer = (state = initialState, action) => {
                 ...state,
                 loading: true,
                 error: null,
+                syncResult: null,
             };
         case NEOCAFE.SYNC_ORDERS_SUCCESS:
             return {
@@ -28,6 +29,7 @@ const syncReducer = (state = initialState, action) => {
             return {
                 ...state,
                 loading: false,
+                syncResult: null,
                 error: action.payload.message || 'Failed to sync orders',
             };
         case NEOCAFE.SYNC_ORDERS_RESET:

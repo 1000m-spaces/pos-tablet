@@ -31,6 +31,12 @@ function* syncPendingOrdersSaga() {
         const pendingOrders = yield call(AsyncStorageService.getPendingOrders);
         console.log('Pending orders to sync:', pendingOrders);
 
+        // Backup all pending orders before syncing (hidden from users, for emergency recovery)
+        if (pendingOrders.length > 0) {
+            yield call(AsyncStorageService.setBackupOrders, pendingOrders);
+            console.log(`Backed up ${pendingOrders.length} orders before sync attempt`);
+        }
+
         // Filter out already synced orders and limit retry attempts
         const ordersToSync = pendingOrders.filter(order => {
             const shouldRetry = (!order.syncStatus || order.syncStatus === 'pending') &&

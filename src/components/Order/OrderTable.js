@@ -111,7 +111,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const [currenData, setCurrentData] = useState([]);
     const [count, setCount] = useState(1);
     const confirmedOrderIdRef = useRef(null); // Use ref to store order ID immediately
-    const autoPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print execution
+    const autoPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print execution for new orders
+    const confirmPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print after confirmation
     const [showTableSelector, setShowTableSelector] = useState(false);
     const [orderToConfirm, setOrderToConfirm] = useState(null);
     // orderTableMapRef is now passed as prop from parent to persist across unmounts
@@ -183,6 +184,12 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             }
 
             if (confirmOrderStatus === Status.SUCCESS) {
+                // Synchronous lock check - prevents race conditions
+                if (confirmPrintLockRef.current) {
+                    console.log('Confirm auto-print already running, skipping this execution');
+                    return;
+                }
+
                 // Find the confirmed order
                 const confirmedOrder = orders.find(order => order.displayID === orderId);
                 if (!confirmedOrder) {
@@ -198,11 +205,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     return;
                 }
 
-                if (isAutoPrinting) {
-                    console.log('Already printing, skipping...');
-                    return;
-                }
-
+                // Acquire synchronous lock BEFORE setting async state
+                confirmPrintLockRef.current = true;
                 setIsAutoPrinting(true);
                 console.log('Starting auto-print for order:', orderId);
 
@@ -242,6 +246,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 } catch (error) {
                     console.error('Auto-print error:', error);
                 } finally {
+                    // Release lock in finally block to ensure it's always released
+                    confirmPrintLockRef.current = false;
                     setIsAutoPrinting(false);
                     confirmedOrderIdRef.current = null;
                     setConfirmedOrderId(null);
@@ -260,6 +266,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     text1: 'Xác nhận đơn hàng thất bại',
                     position: 'bottom',
                 });
+                // Release lock on error
+                confirmPrintLockRef.current = false;
                 confirmedOrderIdRef.current = null;
                 setConfirmedOrderId(null);
                 // Clean up table info from map on error

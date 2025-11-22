@@ -668,6 +668,86 @@ const getCachedOrderChannels = async () => {
   return null;
 };
 
+// Order Backup Management (Hidden from users, for emergency recovery)
+const setBackupOrders = async (orders) => {
+  try {
+    const backupData = {
+      orders: orders,
+      timestamp: new Date().toISOString(),
+      count: orders.length,
+    };
+    await AsyncStorage.setItem('backupOrders', JSON.stringify(backupData));
+    console.log(`Backed up ${orders.length} orders at ${backupData.timestamp}`);
+  } catch (error) {
+    console.error('Error setting backup orders:', error);
+  }
+};
+
+const getBackupOrders = async () => {
+  try {
+    const value = await AsyncStorage.getItem('backupOrders');
+    if (value !== null) {
+      const backupData = JSON.parse(value);
+      console.log(`Retrieved ${backupData.count} backup orders from ${backupData.timestamp}`);
+      return backupData.orders || [];
+    }
+  } catch (error) {
+    console.error('Error getting backup orders:', error);
+  }
+  return [];
+};
+
+const addToBackupOrders = async (order) => {
+  try {
+    const existingBackups = await getBackupOrders();
+    // Check if order already exists in backup (by session ID)
+    const orderExists = existingBackups.some(o => o.session === order.session);
+
+    if (!orderExists) {
+      const updatedBackups = [...existingBackups, {
+        ...order,
+        backup_at: new Date().toISOString(),
+      }];
+      await setBackupOrders(updatedBackups);
+      console.log(`Added order ${order.session} to backup`);
+    } else {
+      console.log(`Order ${order.session} already in backup`);
+    }
+  } catch (error) {
+    console.error('Error adding to backup orders:', error);
+  }
+};
+
+const clearBackupOrders = async () => {
+  try {
+    await AsyncStorage.removeItem('backupOrders');
+    console.log('Cleared all backup orders');
+  } catch (error) {
+    console.error('Error clearing backup orders:', error);
+  }
+};
+
+const getBackupOrdersMetadata = async () => {
+  try {
+    const value = await AsyncStorage.getItem('backupOrders');
+    if (value !== null) {
+      const backupData = JSON.parse(value);
+      return {
+        count: backupData.count || 0,
+        timestamp: backupData.timestamp,
+        lastBackup: backupData.timestamp,
+      };
+    }
+  } catch (error) {
+    console.error('Error getting backup metadata:', error);
+  }
+  return {
+    count: 0,
+    timestamp: null,
+    lastBackup: null,
+  };
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -717,4 +797,10 @@ export default {
   getCachedPaymentChannels,
   setCachedOrderChannels,
   getCachedOrderChannels,
+  // Backup order functions
+  setBackupOrders,
+  getBackupOrders,
+  addToBackupOrders,
+  clearBackupOrders,
+  getBackupOrdersMetadata,
 };
