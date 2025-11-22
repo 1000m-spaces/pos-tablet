@@ -111,6 +111,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const [currenData, setCurrentData] = useState([]);
     const [count, setCount] = useState(1);
     const confirmedOrderIdRef = useRef(null); // Use ref to store order ID immediately
+    const autoPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print execution
     const [showTableSelector, setShowTableSelector] = useState(false);
     const [orderToConfirm, setOrderToConfirm] = useState(null);
     // orderTableMapRef is now passed as prop from parent to persist across unmounts
@@ -498,6 +499,12 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     // Monitor orders for new unprinted items
     useEffect(() => {
         const checkAndPrintNewOrders = async () => {
+            // Synchronous lock check - prevents race conditions
+            if (autoPrintLockRef.current) {
+                console.log("Auto-print already running, skipping this execution");
+                return;
+            }
+
             // Early return checks before any async operations
             if (isAutoPrinting || !orders.length) return;
             if (orderType != 1) return;
@@ -506,7 +513,10 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             const labelPrinterInfo = await AsyncStorage.getLabelPrinterInfo();
             if (!labelPrinterInfo?.autoPrint) return;
 
+            // Acquire synchronous lock BEFORE setting async state
+            autoPrintLockRef.current = true;
             setIsAutoPrinting(true);
+
             try {
                 // Get fresh printed labels from AsyncStorage (date-aware, returns today's labels only)
                 const currentPrintedLabels = await AsyncStorage.getPrintedLabels();
@@ -539,6 +549,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     }
                 }
             } finally {
+                // Release lock in finally block to ensure it's always released
+                autoPrintLockRef.current = false;
                 setIsAutoPrinting(false);
             }
         };

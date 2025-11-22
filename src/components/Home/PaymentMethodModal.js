@@ -30,10 +30,6 @@ const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onS
 
     const renderPaymentMethod = ({ item }) => {
         console.log('Rendering payment method:', item)
-        if (item?.chanel_type_id == '22243' && currentOrder?.orderType != '1') {
-            onSelectPayment(item);
-            onCloseModal();
-        }
         return (
             <TouchableOpacity
                 style={[
