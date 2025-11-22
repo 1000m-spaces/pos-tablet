@@ -12,8 +12,9 @@ const BillTemplate = ({ selectedOrder }) => {
     const orderChannels = useSelector(state => getOrderChannelsSelector(state));
     const [restId, setRestId] = useState(null);
 
-    // Fetch WiFi info using React Query
+    // Fetch WiFi info using React Query - extract only data to prevent infinite loops
     const { data: wifiInfo } = useWifiInfo(restId);
+    console.log('BillTemplate wifiInfo', wifiInfo)
     const [fontSizes, setFontSizes] = useState({
         header: 24,
         content: 16,
@@ -488,13 +489,13 @@ const BillTemplate = ({ selectedOrder }) => {
             <View style={styles.dottedLine} />
 
             {/* WiFi Information */}
-            {shopInfo.wifi_name && shopInfo.wifi_pass && (
+            {wifiInfo?.wifi_name && wifiInfo?.wifi_pass && (
                 <View style={styles.wifiSection}>
                     <Text style={[styles.wifiText, { fontSize: fontSizes.content }]}>
-                        Wifi: {shopInfo.wifi_name}
+                        Wifi: {wifiInfo.wifi_name}
                     </Text>
                     <Text style={[styles.wifiText, { fontSize: fontSizes.content }]}>
-                        Pass: {shopInfo.wifi_pass}
+                        Pass: {wifiInfo.wifi_pass}
                     </Text>
                 </View>
             )}

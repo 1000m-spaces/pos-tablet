@@ -11,7 +11,6 @@ const fetchWifiInfo = async (restid) => {
     if (!restid) {
         throw new Error('Restaurant ID is required');
     }
-
     try {
         const { data } = await HttpClient.post(UrlApi.getWifi, { restid });
         console.log('WiFi info fetched:', data);

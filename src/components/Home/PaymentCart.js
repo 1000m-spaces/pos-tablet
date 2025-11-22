@@ -43,6 +43,7 @@ const PaymentCart = () => {
   const [isOrderDataSaved, setIsOrderDataSaved] = useState(null);
 
   const [modal, setModal] = useState(false);
+  const autoPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print execution
 
   useEffect(() => {
     let numOfProduct = 0;
@@ -351,10 +352,54 @@ const PaymentCart = () => {
 
   // Trigger auto-print functionality
   const triggerAutoPrint = async (orderData) => {
+    // Synchronous lock check - prevents race conditions
+    if (autoPrintLockRef.current) {
+      console.log('Auto-print already running, skipping duplicate execution');
+      return;
+    }
+
+    // Acquire synchronous lock immediately
+    autoPrintLockRef.current = true;
+
     try {
+      // Get order identifier
+      const orderIdentifier = orderData.session || orderData.offlineOrderId || orderData.displayID;
+      if (!orderIdentifier) {
+        console.warn('No order identifier found for auto-print');
+        return;
+      }
+
+      console.log('Triggering auto-print for order:', orderIdentifier);
+
+      // Check if already printed to prevent duplicates
+      const printedLabels = await AsyncStorage.getPrintedLabels();
+      const isAlreadyPrinted = printedLabels.includes(orderIdentifier);
+
+      // Check if already in print queue
+      const isInQueue = printQueueService.isOrderInAnyQueue(orderIdentifier);
+
+      if (isAlreadyPrinted) {
+        console.log('Order already printed, skipping auto-print:', orderIdentifier);
+        return;
+      }
+
+      if (isInQueue) {
+        console.log('Order already in print queue, skipping auto-print:', orderIdentifier);
+        return;
+      }
+
       // Check if auto-print is enabled
       const printerInfo = await AsyncStorage.getLabelPrinterInfo();
-      console.log('Triggering auto-print for order:', orderData.session);
+      if (!printerInfo?.autoPrint) {
+        console.log('Auto-print is disabled in settings');
+        return;
+      }
+
+      console.log('Auto-print checks passed for order:', orderIdentifier, {
+        alreadyPrinted: isAlreadyPrinted,
+        inQueue: isInQueue,
+        autoPrintEnabled: printerInfo?.autoPrint
+      });
 
       // Use the new queueMultipleLabels function to handle multiple products and quantities
       // Queue multiple labels for all products and quantities
@@ -367,7 +412,7 @@ const PaymentCart = () => {
         order: orderData,
         priority: 'high'
       });
-
+      await new Promise(resolve => setTimeout(resolve, 1000));
       console.log('Auto-print: Queued bill task:', billTaskId);
       console.log(`Auto-print completed - ${labelTaskIds.length} labels + 1 bill queued`);
     } catch (error) {
@@ -378,6 +423,10 @@ const PaymentCart = () => {
         text2: 'Không thể tự động in đơn hàng. Vui lòng in thủ công.',
         position: 'top',
       });
+    } finally {
+      // Always release lock in finally block to ensure it's released even on errors
+      autoPrintLockRef.current = false;
+      console.log('Auto-print lock released');
     }
   };
 
