@@ -45,7 +45,7 @@ const PrinterSettingsModal = ({
     const [labelNote, setLabelNote] = useState(14);
 
     // Label printer DPI setting
-    const [labelPrinterDPI, setLabelPrinterDPI] = useState(72);
+    const [labelPrinterDPI, setLabelPrinterDPI] = useState(100);
 
     // Bill printer settings
     const [billIP, setBillIP] = useState("");
@@ -73,7 +73,7 @@ const PrinterSettingsModal = ({
     const [errors, setErrors] = useState({});
     const [isSaving, setIsSaving] = useState(false);
     const [printerType, setPrinterType] = useState(initialPrinterType); // 'label' or 'bill'
-    
+
     // Failed print tasks state
     const [failedTasks, setFailedTasks] = useState([]);
     const [showFailedTasks, setShowFailedTasks] = useState(false);
@@ -102,8 +102,8 @@ const PrinterSettingsModal = ({
                     `Không thể in ${data.queueType === 'label' ? 'tem' : 'bill'} sau ${printQueueService.maxRetries} lần thử.\n\nLỗi: ${data.lastError}\n\nTổng số tác vụ thất bại: ${data.totalFailed}`,
                     [
                         { text: 'Đóng', style: 'cancel' },
-                        { 
-                            text: 'Xem chi tiết', 
+                        {
+                            text: 'Xem chi tiết',
                             onPress: () => {
                                 loadFailedTasks();
                                 setShowFailedTasks(true);
@@ -112,7 +112,7 @@ const PrinterSettingsModal = ({
                     ]
                 );
             }
-            
+
             // Refresh failed tasks list when tasks are retried or cleared
             if (event === 'failedTasksRetried' || event === 'failedTasksCleared' || event === 'failedTaskCleared') {
                 loadFailedTasks();

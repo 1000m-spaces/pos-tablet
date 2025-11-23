@@ -237,8 +237,10 @@ const HiddenViewShotComponents = () => {
       currentItemIndex: labelIndex + 1,
       isPartialPrint: true, // Indicates this is one item from a multi-item order
 
-      // Preserve source marker
+      // Preserve source marker and delivery info
       source: originalOrder.source,
+      is_delivery: originalOrder.is_delivery,
+      address: originalOrder.address || originalOrder.eater?.address?.address || '',
     };
 
     console.log(`RootNav: transformedOrder table field:`, transformedOrder.table);

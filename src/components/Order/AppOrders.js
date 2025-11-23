@@ -88,6 +88,10 @@ const transformAppOrder = (apiOrder) => {
       }
     });
 
+    // Determine order type
+    const isDelivery = apiOrder.is_delivery == '1';
+    const chanelTypeId = isDelivery ? "3" : "2"; // 3 = Delivery, 2 = Takeaway/Pickup (default)
+
     // Transform the order to match expected structure
     return {
       shipping_status: apiOrder.shipping_status || '',
@@ -107,10 +111,15 @@ const transformAppOrder = (apiOrder) => {
         }
       },
       // Add service info 
-      service: apiOrder.is_delivery == '1' ? 'Delivery' : 'Pick up',
+      service: isDelivery ? 'Delivery' : 'Pick up',
       shipping_provider: apiOrder.shipping_provider,
       // Mark as app order
       source: 'app_order',
+      // Add order type for label formatting
+      chanel_type_id: chanelTypeId,
+      is_delivery: apiOrder.is_delivery,
+      // Preserve full address for delivery orders
+      address: apiOrder.address || '',
       // Add timestamps
       createdAt: apiOrder.time_create,
       checkTime: apiOrder.time_check,
