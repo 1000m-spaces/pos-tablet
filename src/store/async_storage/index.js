@@ -517,6 +517,27 @@ const getOfflineOrderCounter = async () => {
   return null;
 };
 
+// Display Order Counter Management (M-XXXX format)
+const setDisplayOrderCounter = async (counterData) => {
+  try {
+    await AsyncStorage.setItem('displayOrderCounter', JSON.stringify(counterData));
+  } catch (error) {
+    console.error('Error setting display order counter:', error);
+  }
+};
+
+const getDisplayOrderCounter = async () => {
+  try {
+    const value = await AsyncStorage.getItem('displayOrderCounter');
+    if (value !== null) {
+      return JSON.parse(value);
+    }
+  } catch (error) {
+    console.error('Error getting display order counter:', error);
+  }
+  return null;
+};
+
 // Print Records Management for Print Queue
 const setPrintRecords = async (printRecords) => {
   try {
@@ -784,6 +805,8 @@ export default {
   getTableStatus,
   setOfflineOrderCounter,
   getOfflineOrderCounter,
+  setDisplayOrderCounter,
+  getDisplayOrderCounter,
   setPrintRecords,
   getPrintRecords,
   setFailedPrintTasks,

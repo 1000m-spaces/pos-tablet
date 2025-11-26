@@ -210,6 +210,12 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             color: '#000',
             textAlign: 'right',
         },
+        addressText: {
+            fontSize: config.fontSize.dateTime,
+            fontWeight: '700',
+            color: '#000',
+            lineHeight: config.fontSize.dateTime + 2,
+        },
     });
 
     // Use decals array if available, otherwise fall back to itemInfo structure
@@ -228,32 +234,82 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
     console.log("TemTemplate using decals?", !!orderPrint?.decals);
     console.log("TemTemplate itemsToRender[0]:", itemsToRender?.[0]);
 
+    // Helper function to get order type prefix for label header
+    const getOrderPrefix = (order) => {
+        // Check if this is a 1000M app order (not FoodApp like GRAB/GoFood)
+        const is1000MAppOrder = order.source === 'app_order' &&
+            (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
+
+        // Check if this is a POS order (offline order)
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-');
+
+        const isDelivery = order.is_delivery == '1' || order.chanel_type_id === "3" || order.chanel_type_id === 3;
+        const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
+        const isTakeaway = order.chanel_type_id === "2" || order.chanel_type_id === 2;
+
+        // Apply suffixes for 1000M app orders AND POS orders
+        if (is1000MAppOrder || isPOSOrder) {
+            const orderPrefix = '#' + (order.displayID || order.bill_id);
+            if (isDelivery) {
+                return orderPrefix + ' D'; // Delivery
+            } else if (isDineIn) {
+                return orderPrefix + ' AO'; // At restaurant/Tại quán
+            } else if (isTakeaway) {
+                return orderPrefix + ' AT'; // Takeaway/Mang đi
+            } else {
+                return orderPrefix; // Default without suffix
+            }
+        } else {
+            // FoodApp orders (GRAB, etc.): keep old format without suffix
+            return '#' + (order.displayID || order.bill_id);
+        }
+    };
+
     const getOrderTypeText = (order) => {
-        // For online orders, prioritize service field
-        const isOnlineOrder = order.source === 'app_order' || order.source === 'online_new';
-        if (isOnlineOrder && order.service) {
-            return order.service;
+        // Check if this is a 1000M app order (not FoodApp like GRAB/GoFood)
+        const is1000MAppOrder = order.source === 'app_order' &&
+            (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
+
+        const isDelivery = order.is_delivery == '1' || order.chanel_type_id === "3" || order.chanel_type_id === 3;
+        const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
+
+        if (is1000MAppOrder) {
+            // 1000M app orders: use new format text
+            if (isDelivery) {
+                return 'Đơn App Delivery';
+            } else if (isDineIn) {
+                return 'Đơn App Pick UP - dùng tại quán';
+            } else {
+                return 'Đơn App Pick UP - take away';
+            }
+        } else {
+            // FoodApp orders and offline orders: keep old format
+            // For online orders, prioritize service field
+            const isOnlineOrder = order.source === 'app_order' || order.source === 'online_new';
+            if (isOnlineOrder && order.service) {
+                return order.service;
+            }
+
+            // For offline orders, map chanel_type_id directly
+            if (order.chanel_type_id) {
+                // Direct mapping based on user selection in Cart/TableSelector
+                if (order.chanel_type_id === "1" || order.chanel_type_id === 1) {
+                    return "Tại quán";
+                }
+                if (order.chanel_type_id === "2" || order.chanel_type_id === 2) {
+                    return "Mang đi";
+                }
+
+                // Fallback to orderChannels lookup for other types
+                var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id);
+                if (orderType) {
+                    return orderType?.name_vn || orderType?.name;
+                }
+            }
+
+            // Final fallback
+            return order.service || 'Mang đi';
         }
-
-        // For offline orders, map chanel_type_id directly
-        if (order.chanel_type_id) {
-            // Direct mapping based on user selection in Cart/TableSelector
-            if (order.chanel_type_id === "1" || order.chanel_type_id === 1) {
-                return "Tại quán";
-            }
-            if (order.chanel_type_id === "2" || order.chanel_type_id === 2) {
-                return "Mang đi";
-            }
-
-            // Fallback to orderChannels lookup for other types
-            var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id);
-            if (orderType) {
-                return orderType?.name_vn || orderType?.name;
-            }
-        }
-
-        // Final fallback
-        return order.service || 'Mang đi';
     };
 
     // Helper function to format price
@@ -272,11 +328,11 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                     {/* Header with order number, table info, and page counter in one line */}
                     <View style={styles.headerLine}>
                         <Text style={styles.orderNumber}>
-                            #{orderPrint.bill_id || orderPrint.displayID}
+                            {getOrderPrefix(orderPrint)}
                         </Text>
                         <View style={styles.spacerFlex} />
                         <Text style={styles.tableInfo}>
-                            /{orderPrint.table || '——'}
+                            - {orderPrint.table || 'Thẻ ——'}
                         </Text>
                         <Text style={styles.pageCounter}>
                             ({item.itemIdx}/{item.totalItems})
@@ -340,8 +396,21 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
                     {/* Bottom section with additional order info, date/time, and price */}
                     <View style={styles.bottomSection}>
+                        {/* Show address for 1000M app delivery orders only */}
+                        {(() => {
+                            const is1000MAppOrder = orderPrint.source === 'app_order' &&
+                                (orderPrint.service === 'Delivery' || orderPrint.service === 'Pick up' || orderPrint.is_delivery !== undefined);
+                            const isDelivery = orderPrint.is_delivery == '1' || orderPrint.chanel_type_id === "3" || orderPrint.chanel_type_id === 3;
+                            return is1000MAppOrder && isDelivery && orderPrint.address && (
+                                <View style={{ marginBottom: config.margin }}>
+                                    <Text style={styles.addressText} numberOfLines={2} ellipsizeMode="tail">
+                                        {orderPrint.address}
+                                    </Text>
+                                </View>
+                            );
+                        })()}
                         <View style={styles.bottomRow}>
-                            {/* Additional order identifier (like GF-248) - always render for consistent layout */}
+                            {/* Additional order identifier - always render for consistent layout */}
                             <Text style={styles.additionalOrderId}>
                                 {getOrderTypeText(orderPrint)}
                             </Text>
