@@ -275,6 +275,48 @@ const PaymentCart = () => {
       const offlineOrderId = await generateOfflineOrderId();
       const session = `POS-${offlineOrderId}`;
 
+      // Generate display order ID in format M-XXXX
+      const generateDisplayOrderId = async () => {
+        const now = new Date();
+        const year = String(now.getFullYear()).slice(-2);
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const currentDateKey = `${year}${month}${day}`;
+
+        try {
+          // Get stored counter data
+          const counterData = await AsyncStorage.getDisplayOrderCounter();
+          let counter = 1; // Start from 1
+
+          if (counterData) {
+            const { lastDate, count } = counterData;
+            // If same date, increment counter; if different date, reset to 1
+            if (lastDate === currentDateKey) {
+              counter = (count || 0) + 1;
+            } else {
+              counter = 1; // Reset for new date
+            }
+          }
+
+          // Store updated counter
+          await AsyncStorage.setDisplayOrderCounter({
+            lastDate: currentDateKey,
+            count: counter
+          });
+
+          // Format as M-XXXX (e.g., M-0001, M-0002, etc.)
+          return `M-${String(counter).padStart(4, '0')}`;
+
+        } catch (error) {
+          console.error('Error generating display order ID:', error);
+          // Fallback to timestamp-based ID if AsyncStorage fails
+          const timestamp = Date.now().toString().slice(-4);
+          return `M-${timestamp}`;
+        }
+      };
+
+      const displayOrderId = await generateDisplayOrderId();
+
       // Create order object
       console.log('Selected payment method for order:', paymentMethod);
       console.log(' User info payment cart:', user);
@@ -297,6 +339,7 @@ const PaymentCart = () => {
         session: session,
         offlineOrderId: session,
         offline_code: session,
+        displayID: displayOrderId, // Display order ID in format M-XXXX for labels and invoice
         shopid: user?.shops?.id || user?.shopid || "246",
         userid: user?.userid || "1752",
         roleid: user?.roleid || "4",
