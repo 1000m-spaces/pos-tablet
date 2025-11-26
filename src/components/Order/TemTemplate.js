@@ -240,21 +240,27 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         const is1000MAppOrder = order.source === 'app_order' &&
             (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
 
+        // Check if this is a POS order (offline order)
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-');
+
         const isDelivery = order.is_delivery == '1' || order.chanel_type_id === "3" || order.chanel_type_id === 3;
         const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
+        const isTakeaway = order.chanel_type_id === "2" || order.chanel_type_id === 2;
 
-        if (is1000MAppOrder) {
-            // 1000M app orders: use new format with # prefix and suffixes
+        // Apply suffixes for 1000M app orders AND POS orders
+        if (is1000MAppOrder || isPOSOrder) {
             const orderPrefix = '#' + (order.displayID || order.bill_id);
             if (isDelivery) {
                 return orderPrefix + ' D'; // Delivery
             } else if (isDineIn) {
-                return orderPrefix + ' AO'; // App Order - Tại quán
+                return orderPrefix + ' AO'; // At restaurant/Tại quán
+            } else if (isTakeaway) {
+                return orderPrefix + ' AT'; // Takeaway/Mang đi
             } else {
-                return orderPrefix + ' AT'; // App Order - Takeaway (default for pickup)
+                return orderPrefix; // Default without suffix
             }
         } else {
-            // FoodApp orders (GRAB, etc.) and offline orders: keep old format
+            // FoodApp orders (GRAB, etc.): keep old format without suffix
             return '#' + (order.displayID || order.bill_id);
         }
     };
