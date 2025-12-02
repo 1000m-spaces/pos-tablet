@@ -118,8 +118,8 @@ android {
         applicationId "com.postablet"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 29
-        versionName "0.0.4"
+        versionCode 40
+        versionName "0.0.5"
         externalNativeBuild {
             cmake {
                 arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
@@ -129,8 +129,13 @@ android {
     
     packagingOptions {
         jniLibs {
-            useLegacyPackaging = false
+            useLegacyPackaging = true
         }
+        // Exclude problematic libraries if needed
+        exclude "lib/x86_64/libprinter_serial_port.so"
+        exclude "lib/arm64-v8a/libprinter_serial_port.so"
+        exclude "lib/x86/libprinter_serial_port.so"
+        exclude "lib/armeabi-v7a/libprinter_serial_port.so"
     }
     signingConfigs {
         debug {

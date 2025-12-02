@@ -133,8 +133,8 @@ const HiddenViewShotComponents = () => {
       timestamp: originalOrder.created_at || originalOrder.createdAt || originalOrder.timestamp || new Date().toISOString(),
 
       // Order notes and metadata
-      note: originalOrder.orderNote || originalOrder.note || originalOrder.eater?.comment || '',
-      orderNote: originalOrder.orderNote || originalOrder.note || originalOrder.eater?.comment || '',
+      note: originalOrder.orderNote || originalOrder.note || '',
+      orderNote: originalOrder.orderNote || originalOrder.note || '',
 
       // Shop and user information
       shopid: originalOrder.shopid || "246",

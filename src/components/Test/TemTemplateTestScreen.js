@@ -335,7 +335,7 @@ const TemTemplateTestScreen = () => {
             session: jsonObj.session || jsonObj.displayID,
             tableName: jsonObj.tableName || jsonObj.shoptablename || (jsonObj.customerInfo?.name),
             createdAt: jsonObj.created_at || jsonObj.timestamp || new Date().toISOString(),
-            orderNote: jsonObj.orderNote || jsonObj.eater?.comment || "",
+            orderNote: jsonObj.orderNote || "",
             staff: "System Staff",
             paymentMethod: "Tiền mặt",
             service: jsonObj.service || jsonObj.serviceType || "POS",

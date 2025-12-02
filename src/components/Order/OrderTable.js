@@ -805,13 +805,17 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         console.log('postCallDriverBack currenData:', dataPayload);
         console.log('postCallDriverBack checksum:', hexString);
         dispatch(callDriverBack(dataPayload, hexString));
-    }
-
+    };
 
     return (
         <>
-            <ScrollView horizontal>
-                <ScrollView style={{ maxHeight: height * 0.6 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                <ScrollView
+                    style={{ flex: 1 }}
+                    showsVerticalScrollIndicator={true}
+                    persistentScrollbar={true}
+                    indicatorStyle="black"
+                >
                     <View style={{ flex: 1, width: tableWidth }}>
                         <Table borderStyle={styles.border}>
                             <Row data={tableHead} widthArr={widthArr} style={styles.head} textStyle={styles.textHead} />
