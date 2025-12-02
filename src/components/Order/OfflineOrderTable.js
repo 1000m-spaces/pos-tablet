@@ -432,7 +432,12 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
                             widthArr={widthArr}
                         />
                     </Table>
-                    <ScrollView style={styles.dataWrapper}>
+                    <ScrollView
+                        style={styles.dataWrapper}
+                        showsVerticalScrollIndicator={true}
+                        persistentScrollbar={true}
+                        indicatorStyle="black"
+                    >
                         <Table borderStyle={{ borderWidth: 1, borderColor: Colors.borderColor }}>
                             {tableData.map((rowData, index) => (
                                 <TouchableOpacity
@@ -505,7 +510,7 @@ const styles = StyleSheet.create({
     },
     dataWrapper: {
         marginTop: -1,
-        maxHeight: height * 0.6,
+        flex: 1,
     },
     row: {
         backgroundColor: '#fff',
