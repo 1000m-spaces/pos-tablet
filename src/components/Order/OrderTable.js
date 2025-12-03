@@ -6,7 +6,6 @@ import brandLogos from 'assets/brand_logos';
 import AsyncStorage from 'store/async_storage/index'
 import Toast from 'react-native-toast-message'
 import OrderDetailDialog from './OrderDetailDialog';
-import TableSelector from '../Home/TableSelector';
 import printQueueService from '../../services/PrintQueueService';
 import { TextNormal } from "common/Text/TextFont";
 import { useDispatch, useSelector } from "react-redux";
@@ -16,7 +15,6 @@ import Status from "common/Status/Status";
 import CryptoJS from 'crypto-js';
 import { PARTNER_ID, SECRET_KEY_TAX } from "assets/config";
 
-const { width, height } = Dimensions.get("window");
 
 const Badge = ({ text, colorText, colorBg, width }) => (
     <View style={[styles.badge, { backgroundColor: colorBg, width: width }]}>
@@ -113,10 +111,6 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const confirmedOrderIdRef = useRef(null); // Use ref to store order ID immediately
     const autoPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print execution for new orders
     const confirmPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print after confirmation
-    const [showTableSelector, setShowTableSelector] = useState(false);
-    const [orderToConfirm, setOrderToConfirm] = useState(null);
-    // orderTableMapRef is now passed as prop from parent to persist across unmounts
-    // Fallback to local ref if not provided (for backward compatibility)
     const localOrderTableMapRef = useRef({});
     const tableMapRef = orderTableMapRef || localOrderTableMapRef;
 
@@ -582,58 +576,17 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             });
             return;
         }
-        // Store order and show table selector
-        setOrderToConfirm(order);
-        setShowTableSelector(true);
-    };
-
-    // Handle table selection for order confirmation
-    const onSelectTable = (table) => {
-        setShowTableSelector(false);
-
-        if (!orderToConfirm) {
-            Toast.show({
-                type: 'error',
-                text1: 'Không có đơn hàng để xác nhận',
-                position: 'bottom',
-            });
-            return;
-        }
-        // Store table info in map keyed by order ID - this persists across re-renders
-        const tableInfo = {
-            shoptableid: table.shoptableid,
-            shoptablename: table.shoptablename
-        };
-
-        // Store with the EXACT order ID from the order object
-        const orderKey = String(orderToConfirm.displayID); // Ensure it's a string
-        tableMapRef.current[orderKey] = tableInfo;
-        // Set ref immediately (synchronous) - survives re-renders
-        confirmedOrderIdRef.current = orderToConfirm.displayID;
-        // Set lifted state if available (from AppOrders)
-        if (setConfirmedOrderId) {
-            setConfirmedOrderId(orderToConfirm.displayID);
-        }
-
+        // Set confirmed order ID before dispatching so autoPrintAfterConfirm can find it
+        setConfirmedOrderId(order.displayID);
         // Dispatch action with table info
         dispatch(confirmOrderOnline({
-            order_id: orderToConfirm.displayID,
-            shopTableid: table.shoptableid,
-            shopTableName: table.shoptablename
+            order_id: order.displayID,
         }));
         Toast.show({
             type: 'info',
-            text1: `Đang xác nhận đơn hàng cho bàn ${table.shoptablename}...`,
+            text1: `Đang xác nhận đơn hàng`,
             position: 'bottom',
         });
-        // Clear order to confirm
-        setOrderToConfirm(null);
-    };
-
-    // Close table selector modal
-    const closeTableSelector = () => {
-        setShowTableSelector(false);
-        setOrderToConfirm(null);
     };
 
     const tableData = orders?.map((order, index) => {
@@ -847,18 +800,6 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 onConfirm={onConfirmOrder ? () => onConfirmOrder(selectedOrder) : undefined}
                 loadingVisible={loadingVisible}
             />
-
-            <TableSelector
-                isVisible={showTableSelector}
-                close={closeTableSelector}
-                currentOrder={{
-                    orderType: "1", // Force table selection requirement
-                    table: "",
-                    tableId: ""
-                }}
-                onSelectTable={onSelectTable}
-            />
-
             <Toast
                 position="top"
                 topOffset={50}
