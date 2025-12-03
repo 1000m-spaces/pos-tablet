@@ -72,7 +72,7 @@ const Main = () => {
               Toast.show({
                 type: 'success',
                 text1: 'In thành công',
-                text2: `Đơn hàng ${data.order?.session || data.order?.offlineOrderId} đã được in`,
+                text2: `Đơn hàng ${data.order?.displayID || data.order?.session || data.order?.offlineOrderId || 'N/A'} đã được in`,
                 position: 'top',
               });
               // Clear status after a delay
