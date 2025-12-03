@@ -96,21 +96,16 @@ const PrinterSettingsModal = ({
     useEffect(() => {
         const unsubscribe = printQueueService.addListener((event, data) => {
             if (event === 'taskFailed' && data?.showDialog) {
-                // Show alert when a task fails after all retries
-                Alert.alert(
-                    'In thất bại',
-                    `Không thể in ${data.queueType === 'label' ? 'tem' : 'bill'} sau ${printQueueService.maxRetries} lần thử.\n\nLỗi: ${data.lastError}\n\nTổng số tác vụ thất bại: ${data.totalFailed}`,
-                    [
-                        { text: 'Đóng', style: 'cancel' },
-                        {
-                            text: 'Xem chi tiết',
-                            onPress: () => {
-                                loadFailedTasks();
-                                setShowFailedTasks(true);
-                            }
-                        }
-                    ]
-                );
+                // Show toast when a task fails after all retries
+                Toast.show({
+                    type: 'error',
+                    text1: 'In thất bại',
+                    text2: `Không thể in ${data.queueType === 'label' ? 'tem' : 'bill'} sau ${printQueueService.maxRetries} lần thử. Lỗi: ${data.lastError}`,
+                    visibilityTime: 4000,
+                    position: 'top',
+                });
+                // Refresh failed tasks list
+                loadFailedTasks();
             }
 
             // Refresh failed tasks list when tasks are retried or cleared

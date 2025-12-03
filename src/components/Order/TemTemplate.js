@@ -247,22 +247,33 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
         const isTakeaway = order.chanel_type_id === "2" || order.chanel_type_id === 2;
 
-        // Apply suffixes for 1000M app orders AND POS orders
-        if (is1000MAppOrder || isPOSOrder) {
-            const orderPrefix = '#' + (order.displayID || order.bill_id);
+        const orderId = order.displayID || order.bill_id;
+
+        // 1. Offline POS orders: M-0012 O or M-0012 T
+        if (isPOSOrder) {
+            if (isDineIn) {
+                return orderId + ' O'; // O = On-site/Tại quán
+            } else if (isTakeaway) {
+                return orderId + ' T'; // T = Take away
+            } else {
+                return orderId; // Default without suffix
+            }
+        }
+
+        // 2. 1000M App orders: #2868215 AO, #2868215 AT, or #280930 D
+        if (is1000MAppOrder) {
+            const orderPrefix = '#' + orderId;
             if (isDelivery) {
                 return orderPrefix + ' D'; // Delivery
             } else if (isDineIn) {
-                return orderPrefix + ' AO'; // At restaurant/Tại quán
-            } else if (isTakeaway) {
-                return orderPrefix + ' AT'; // Takeaway/Mang đi
+                return orderPrefix + ' AO'; // App Order - dùng tại quán
             } else {
-                return orderPrefix; // Default without suffix
+                return orderPrefix + ' AT'; // App Order - take away
             }
-        } else {
-            // FoodApp orders (GRAB, etc.): keep old format without suffix
-            return '#' + (order.displayID || order.bill_id);
         }
+
+        // 3. FoodApp orders (GRAB, GoFood, etc.): just #GF-254 without suffix
+        return '#' + orderId;
     };
 
     const getOrderTypeText = (order) => {
@@ -270,11 +281,26 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         const is1000MAppOrder = order.source === 'app_order' &&
             (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
 
+        // Check if this is a POS order (offline order)
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-');
+
         const isDelivery = order.is_delivery == '1' || order.chanel_type_id === "3" || order.chanel_type_id === 3;
         const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
+        const isTakeaway = order.chanel_type_id === "2" || order.chanel_type_id === 2;
 
+        // 1. Offline POS orders: "Đơn Offline - Dùng tại quán" or "Đơn Offline - Take away"
+        if (isPOSOrder) {
+            if (isDineIn) {
+                return 'Đơn Offline - Dùng tại quán';
+            } else if (isTakeaway) {
+                return 'Đơn Offline - Take away';
+            } else {
+                return 'Đơn Offline';
+            }
+        }
+
+        // 2. 1000M app orders: specific format
         if (is1000MAppOrder) {
-            // 1000M app orders: use new format text
             if (isDelivery) {
                 return 'Đơn App Delivery';
             } else if (isDineIn) {
@@ -282,34 +308,16 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             } else {
                 return 'Đơn App Pick UP - take away';
             }
-        } else {
-            // FoodApp orders and offline orders: keep old format
-            // For online orders, prioritize service field
-            const isOnlineOrder = order.source === 'app_order' || order.source === 'online_new';
-            if (isOnlineOrder && order.service) {
-                return order.service;
-            }
-
-            // For offline orders, map chanel_type_id directly
-            if (order.chanel_type_id) {
-                // Direct mapping based on user selection in Cart/TableSelector
-                if (order.chanel_type_id === "1" || order.chanel_type_id === 1) {
-                    return "Tại quán";
-                }
-                if (order.chanel_type_id === "2" || order.chanel_type_id === 2) {
-                    return "Mang đi";
-                }
-
-                // Fallback to orderChannels lookup for other types
-                var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id);
-                if (orderType) {
-                    return orderType?.name_vn || orderType?.name;
-                }
-            }
-
-            // Final fallback
-            return order.service || 'Mang đi';
         }
+
+        // 3. FoodApp orders (GRAB, GoFood, etc.): use service field
+        const isOnlineOrder = order.source === 'app_order' || order.source === 'online_new';
+        if (isOnlineOrder && order.service) {
+            return order.service;
+        }
+
+        // Final fallback
+        return order.service || 'Mang đi';
     };
 
     // Helper function to format price
