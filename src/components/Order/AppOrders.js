@@ -27,7 +27,7 @@ const appOrderFilters = [
 ];
 
 // Combo product IDs constant
-const COMBO_PRODUCT_IDS = ["8121", "8134", "8172", "8173", "8200", "7737", "8174"];
+const COMBO_PRODUCT_IDS = ["8121", "8134", "8172", "8173", "8200", "7737", "8174", "8175"];
 
 // Function to transform app order response to match expected order structure
 const transformAppOrder = (apiOrder) => {
