@@ -119,13 +119,13 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             color: '#000',
         },
         tableInfo: {
-            fontSize: config.fontSize.tableInfo,
+            fontSize: config.fontSize.orderNumber,
             fontWeight: '900',
             color: '#000',
             marginLeft: 2,
         },
         pageCounter: {
-            fontSize: config.fontSize.pageCounter,
+            fontSize: config.fontSize.orderNumber,
             fontWeight: '900',
             color: '#000',
             marginLeft: 4,
@@ -234,8 +234,23 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
     console.log("TemTemplate using decals?", !!orderPrint?.decals);
     console.log("TemTemplate itemsToRender[0]:", itemsToRender?.[0]);
 
-    // Helper function to get order type prefix for label header
-    const getOrderPrefix = (order) => {
+    // Helper function to get order ID for label header (without suffix)
+    const getOrderId = (order) => {
+        const orderId = order.displayID || order.bill_id;
+
+        // Check if this is a POS order (offline order)
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-');
+
+        if (isPOSOrder) {
+            return orderId;
+        }
+
+        // Online/App orders use # prefix
+        return '#' + orderId;
+    };
+
+    // Helper function to get order type suffix (O, T, D, AO, AT)
+    const getOrderSuffix = (order) => {
         // Check if this is a 1000M app order (not FoodApp like GRAB/GoFood)
         const is1000MAppOrder = order.source === 'app_order' &&
             (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
@@ -247,33 +262,30 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
         const isTakeaway = order.chanel_type_id === "2" || order.chanel_type_id === 2;
 
-        const orderId = order.displayID || order.bill_id;
-
-        // 1. Offline POS orders: M-0012 O or M-0012 T
+        // 1. Offline POS orders: O or T
         if (isPOSOrder) {
             if (isDineIn) {
-                return orderId + ' O'; // O = On-site/Tại quán
+                return 'O'; // O = On-site/Tại quán
             } else if (isTakeaway) {
-                return orderId + ' T'; // T = Take away
-            } else {
-                return orderId; // Default without suffix
+                return 'T'; // T = Take away
             }
+            return ''; // No suffix if not explicitly set
         }
 
-        // 2. 1000M App orders: #2868215 AO, #2868215 AT, or #280930 D
+        // 2. 1000M App orders: D, AO, or AT
         if (is1000MAppOrder) {
-            const orderPrefix = '#' + orderId;
             if (isDelivery) {
-                return orderPrefix + ' D'; // Delivery
+                return 'D'; // Delivery
             } else if (isDineIn) {
-                return orderPrefix + ' AO'; // App Order - dùng tại quán
-            } else {
-                return orderPrefix + ' AT'; // App Order - take away
+                return 'AO'; // App Order - dùng tại quán
+            } else if (isTakeaway) {
+                return 'AT'; // App Order - take away
             }
+            return ''; // No suffix if not explicitly set
         }
 
-        // 3. FoodApp orders (GRAB, GoFood, etc.): just #GF-254 without suffix
-        return '#' + orderId;
+        // 3. FoodApp orders (GRAB, GoFood, etc.): no suffix
+        return '';
     };
 
     const getOrderTypeText = (order) => {
@@ -336,9 +348,12 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                     {/* Header with order number, table info, and page counter in one line */}
                     <View style={styles.headerLine}>
                         <Text style={styles.orderNumber}>
-                            {getOrderPrefix(orderPrint)}
+                            {getOrderId(orderPrint)}
                         </Text>
                         <View style={styles.spacerFlex} />
+                        <Text style={styles.orderNumber}>
+                            {getOrderSuffix(orderPrint)}
+                        </Text>
                         <Text style={styles.tableInfo}>
                             - {orderPrint.table || 'Thẻ ——'}
                         </Text>
