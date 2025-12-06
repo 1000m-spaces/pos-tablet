@@ -6,6 +6,7 @@ import brandLogos from 'assets/brand_logos';
 import AsyncStorage from 'store/async_storage/index'
 import Toast from 'react-native-toast-message'
 import OrderDetailDialog from './OrderDetailDialog';
+import TableSelector from '../Home/TableSelector';
 import printQueueService from '../../services/PrintQueueService';
 import { TextNormal } from "common/Text/TextFont";
 import { useDispatch, useSelector } from "react-redux";
@@ -15,6 +16,7 @@ import Status from "common/Status/Status";
 import CryptoJS from 'crypto-js';
 import { PARTNER_ID, SECRET_KEY_TAX } from "assets/config";
 
+const { width, height } = Dimensions.get("window");
 
 const Badge = ({ text, colorText, colorBg, width }) => (
     <View style={[styles.badge, { backgroundColor: colorBg, width: width }]}>
@@ -111,6 +113,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const confirmedOrderIdRef = useRef(null); // Use ref to store order ID immediately
     const autoPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print execution for new orders
     const confirmPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print after confirmation
+    const autoPrintingOrdersRef = useRef(new Set()); // Track orders currently being auto-printed to prevent duplicates
+    const [showTableSelector, setShowTableSelector] = useState(false);
+    const [orderToConfirm, setOrderToConfirm] = useState(null);
+    // orderTableMapRef is now passed as prop from parent to persist across unmounts
+    // Fallback to local ref if not provided (for backward compatibility)
     const localOrderTableMapRef = useRef({});
     const tableMapRef = orderTableMapRef || localOrderTableMapRef;
 
@@ -152,6 +159,17 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 // Reload printed labels from storage when a label task completes
                 const labels = await AsyncStorage.getPrintedLabels();
                 setPrintedLabelsState(labels);
+
+                // Clean up autoPrintingOrdersRef for completed orders
+                const orderIdentifier = data?.order?.displayID;
+                if (orderIdentifier && autoPrintingOrdersRef.current.has(orderIdentifier)) {
+                    // Check if order is no longer in queue (all labels printed)
+                    const stillInQueue = printQueueService.isOrderInAnyQueue(orderIdentifier);
+                    if (!stillInQueue) {
+                        autoPrintingOrdersRef.current.delete(orderIdentifier);
+                        console.log('OrderTable: Removed order from auto-printing tracking:', orderIdentifier);
+                    }
+                }
                 console.log('OrderTable: Updated printed labels after task completion');
             }
         };
@@ -533,12 +551,17 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     const isAlreadyPrinted = currentPrintedLabels.includes(orderIdentifier);
                     // 2. Check if already in print queue (any queue type)
                     const isInQueue = printQueueService.isOrderInAnyQueue(orderIdentifier);
-                    // 3. Check against current component state for additional safety
+                    // 3. Check if currently being auto-printed (in-progress tracking)
+                    const isCurrentlyAutoPrinting = autoPrintingOrdersRef.current.has(orderIdentifier);
+                    // 4. Check against current component state for additional safety
                     const isInLocalState = printedLabels.includes(orderIdentifier);
-                    if (!isAlreadyPrinted && !isInQueue && !isInLocalState) {
+                    if (!isAlreadyPrinted && !isInQueue && !isCurrentlyAutoPrinting && !isInLocalState) {
+                        // Mark order as currently being auto-printed BEFORE queuing
+                        autoPrintingOrdersRef.current.add(orderIdentifier);
                         console.log("Auto print order:", orderIdentifier, {
                             printed: isAlreadyPrinted,
                             inQueue: isInQueue,
+                            currentlyAutoPrinting: isCurrentlyAutoPrinting,
                             inLocalState: isInLocalState
                         });
                         await autoPrintOrder(order);
@@ -548,6 +571,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                         console.log("Skipping auto print for order:", orderIdentifier, {
                             alreadyPrinted: isAlreadyPrinted,
                             inQueue: isInQueue,
+                            currentlyAutoPrinting: isCurrentlyAutoPrinting,
                             inLocalState: isInLocalState
                         });
                     }
@@ -561,7 +585,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         if (isFoodApp) {
             checkAndPrintNewOrders();
         }
-    }, [orders, orderType, printedLabels]); // Added printedLabels to dependencies
+    }, [orders, orderType]); // Removed printedLabels dependency - causes infinite loop when labels complete
 
     // confirm order - require table selection first
     const handleConfirmOrder = (orderId) => {
@@ -576,17 +600,58 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             });
             return;
         }
-        // Set confirmed order ID before dispatching so autoPrintAfterConfirm can find it
-        setConfirmedOrderId(order.displayID);
+        // Store order and show table selector
+        setOrderToConfirm(order);
+        setShowTableSelector(true);
+    };
+
+    // Handle table selection for order confirmation
+    const onSelectTable = (table) => {
+        setShowTableSelector(false);
+
+        if (!orderToConfirm) {
+            Toast.show({
+                type: 'error',
+                text1: 'Không có đơn hàng để xác nhận',
+                position: 'bottom',
+            });
+            return;
+        }
+        // Store table info in map keyed by order ID - this persists across re-renders
+        const tableInfo = {
+            shoptableid: table.shoptableid,
+            shoptablename: table.shoptablename
+        };
+
+        // Store with the EXACT order ID from the order object
+        const orderKey = String(orderToConfirm.displayID); // Ensure it's a string
+        tableMapRef.current[orderKey] = tableInfo;
+        // Set ref immediately (synchronous) - survives re-renders
+        confirmedOrderIdRef.current = orderToConfirm.displayID;
+        // Set lifted state if available (from AppOrders)
+        if (setConfirmedOrderId) {
+            setConfirmedOrderId(orderToConfirm.displayID);
+        }
+
         // Dispatch action with table info
         dispatch(confirmOrderOnline({
-            order_id: order.displayID,
+            order_id: orderToConfirm.displayID,
+            shopTableid: table.shoptableid,
+            shopTableName: table.shoptablename
         }));
         Toast.show({
             type: 'info',
-            text1: `Đang xác nhận đơn hàng`,
+            text1: `Đang xác nhận đơn hàng cho bàn ${table.shoptablename}...`,
             position: 'bottom',
         });
+        // Clear order to confirm
+        setOrderToConfirm(null);
+    };
+
+    // Close table selector modal
+    const closeTableSelector = () => {
+        setShowTableSelector(false);
+        setOrderToConfirm(null);
     };
 
     const tableData = orders?.map((order, index) => {
@@ -800,6 +865,18 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 onConfirm={onConfirmOrder ? () => onConfirmOrder(selectedOrder) : undefined}
                 loadingVisible={loadingVisible}
             />
+
+            <TableSelector
+                isVisible={showTableSelector}
+                close={closeTableSelector}
+                currentOrder={{
+                    orderType: "1", // Force table selection requirement
+                    table: "",
+                    tableId: ""
+                }}
+                onSelectTable={onSelectTable}
+            />
+
             <Toast
                 position="top"
                 topOffset={50}
