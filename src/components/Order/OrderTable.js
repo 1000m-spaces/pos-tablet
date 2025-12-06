@@ -113,6 +113,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const confirmedOrderIdRef = useRef(null); // Use ref to store order ID immediately
     const autoPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print execution for new orders
     const confirmPrintLockRef = useRef(false); // Synchronous lock to prevent concurrent auto-print after confirmation
+    const autoPrintingOrdersRef = useRef(new Set()); // Track orders currently being auto-printed to prevent duplicates
     const [showTableSelector, setShowTableSelector] = useState(false);
     const [orderToConfirm, setOrderToConfirm] = useState(null);
     // orderTableMapRef is now passed as prop from parent to persist across unmounts
@@ -158,6 +159,17 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 // Reload printed labels from storage when a label task completes
                 const labels = await AsyncStorage.getPrintedLabels();
                 setPrintedLabelsState(labels);
+
+                // Clean up autoPrintingOrdersRef for completed orders
+                const orderIdentifier = data?.order?.displayID;
+                if (orderIdentifier && autoPrintingOrdersRef.current.has(orderIdentifier)) {
+                    // Check if order is no longer in queue (all labels printed)
+                    const stillInQueue = printQueueService.isOrderInAnyQueue(orderIdentifier);
+                    if (!stillInQueue) {
+                        autoPrintingOrdersRef.current.delete(orderIdentifier);
+                        console.log('OrderTable: Removed order from auto-printing tracking:', orderIdentifier);
+                    }
+                }
                 console.log('OrderTable: Updated printed labels after task completion');
             }
         };
@@ -539,12 +551,17 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     const isAlreadyPrinted = currentPrintedLabels.includes(orderIdentifier);
                     // 2. Check if already in print queue (any queue type)
                     const isInQueue = printQueueService.isOrderInAnyQueue(orderIdentifier);
-                    // 3. Check against current component state for additional safety
+                    // 3. Check if currently being auto-printed (in-progress tracking)
+                    const isCurrentlyAutoPrinting = autoPrintingOrdersRef.current.has(orderIdentifier);
+                    // 4. Check against current component state for additional safety
                     const isInLocalState = printedLabels.includes(orderIdentifier);
-                    if (!isAlreadyPrinted && !isInQueue && !isInLocalState) {
+                    if (!isAlreadyPrinted && !isInQueue && !isCurrentlyAutoPrinting && !isInLocalState) {
+                        // Mark order as currently being auto-printed BEFORE queuing
+                        autoPrintingOrdersRef.current.add(orderIdentifier);
                         console.log("Auto print order:", orderIdentifier, {
                             printed: isAlreadyPrinted,
                             inQueue: isInQueue,
+                            currentlyAutoPrinting: isCurrentlyAutoPrinting,
                             inLocalState: isInLocalState
                         });
                         await autoPrintOrder(order);
@@ -554,6 +571,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                         console.log("Skipping auto print for order:", orderIdentifier, {
                             alreadyPrinted: isAlreadyPrinted,
                             inQueue: isInQueue,
+                            currentlyAutoPrinting: isCurrentlyAutoPrinting,
                             inLocalState: isInLocalState
                         });
                     }
@@ -567,7 +585,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         if (isFoodApp) {
             checkAndPrintNewOrders();
         }
-    }, [orders, orderType, printedLabels]); // Added printedLabels to dependencies
+    }, [orders, orderType]); // Removed printedLabels dependency - causes infinite loop when labels complete
 
     // confirm order - require table selection first
     const handleConfirmOrder = (orderId) => {

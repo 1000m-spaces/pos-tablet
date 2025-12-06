@@ -193,16 +193,12 @@ const Orders = () => {
     const transformedOrders = rawOrders?.map(order => transformOrderData(order, order.service));
 
     // Sort by completion time (newest to oldest)
-    // Assuming orders have a completion time field - check rawData for actual field name
+    // Assuming orders have a comp letion time field - check rawData for actual field name
     const sortedOrders = transformedOrders?.sort((a, b) => {
       const timeA = a.rawData?.updated_at || a.rawData?.created_at || 0;
       const timeB = b.rawData?.updated_at || b.rawData?.created_at || 0;
       return new Date(timeB) - new Date(timeA);
     });
-
-    console.log('Transformed and sorted history orders:', sortedOrders);
-    console.log('Total revenue from API:', totalRevenue);
-
     // Return both orders and total revenue
     return {
       orders: sortedOrders,
