@@ -352,11 +352,15 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                         </Text>
                         <View style={styles.spacerFlex} />
                         <Text style={styles.orderNumber}>
-                            {getOrderSuffix(orderPrint)}
+                            - {getOrderSuffix(orderPrint)}
                         </Text>
-                        <Text style={styles.tableInfo}>
-                            - {orderPrint.table || 'Thẻ ——'}
-                        </Text>
+                        {
+                            !(orderPrint.source === 'app_order' || orderPrint.source === 'online_new') && (
+                                <Text style={styles.tableInfo}>
+                                    - {orderPrint.table || 'Thẻ ——'}
+                                </Text>
+                            )
+                        }
                         <Text style={styles.pageCounter}>
                             ({item.itemIdx}/{item.totalItems})
                         </Text>
