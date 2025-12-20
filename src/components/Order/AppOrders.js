@@ -50,13 +50,13 @@ const transformAppOrder = (apiOrder) => {
             is_combo: true,
             name: extra.name, // Name of the item in combo
             quantity: parseInt(product.quantity) || 1,
-            comment: requestProduct.note || '',
+            comment: apiOrder.note_manager || '',
             modifierGroups: [{
               modifierGroupName: 'Combo',
               modifiers: [{
                 modifierName: product.prodname, // Combo name as modifier
                 modifierPrice: extra.paid_price || 0
-              }]
+              },]
             }],
             fare: {
               priceDisplay: extra.paid_price ? parseInt(extra.paid_price).toLocaleString('vi-VN') : '0', // Individual items in combo don't have separate price
