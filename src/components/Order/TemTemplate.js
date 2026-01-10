@@ -355,9 +355,9 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                             - {getOrderSuffix(orderPrint)}
                         </Text>
                         {
-                            !(orderPrint.source === 'app_order' || orderPrint.source === 'online_new') && (
+                            (orderPrint.table || orderPrint.shopTableName || orderPrint.shoptablename) && (
                                 <Text style={styles.tableInfo}>
-                                    - {orderPrint.table || 'Thẻ ——'}
+                                    - {orderPrint.table || orderPrint.shopTableName || orderPrint.shoptablename || 'Thẻ ——'}
                                 </Text>
                             )
                         }
