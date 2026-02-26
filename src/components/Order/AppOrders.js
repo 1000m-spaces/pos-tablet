@@ -227,8 +227,7 @@ const AppOrders = () => {
         dispatch(getOnlineOrder({ rest_id: userShop.id }));
         // await triggerAutoPrint(isOrderDataSaved);
       }
-    }
-    )
+    })();
   }, [isStatustConfirmOrderOnline]);
 
   useEffect(() => {

@@ -29,6 +29,7 @@ const Home = ({ navigation }) => {
   const [isSearching, setIsSearching] = useState(false);
   const currentOrder = useSelector(state => currentOrderSelector(state));
   const [restId, setRestId] = useState(null);
+  const [editingCartItem, setEditingCartItem] = useState(null);
 
   // Fetch WiFi info using React Query
   const { data: wifiInfo, isLoading: wifiLoading } = useWifiInfo(restId);
@@ -90,14 +91,20 @@ const Home = ({ navigation }) => {
     );
   };
 
-  const handlePressProduct = async item => {
+  const handlePressProduct = async (item, isFromCart = false) => {
     console.log(item);
     dispatch(setProductAction(item));
+    if (isFromCart) {
+      setEditingCartItem(item);
+    } else {
+      setEditingCartItem(null);
+    }
     item && setShowModal(1);
   };
 
   const onClose = () => {
     setShowModal(-1);
+    setEditingCartItem(null);
   };
 
   const onShowTable = () => setShowModal(2);
@@ -168,9 +175,13 @@ const Home = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           />
         </View>
-        <Cart showTable={onShowTable} />
+        <Cart showTable={onShowTable} onEditProduct={(item) => handlePressProduct(item, true)} />
         {showModal === 1 && (
-          <DetailProduct close={onClose} isVisiable={showModal === 1} />
+          <DetailProduct
+            close={onClose}
+            isVisiable={showModal === 1}
+            editingCartItem={editingCartItem}
+          />
         )}
         {showModal === 2 && (
           <TableSelector

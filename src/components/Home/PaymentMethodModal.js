@@ -3,8 +3,8 @@ import {
     StyleSheet,
     TouchableOpacity,
     View,
-    FlatList,
     ActivityIndicator,
+    ScrollView,
 } from 'react-native';
 import { TextNormal } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
@@ -28,22 +28,24 @@ const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onS
         onCloseModal();
     };
 
-    const renderPaymentMethod = ({ item }) => {
-        console.log('Rendering payment method:', item)
+    const renderPaymentMethod = (item) => {
+        const isDisabled = currentOrder?.orderType == '1' && item?.chanel_type_id == '22243';
         return (
             <TouchableOpacity
+                key={item.id?.toString() || item.name}
                 style={[
                     styles.methodItem,
                     selectedMethod?.id === item.id && styles.selectedMethod,
-                    { opacity: currentOrder?.orderType == '1' && item?.chanel_type_id == '22243' ? 0.3 : 1 }
+                    { opacity: isDisabled ? 0.3 : 1 }
                 ]}
-                disabled={currentOrder?.orderType == '1' && item?.chanel_type_id == '22243'} // Disable if chanel_type_id is '22243' ví food app
+                disabled={isDisabled}
                 onPress={() => handleSelectMethod(item)}
             >
                 <View style={styles.methodInfo}>
                     <TextNormal style={styles.methodName}>{item.name}</TextNormal>
                 </View>
-            </TouchableOpacity>)
+            </TouchableOpacity>
+        );
     };
 
     return (
@@ -66,12 +68,12 @@ const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onS
                         <TextNormal style={styles.loadingText}>Không có phương thức thanh toán nào khả dụng</TextNormal>
                     </View>
                 ) : (
-                    <FlatList
-                        data={methods}
-                        renderItem={renderPaymentMethod}
-                        keyExtractor={(item) => item.id?.toString() || item.name}
+                    <ScrollView
+                        contentContainerStyle={styles.methodsGrid}
                         showsVerticalScrollIndicator={false}
-                    />
+                    >
+                        {methods.map(item => renderPaymentMethod(item))}
+                    </ScrollView>
                 )}
             </View>
 
@@ -120,8 +122,13 @@ const styles = StyleSheet.create({
         padding: 4,
     },
     content: {
-        flex: 1,
         paddingHorizontal: 20,
+        paddingVertical: 10,
+    },
+    methodsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
     },
     loadingContainer: {
         flex: 1,
@@ -136,15 +143,17 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     methodItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        width: '48%',
+        justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 16,
+        paddingVertical: 20,
         paddingHorizontal: 12,
-        marginVertical: 4,
-        borderRadius: 8,
+        marginVertical: 6,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: Colors.line,
+        backgroundColor: Colors.whiteColor,
+        minHeight: 70,
     },
     selectedMethod: {
         borderColor: Colors.primary,

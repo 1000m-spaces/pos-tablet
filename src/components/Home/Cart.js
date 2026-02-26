@@ -19,7 +19,7 @@ import PaymentCart from './PaymentCart';
 import FastImage from 'react-native-fast-image';
 import { setOrderAction } from 'store/actions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-const Cart = ({ showTable }) => {
+const Cart = ({ showTable, onEditProduct }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const currentOrder = useSelector(state => currentOrderSelector(state));
@@ -72,9 +72,19 @@ const Cart = ({ showTable }) => {
       showTable();
     }
   };
+  const handleEditProduct = (item) => {
+    if (onEditProduct) {
+      onEditProduct(item);
+    }
+  };
+
   const renderProductCart = ({ item, _ }) => {
     return (
-      <View style={styles.containerProduct}>
+      <TouchableOpacity
+        style={styles.containerProduct}
+        onPress={() => handleEditProduct(item)}
+        activeOpacity={0.7}
+      >
         <FastImage
           style={[styles.image]}
           source={{
@@ -117,7 +127,7 @@ const Cart = ({ showTable }) => {
             </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
   const renderOrderType = ({ item, index }) => {
@@ -146,10 +156,10 @@ const Cart = ({ showTable }) => {
               ? `Tại quán/ ${currentOrder.table}`
               : displayName
             : item.id === "2" || item.id === 2
-            ? currentOrder.table && currentOrder.table !== ''
-              ? `Mang đi/ ${currentOrder.table}`
-              : displayName
-            : displayName}
+              ? currentOrder.table && currentOrder.table !== ''
+                ? `Mang đi/ ${currentOrder.table}`
+                : displayName
+              : displayName}
         </TextNormal>
       </TouchableOpacity>
     );
