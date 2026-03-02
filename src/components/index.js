@@ -11,5 +11,7 @@ import VerifyCode from './VerifyCode/VerifyCode';
 import Orders from './Order/Orders';
 import AppOrders from './Order/AppOrders';
 import Invoice from './Order/Invoice';
+import OrderNew from './OrderNew/OrderNew';
+import OrderDetailNew from './OrderDetail/OrderDetailNew';
 import Profile from './Profile/Profile';
-export { Splash, Main, Home, Login, VerifyCode, Orders, AppOrders, Invoice, Profile };
+export { Splash, Main, Home, Login, VerifyCode, Orders, AppOrders, Invoice, Profile, OrderNew, OrderDetailNew };

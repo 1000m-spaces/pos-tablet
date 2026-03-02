@@ -167,7 +167,7 @@ const Main = () => {
         />
         <Drawer.Screen
           name={NAVIGATION_ORDER}
-          component={Screens.Orders}
+          component={Screens.OrderNew}
           options={{
             drawerLabel: 'Đơn online'
           }}

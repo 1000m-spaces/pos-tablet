@@ -8,6 +8,8 @@ import {
   NAVIGATION_ORDER,
   NAVIGATION_PROFILE,
   NAVIGATION_ORDER_1000M,
+  NAVIGATION_ORDER_NEW,
+  NAVIGATION_ORDER_DETAIL,
 } from './routes';
 import * as Screens from 'components';
 
@@ -24,6 +26,8 @@ const StackNavigator = () => {
       <Stack.Screen name={NAVIGATION_LOGIN} component={Screens.Login} />
       <Stack.Screen name={NAVIGATION_ORDER} component={Screens.Orders} />
       <Stack.Screen name={NAVIGATION_PROFILE} component={Screens.Profile} />
+      <Stack.Screen name={NAVIGATION_ORDER_NEW} component={Screens.OrderNew} />
+      <Stack.Screen name={NAVIGATION_ORDER_DETAIL} component={Screens.OrderDetailNew} />
     </Stack.Navigator>
   );
 };
