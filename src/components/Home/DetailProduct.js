@@ -12,20 +12,23 @@ import Modal from 'react-native-modal';
 import Options from './Options';
 import { useDispatch, useSelector } from 'react-redux';
 import { productSelector } from 'store/selectors';
-import { addProductCart, setProductAction } from 'store/actions';
+import { addProductCart, setProductAction, setOrderAction } from 'store/actions';
+import { currentOrderSelector } from 'store/selectors';
 import ProductSection from './ProductSection';
 import ExtraSection from './ExtraSection';
 import QuantityProduct from './QuantityProduct';
 import { heightDevice, widthDevice } from 'assets/constans';
 import { TextNormal } from 'common/Text/TextFont';
 import Colors from 'theme/Colors';
-const DetailProduct = ({ isVisiable, close }) => {
+const DetailProduct = ({ isVisiable, close, editingCartItem }) => {
   const dispatch = useDispatch();
   const detailProduct = useSelector(state => productSelector(state));
+  const currentOrder = useSelector(state => currentOrderSelector(state));
   const [options, setOptions] = useState([]);
   const [topping, setTopping] = useState([]);
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState('');
+  const isEditing = !!editingCartItem;
   const setupOption = () => {
     if (detailProduct?.options === false) {
       return;
@@ -68,6 +71,14 @@ const DetailProduct = ({ isVisiable, close }) => {
     if (detailProduct) {
       setupOption();
       setupExtra();
+      // Set quantity and note from editing item
+      if (editingCartItem) {
+        setQuantity(editingCartItem.quantity || 1);
+        setNote(editingCartItem.note || '');
+      } else {
+        setQuantity(1);
+        setNote('');
+      }
     }
   }, [isVisiable]);
   const updateOptionProduct = () => {
@@ -152,6 +163,28 @@ const DetailProduct = ({ isVisiable, close }) => {
         total_price += e.def_price;
       }
     });
+
+    // If editing, first remove the old item from cart
+    if (isEditing && editingCartItem) {
+      const updatedProducts = currentOrder.products.filter((prod, idx) => {
+        const isSameProduct =
+          prod.prodid === editingCartItem.prodid &&
+          prod?.option_item?.id === editingCartItem?.option_item?.id &&
+          JSON.stringify(prod.extraIds) === JSON.stringify(editingCartItem.extraIds);
+        return !isSameProduct;
+      });
+
+      // Update order with the item removed, then add the new version
+      dispatch(
+        setOrderAction({
+          ...currentOrder,
+          products: updatedProducts,
+          applied_products: updatedProducts,
+        }),
+      );
+    }
+
+    // Add the product (new or updated)
     dispatch(
       addProductCart({
         ...detailProduct,

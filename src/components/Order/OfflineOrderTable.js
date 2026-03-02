@@ -493,13 +493,13 @@ const styles = StyleSheet.create({
     },
     head: {
         height: 50,
-        backgroundColor: Colors.primary,
+        backgroundColor: "#f0f0f0",
     },
     headText: {
         margin: 6,
         fontWeight: 'bold',
         textAlign: 'center',
-        color: '#fff',
+        color: Colors.textPrimary,
         fontSize: 14,
     },
     text: {
