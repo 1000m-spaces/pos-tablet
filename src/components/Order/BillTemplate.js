@@ -159,7 +159,7 @@ const BillTemplate = ({ selectedOrder }) => {
     const generateQRUrl = () => {
         try {
             // Get order data
-            const orderId = selectedOrder?.displayID || selectedOrder?.session || selectedOrder?.id || 'unknown';
+            const orderId = selectedOrder?.offline_code || selectedOrder?.session || selectedOrder?.displayID || selectedOrder?.id || 'unknown';
 
             // Get dataOrderTime (try various possible order time fields)
             const dataOrderTime = selectedOrder?.createdAt ||
