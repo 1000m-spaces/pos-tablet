@@ -219,20 +219,34 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
     });
 
     // Use decals array if available, otherwise fall back to itemInfo structure
-    const itemsToRender = orderPrint?.decals || (orderPrint?.itemInfo?.items ?
-        orderPrint.itemInfo.items.map((item, idx) => ({
-            ...item,
-            item_name: item.name,
-            stringName: item.modifierGroups?.flatMap(mg =>
-                mg.modifiers?.map(m => m.modifierName) || []
-            ).join(' / ') || '',
-            extrastring: '',
-            note_prod: item.comment || '',
-        })) : []);
+    let itemsToRender = [];
+    if (orderPrint?.decals) {
+        itemsToRender = orderPrint.decals;
+        console.log('TemTemplate using decals array, count:', itemsToRender.length);
+    } else if (orderPrint?.itemInfo?.items) {
+        console.log('TemTemplate using itemInfo.items, raw items count:', orderPrint.itemInfo.items.length);
+        itemsToRender = orderPrint.itemInfo.items.map((item, idx) => {
+            const mappedItem = {
+                ...item,
+                item_name: item.name,
+                stringName: item.modifierGroups?.flatMap(mg =>
+                    mg.modifiers?.map(m => m.modifierName) || []
+                ).join(' / ') || '',
+                extrastring: '',
+                note_prod: item.comment || '',
+            };
+            console.log(`TemTemplate mapped item ${idx}:`, {
+                raw: item,
+                mapped: mappedItem,
+            });
+            return mappedItem;
+        });
+    } else {
+        console.log('TemTemplate no decals and no itemInfo.items found');
+    }
 
     console.log("TemTemplate itemsToRender:", itemsToRender);
-    console.log("TemTemplate using decals?", !!orderPrint?.decals);
-    console.log("TemTemplate itemsToRender[0]:", itemsToRender?.[0]);
+    console.log("TemTemplate first rendered item:", itemsToRender?.[0]);
 
     // Helper function to get order ID for label header (without suffix)
     const getOrderId = (order) => {
@@ -376,6 +390,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                     {/* Modifiers/Options/Notes */}
                     {(() => {
                         const allOptions = [];
+                        console.log('TemTemplate formatting options for item:', item);
 
                         // Add options from option array
                         if (item.option) {
@@ -385,32 +400,60 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                                 const optionNames = item.option
                                     .filter(opt => opt && opt.optdetailid && opt.optdetailname)
                                     .map(opt => opt.optdetailname);
+                                console.log('TemTemplate extracted optionNames from item.option:', optionNames);
                                 allOptions.push(...optionNames);
-                                console.log("TemTemplate optionNames:", optionNames, item.option
-                                    .filter(opt => opt && opt.optdetailid && opt.optdetailname));
-                            } else if (typeof item.option === 'string' && item.option.trim() !== '') {
-                                // Old format: string
-                                allOptions.push(item.option.trim());
+                            } else if (typeof item.option === 'string' && item.option !== '') {
+                                console.log('TemTemplate extracted option string from item.option:', item.option);
+                                allOptions.push(item.option);
                             }
-                            console.log("TemTemplate allOptions:", allOptions);
+                            console.log("TemTemplate allOptions after item.option:", allOptions);
                         }
 
                         // Add other option fields
-                        if (item.stringName && item.stringName.trim() !== '') {
-                            allOptions.push(item.stringName.trim());
+                        if (item.stringName && item.stringName !== '') {
+                            console.log('TemTemplate adding stringName:', item.stringName);
+                            allOptions.push(item.stringName);
                         }
-                        if (item.extrastring && item.extrastring.trim() !== '') {
-                            allOptions.push(item.extrastring.trim());
+                        const optNameFields = ['opt_name1', 'opt_name2', 'opt_name3'];
+                        optNameFields.forEach(fieldName => {
+                            const fieldValue = item[fieldName];
+                            if (fieldValue === undefined || fieldValue === null) {
+                                console.log(`TemTemplate ${fieldName} is empty or missing`);
+                                return;
+                            }
+                            console.log(`TemTemplate processing ${fieldName}:`, fieldValue);
+                            if (Array.isArray(fieldValue)) {
+                                const values = fieldValue
+                                    .filter(opt => opt !== undefined && opt !== null)
+                                    .map(opt => opt.toString());
+                                console.log(`TemTemplate ${fieldName} array values:`, values);
+                                allOptions.push(...values);
+                            } else if (typeof fieldValue === 'string') {
+                                if (fieldValue !== '') {
+                                    allOptions.push(fieldValue);
+                                }
+                            } else {
+                                allOptions.push(fieldValue.toString());
+                            }
+                            console.log(`TemTemplate allOptions after ${fieldName}:`, allOptions);
+                        });
+                        if (item.extrastring && item.extrastring !== '') {
+                            console.log('TemTemplate adding extrastring:', item.extrastring);
+                            allOptions.push(item.extrastring);
                         }
-                        if (item.note_prod && item.note_prod.trim() !== '') {
-                            allOptions.push(item.note_prod.trim());
+                        if (item.note_prod && item.note_prod !== '') {
+                            console.log('TemTemplate adding note_prod:', item.note_prod);
+                            allOptions.push(item.note_prod);
                         }
-                        if (orderPrint.note && orderPrint.note.trim() !== '') {
-                            allOptions.push(orderPrint.note.trim());
+                        if (orderPrint.note && orderPrint.note !== '') {
+                            console.log('TemTemplate adding orderPrint.note:', orderPrint.note);
+                            allOptions.push(orderPrint.note);
                         }
 
+                        console.log('TemTemplate allOptions before dedupe:', allOptions);
                         // Remove duplicates
                         const uniqueOptions = [...new Set(allOptions)];
+                        console.log('TemTemplate uniqueOptions after dedupe:', uniqueOptions);
 
                         return uniqueOptions.length > 0 && (
                             <View style={styles.modifierSection}>

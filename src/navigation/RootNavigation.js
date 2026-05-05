@@ -113,6 +113,17 @@ const HiddenViewShotComponents = () => {
       modifierStrings.extrastring = modifierNames.join(' / ');
     }
 
+    // Build option from opt_name fields if product.option is empty
+    let optionValue = product.option;
+    if (!optionValue || optionValue === '') {
+      const optNames = [];
+      if (product.opt_name1) optNames.push(product.opt_name1);
+      if (product.opt_name2) optNames.push(product.opt_name2);
+      if (product.opt_name3) optNames.push(product.opt_name3);
+      optionValue = optNames.join(' ');
+      console.log(`RootNav: Built option from opt_name fields: "${optionValue}"`);
+    }
+
     const transformedOrder = {
       ...originalOrder,
       // Basic order identification
@@ -180,7 +191,7 @@ const HiddenViewShotComponents = () => {
 
           // Flattened modifier strings for easier template access
           stringName: modifierStrings.stringName,
-          option: product.option,
+          option: optionValue,
           extrastring: modifierStrings.extrastring,
           itemIdx: labelIndex + 1, // Use 1-based indexing for display
           totalItems: totalLabels,
@@ -195,7 +206,7 @@ const HiddenViewShotComponents = () => {
         amount: 1,
         note_prod: productComment,
         stringName: modifierStrings.stringName,
-        option: product.option,
+        option: optionValue,
         extrastring: modifierStrings.extrastring,
         itemIdx: labelIndex + 1, // Use 1-based indexing for display
         totalItems: totalLabels,

@@ -43,6 +43,15 @@ const transformAppOrder = (apiOrder) => {
       const requestProduct = requestProducts.find(req => req.pid == product.prod_id) || {};
       const isCombo = COMBO_PRODUCT_IDS.includes(product.prod_id);
 
+      // Extract option name fields
+      const optNameFields = {
+        opt_name1: product.opt_name1 || requestProduct.opt_name1 || '',
+        opt_name2: product.opt_name2 || requestProduct.opt_name2 || '',
+        opt_name3: product.opt_name3 || requestProduct.opt_name3 || ''
+      };
+
+      console.log(`transformAppOrder: Product "${product.prodname}" - opt_name fields:`, optNameFields);
+
       if (isCombo && product.extras && product.extras.length > 0) {
         // Split combo into multiple items - each extra becomes a separate item
         product.extras.forEach(extra => {
@@ -61,7 +70,11 @@ const transformAppOrder = (apiOrder) => {
             fare: {
               priceDisplay: extra.paid_price ? parseInt(extra.paid_price).toLocaleString('vi-VN') : '0', // Individual items in combo don't have separate price
               currencySymbol: '₫'
-            }
+            },
+            // Option name fields for combo items
+            opt_name1: optNameFields.opt_name1,
+            opt_name2: optNameFields.opt_name2,
+            opt_name3: optNameFields.opt_name3
           });
         });
       } else {
@@ -83,7 +96,11 @@ const transformAppOrder = (apiOrder) => {
           fare: {
             priceDisplay: product.paid_price ? parseInt(product.paid_price).toLocaleString('vi-VN') : '0',
             currencySymbol: '₫'
-          }
+          },
+          // Option name fields for regular items
+          opt_name1: optNameFields.opt_name1,
+          opt_name2: optNameFields.opt_name2,
+          opt_name3: optNameFields.opt_name3
         });
       }
     });
