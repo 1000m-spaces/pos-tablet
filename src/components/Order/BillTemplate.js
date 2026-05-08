@@ -182,8 +182,14 @@ const BillTemplate = ({ selectedOrder }) => {
             const shopId = shopInfo.id || 'unknown';
             const partnerId = userInfos.partnerid || 'unknown';
 
+            // Determine service type: "POS" for offline orders, "GRAB"/"BE"/etc for online orders
+            let service = selectedOrder?.offline_code ? 'POS' : (selectedOrder?.service || 'POS');
+            if (service === 'Delivery' || service === 'Pick up') {
+                service = 'APP';
+            }
+
             // Generate QR URL
-            const qrUrl = `https://invoice.1000m.vn?shopId=${shopId}&partnerId=${partnerId}&orderId=${orderId}&expireAt=${timestamp}`;
+            const qrUrl = `https://invoice.1000m.vn?shopId=${shopId}&partnerId=${partnerId}&orderId=${orderId}&expireAt=${timestamp}&service=${service}`;
 
             console.log('Generated QR URL:', qrUrl);
             return qrUrl;
