@@ -9,6 +9,7 @@ const initializeState = {
     table: '',
     tableId: '',
     note: '',
+    foodapp_order_id: '',
     delivery: null,
     orderType: null,
   },

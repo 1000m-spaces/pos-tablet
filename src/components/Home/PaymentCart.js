@@ -73,10 +73,15 @@ const PaymentCart = () => {
       // Try to find cash payment method (trans_name === '41') as default
       console.log('Payment channels:', paymentChannels);
       const cashMethod = paymentChannels.find(method => method.trans_name === '41');
-      const defaultMethod = cashMethod || paymentChannels[0];
+      var defaultMethod = cashMethod || paymentChannels[0];
+      if (currentOrder.orderType === '3' || currentOrder.orderType === '2' || currentOrder.orderType === '5') {
+        // If default method is not suitable for order type, try to find an alternative
+        defaultMethod = paymentChannels.find(method => method.chanel_type_id === '22243');
+      }
+      console.log('Default methods:', defaultMethod);
       setSelectedPaymentMethod(defaultMethod);
     }
-  }, [paymentChannels]); // Removed selectedPaymentMethod from dependency array
+  }, [paymentChannels, currentOrder]); // Removed selectedPaymentMethod from dependency array
 
   // Initialize printing service and load printer info
   useEffect(() => {
@@ -328,6 +333,7 @@ const PaymentCart = () => {
         shopTableid: currentOrder.tableId || "0",
         shopTableName: selectedTableName,
         orderNote: currentOrder.note || "",
+        foodapp_order_id: currentOrder.foodapp_order_id || "",
         products: transformedProducts,
         cust_id: 0,
         transType: paymentMethod ? paymentMethod.trans_name : "41", // Use trans_name as transaction type
@@ -367,6 +373,7 @@ const PaymentCart = () => {
         table: '',
         tableId: '',
         note: '',
+        foodapp_order_id: '',
         delivery: null,
         orderType: null,
       }));
@@ -526,6 +533,22 @@ const PaymentCart = () => {
           <Svg name={'arrow_right'} size={16} />
         </View>
       </TouchableOpacity>
+      {['2', '3', '5'].includes(currentOrder?.orderType) && (
+        <TouchableOpacity onPress={() => setModal(4)} style={styles.rowBetween}>
+          <View style={styles.row}>
+            <Svg name={'order_pos'} size={18} color={'red'} />
+            <TextNormal style={styles.textLabel}>{'Mã foodapp'}</TextNormal>
+          </View>
+          <View style={styles.row}>
+            <TextNormal numsOfLine={1} style={styles.textSecondary}>
+              {currentOrder?.foodapp_order_id && currentOrder?.foodapp_order_id?.length > 0
+              ? `${currentOrder.foodapp_order_id}`
+              : 'Thêm mã foodapp'}
+            </TextNormal>
+            <Svg name={'arrow_right'} size={16} />
+          </View>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.line} />
 
@@ -565,9 +588,25 @@ const PaymentCart = () => {
           modal === 1 && { marginBottom: 3, marginLeft: 50 },
           modal === 2 && { marginBottom: 3, marginLeft: 50 },
           modal === 3 && { marginBottom: 3, marginLeft: 50 },
+          modal === 4 && { marginBottom: 3, marginLeft: 50 },
         ]}>
         {modal === 1 && (
-          <NoteModal currentOrder={currentOrder} onCloseModal={onCloseModal} />
+          <NoteModal
+            currentOrder={currentOrder}
+            onCloseModal={onCloseModal}
+            title={'Ghi chú'}
+            placeholder={'Thêm ghi chú đơn'}
+            field={'note'}
+          />
+        )}
+        {modal === 4 && (
+          <NoteModal
+            currentOrder={currentOrder}
+            onCloseModal={onCloseModal}
+            title={'Mã foodapp'}
+            placeholder={'Nhập mã foodapp'}
+            field={'foodapp_order_id'}
+          />
         )}
         {modal === 2 && (
           <VoucherModal

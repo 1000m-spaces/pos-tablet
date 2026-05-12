@@ -250,7 +250,11 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
     // Helper function to get order ID for label header (without suffix)
     const getOrderId = (order) => {
+        if (order.foodapp_order_id && order.foodapp_order_id.length > 0) {
+            return order.foodapp_order_id;
+        }
         const orderId = order.displayID || order.bill_id;
+        console.log('TemTemplate getOrder - raw order:', order);
 
         // Check if this is a POS order (offline order)
         const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-');
@@ -309,12 +313,24 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
         // Check if this is a POS order (offline order)
         const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-');
+        const isFoodAppPos = order.chanel_type_id === "3" || order.chanel_type_id === "2" || order.chanel_type_id === "5";
+        var channelInfo = 'SHOPEE';
+        if (order.chanel_type_id === "2") {
+            channelInfo = 'GRAB';
+        } else if (order.chanel_type_id === "5") {
+            channelInfo = 'BE';
+        }
 
         const isDelivery = order.is_delivery == '1' || order.chanel_type_id === "3" || order.chanel_type_id === 3;
         const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
         const isTakeaway = order.chanel_type_id === "2" || order.chanel_type_id === 2;
 
         // 1. Offline POS orders: "Đơn Offline - Dùng tại quán" or "Đơn Offline - Take away"
+
+        if (isFoodAppPos) {
+            return channelInfo;
+        }
+
         if (isPOSOrder) {
             if (isDineIn) {
                 return 'Đơn Offline - Dùng tại quán';
@@ -324,6 +340,9 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                 return 'Đơn Offline';
             }
         }
+
+        console.log('TemTemplate getOrderTypeText - isFoodAppPos:', isFoodAppPos, 'chanel_type_id:', channelInfo);
+
 
         // 2. 1000M app orders: specific format
         if (is1000MAppOrder) {
