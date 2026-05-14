@@ -220,8 +220,37 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
     // Use decals array if available, otherwise fall back to itemInfo structure
     let itemsToRender = [];
+    console.log('TemTemplate orderPrint:', orderPrint);
     if (orderPrint?.decals) {
-        itemsToRender = orderPrint.decals;
+        // itemsToRender = orderPrint.decals;
+        itemsToRender = orderPrint.decals.map((decal, idx) => {
+            // lấy item gốc tương ứng để đọc modifierGroups
+            const originalItem = orderPrint?.itemInfo?.items?.[idx];
+
+            // tính tổng modifier price
+            const modifierTotal =
+                originalItem?.modifierGroups?.reduce((groupSum, group) => {
+
+                    const modifierSum =
+                        group.modifiers?.reduce((sum, modifier) => {
+                            return sum + Number(modifier.modifierPrice || 0);
+                        }, 0) || 0;
+
+                    return groupSum + modifierSum;
+
+                }, 0) || 0;
+
+            // giá cuối
+            const finalPrice = Number(decal.price || 0) + modifierTotal;
+
+            return {
+                ...decal,
+
+                price: finalPrice,
+
+                priceDisplay: finalPrice,
+            };
+        });
         console.log('TemTemplate using decals array, count:', itemsToRender.length);
     } else if (orderPrint?.itemInfo?.items) {
         console.log('TemTemplate using itemInfo.items, raw items count:', orderPrint.itemInfo.items.length);
@@ -325,22 +354,6 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
         const isTakeaway = order.chanel_type_id === "2" || order.chanel_type_id === 2;
 
-        // 1. Offline POS orders: "Đơn Offline - Dùng tại quán" or "Đơn Offline - Take away"
-
-        if (isFoodAppPos) {
-            return channelInfo;
-        }
-
-        if (isPOSOrder) {
-            if (isDineIn) {
-                return 'Đơn Offline - Dùng tại quán';
-            } else if (isTakeaway) {
-                return 'Đơn Offline - Take away';
-            } else {
-                return 'Đơn Offline';
-            }
-        }
-
         console.log('TemTemplate getOrderTypeText - isFoodAppPos:', isFoodAppPos, 'chanel_type_id:', channelInfo);
 
 
@@ -352,6 +365,22 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
                 return 'Đơn App Pick UP - dùng tại quán';
             } else {
                 return 'Đơn App Pick UP - take away';
+            }
+        }
+
+        // 1. Offline POS orders: "Đơn Offline - Dùng tại quán" or "Đơn Offline - Take away"
+
+        if (isFoodAppPos && !is1000MAppOrder && !isOnlineOrder) {
+            return channelInfo;
+        }
+
+        if (isPOSOrder) {
+            if (isDineIn) {
+                return 'Đơn Offline - Dùng tại quán';
+            } else if (isTakeaway) {
+                return 'Đơn Offline - Take away';
+            } else {
+                return 'Đơn Offline';
             }
         }
 

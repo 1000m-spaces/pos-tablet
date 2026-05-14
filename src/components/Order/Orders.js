@@ -85,6 +85,7 @@ const Orders = () => {
           modifierGroups: (item.extra || []).map(ext => ({
             modifiers: [{
               modifierName: ext.product_name || '',
+              modifierPrice: parseInt(ext.price.replace(/[.,]/g, ''), 10) || 0,
               quantity: ext.quantity || 1
             }]
           })),
