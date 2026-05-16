@@ -12,27 +12,32 @@ import {useDispatch} from 'react-redux';
 import {setOrderAction} from 'store/actions';
 import Colors from 'theme/Colors';
 
-const NoteModal = ({onCloseModal, currentOrder}) => {
+const NoteModal = ({onCloseModal, currentOrder, title, placeholder, field}) => {
   const dispatch = useDispatch();
   const refInput = useRef(null);
   const [note, setNote] = useState('');
   const closeModal = () => {
     note &&
       note.length > 0 &&
-      dispatch(setOrderAction({...currentOrder, note: note.trim()}));
+      dispatch(
+        setOrderAction({
+          ...currentOrder,
+          [field || 'note']: note.trim(),
+        }),
+      );
     onCloseModal();
   };
   return (
     <View
       onLayout={() => setTimeout(() => refInput.current.focus(), 500)}
       style={styles.container}>
-      <TextNormal style={styles.title}>{'Ghi chú'}</TextNormal>
-      <TouchableOpacity style={styles.closeBtn}>
+      <TextNormal style={styles.title}>{title || 'Ghi chú'}</TextNormal>
+      <TouchableOpacity onPress={onCloseModal} style={styles.closeBtn}>
         <Svg name={'icon_close'} size={24} color={'black'} />
       </TouchableOpacity>
       <TextInput
         style={styles.input}
-        placeholder="Thêm ghi chú đơn"
+        placeholder={placeholder || 'Thêm ghi chú đơn'}
         value={note}
         ref={refInput}
         onChangeText={setNote}

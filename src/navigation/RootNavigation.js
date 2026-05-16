@@ -340,6 +340,8 @@ const HiddenViewShotComponents = () => {
         throw new Error(`Unknown snapshot type: ${type}`);
       }
 
+      console.log(`RootNav: Transformed order data for ${type} printing:`, transformedOrder);
+
       // Set the transformed printing order to render in appropriate ViewShot component
       if (type === 'label') {
         setPrintingOrderLabel(transformedOrder);
