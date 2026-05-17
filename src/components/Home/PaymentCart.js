@@ -309,14 +309,16 @@ const PaymentCart = () => {
             count: counter
           });
 
-          // Format as M-XXXX (e.g., M-0001, M-0002, etc.)
-          return `M-${String(counter).padStart(4, '0')}`;
+          // Format as M-XXXX or SF-XXXX based on order type (e.g., M-0001, SF-0001, etc.)
+          const prefix = (currentOrder?.orderType === '3' || currentOrder?.chanel_type_id === '3') ? 'SF-' : 'M-';
+          return `${prefix}${String(counter).padStart(4, '0')}`;
 
         } catch (error) {
           console.error('Error generating display order ID:', error);
           // Fallback to timestamp-based ID if AsyncStorage fails
+          const prefix = (currentOrder?.orderType === '3' || currentOrder?.chanel_type_id === '3') ? 'SF-' : 'M-';
           const timestamp = Date.now().toString().slice(-4);
-          return `M-${timestamp}`;
+          return `${prefix}${timestamp}`;
         }
       };
 
@@ -542,8 +544,8 @@ const PaymentCart = () => {
           <View style={styles.row}>
             <TextNormal numsOfLine={1} style={styles.textSecondary}>
               {currentOrder?.foodapp_order_id && currentOrder?.foodapp_order_id?.length > 0
-              ? `${currentOrder.foodapp_order_id}`
-              : 'Thêm mã foodapp'}
+                ? `${currentOrder.foodapp_order_id}`
+                : 'Thêm mã foodapp'}
             </TextNormal>
             <Svg name={'arrow_right'} size={16} />
           </View>

@@ -379,7 +379,7 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
     };
 
     const tableData = filteredOrders.map((order, index) => [
-        order.displayID || order.session || order.offline_code || `M-${index + 1}`,
+        order.displayID || order.session || order.offline_code || `${(order.chanel_type_id === '3' || order.orderType === '3') ? 'SF-' : 'M-'}${index + 1}`,
         order.shoptablename || 'N/A',
         formatCurrency(order.total_amount || 0),
         getItemCount(order).toString(),
