@@ -286,7 +286,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         console.log('TemTemplate getOrder - raw order:', order);
 
         // Check if this is a POS order (offline order)
-        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-');
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
 
         if (isPOSOrder) {
             return orderId;
@@ -303,17 +303,18 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
 
         // Check if this is a POS order (offline order)
-        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-');
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
 
         const isDelivery = order.is_delivery == '1' || order.chanel_type_id === "3" || order.chanel_type_id === 3;
         const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
         const isTakeaway = order.chanel_type_id === "2" || order.chanel_type_id === 2;
+        const isFoodAppPos = order.chanel_type_id === "3" || order.chanel_type_id === 3;
 
         // 1. Offline POS orders: O or T
         if (isPOSOrder) {
             if (isDineIn) {
                 return 'O'; // O = On-site/Tại quán
-            } else if (isTakeaway) {
+            } else if (isTakeaway || isFoodAppPos) {
                 return 'T'; // T = Take away
             }
             return ''; // No suffix if not explicitly set
@@ -341,7 +342,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
             (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
 
         // Check if this is a POS order (offline order)
-        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-');
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
         const isFoodAppPos = order.chanel_type_id === "3" || order.chanel_type_id === "2" || order.chanel_type_id === "5";
         var channelInfo = 'SHOPEE';
         if (order.chanel_type_id === "2") {
@@ -370,11 +371,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
         // 1. Offline POS orders: "Đơn Offline - Dùng tại quán" or "Đơn Offline - Take away"
 
-        if (isFoodAppPos && !is1000MAppOrder && !isOnlineOrder) {
-            return channelInfo;
-        }
-
-        if (isPOSOrder) {
+        if (isPOSOrder && !isFoodAppPos) {
             if (isDineIn) {
                 return 'Đơn Offline - Dùng tại quán';
             } else if (isTakeaway) {
@@ -388,6 +385,10 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         const isOnlineOrder = order.source === 'app_order' || order.source === 'online_new';
         if (isOnlineOrder && order.service) {
             return order.service;
+        }
+
+        if (isFoodAppPos && !is1000MAppOrder && !isOnlineOrder) {
+            return channelInfo;
         }
 
         // Final fallback
