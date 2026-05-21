@@ -13,9 +13,10 @@ const TableSelector = ({ isVisible, close, currentOrder, onSelectTable: onSelect
   const dispatch = useDispatch();
   const tables = useSelector((state) => getTablesSelector(state));
   const [blockedTables, setBlockedTables] = useState({});
-  const [serviceType, setServiceType] = useState(currentOrder?.orderType || "1"); // "1" for Tại quán, "2" for Mang đi
-  const isTableSelectionRequired = currentOrder?.orderType === "1" || currentOrder?.orderType === 1;
+  const [serviceType, setServiceType] = useState(currentOrder?.orderType ? currentOrder.orderType.toString() : "1"); // "1" for Tại quán, "2" for Mang đi
+  const isTableSelectionRequired = serviceType === "1" || serviceType === 1;
   console.log('tables::', tables)
+  console.log('currentOrder::', currentOrder)
 
   useEffect(() => {
     const loadBlockedTables = async () => {
@@ -44,7 +45,21 @@ const TableSelector = ({ isVisible, close, currentOrder, onSelectTable: onSelect
   };
 
   const onSelectServiceType = (type) => {
+    console.log('Selected currentOrder:', currentOrder);
     setServiceType(type);
+    if (type === "2" || type === 2) {
+      dispatch(setOrderAction({
+        ...currentOrder,
+        orderType: type,
+        table: '',
+        tableId: ''
+      }));
+    } else {
+      dispatch(setOrderAction({
+        ...currentOrder,
+        orderType: type,
+      }));
+    }
   };
 
   return (

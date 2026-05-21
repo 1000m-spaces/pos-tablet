@@ -62,13 +62,19 @@ const Cart = ({ showTable }) => {
     );
   };
   const onSelectOrderType = i => {
+    // Determine the channel type ID (store = 1 for both dine-in and takeaway)
+    const targetChannelId = (i.id === 1 || i.id === '1' || i.id === 2 || i.id === '2') ? '1' : i.id.toString();
+    
     // Update Redux state instead of local state
-    dispatch(setOrderAction({
-      ...currentOrder,
-      orderType: i.id,
-      table: i.id === 1 || i.id === "1" ? currentOrder.table : '', // Reset table when orderType is not 1
-    }));
-    if (i.id === 1 || i.id === "1") {
+    dispatch(
+      setOrderAction({
+        ...currentOrder,
+        orderType: i.id,
+        chanel_type_id: targetChannelId,
+        table: i.id === 1 || i.id === '1' ? currentOrder.table : '', // Reset table when orderType is not 1 (Dùng tại quán)
+      }),
+    );
+    if (i.id === 1 || i.id === '1') {
       showTable();
     }
   };
@@ -220,7 +226,7 @@ const Cart = ({ showTable }) => {
         />
       </View>
       <FlatList
-        data={currentOrder.products}
+        data={currentOrder.products || []}
         keyExtractor={(i, idx) =>
           `${i?.prodid}_${i?.option_item.id}_${i?.extraIds.toString()}_${idx}`
         }
@@ -231,7 +237,7 @@ const Cart = ({ showTable }) => {
           paddingVertical: 10,
         }}
       />
-      {currentOrder.products.length > 0 && <PaymentCart currentOrder={currentOrder} />}
+      {currentOrder.products && currentOrder.products.length > 0 && <PaymentCart currentOrder={currentOrder} />}
     </View>
   );
 };

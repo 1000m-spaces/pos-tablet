@@ -11,7 +11,7 @@ import printQueueService from '../../services/PrintQueueService';
 import { TextNormal } from "common/Text/TextFont";
 import { useDispatch, useSelector } from "react-redux";
 import { callDriverBack, confirmOrderOnline, getEstimateAhamove, resetConfirmOrderOnline, resetEstimateAhamove } from "store/actions";
-import { confirmOrderOnlineStatusSelector, getResultEsstimate, getStatusEstimateAhamove } from "store/selectors";
+import { confirmOrderOnlineStatusSelector, getResultEsstimate, getStatusEstimateAhamove, currentOrderSelector } from "store/selectors";
 import Status from "common/Status/Status";
 import CryptoJS from 'crypto-js';
 import { PARTNER_ID, SECRET_KEY_TAX } from "assets/config";
@@ -103,6 +103,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const confirmOrderStatus = useSelector(confirmOrderOnlineStatusSelector);
     const isResultEsstimate = useSelector(getResultEsstimate);
     const isStatusEstimateAhamove = useSelector(getStatusEstimateAhamove);
+    const currentOrder = useSelector(state => currentOrderSelector(state));
     const [modalVisible, setModalVisible] = useState(false);
     const [loadingVisible, setLoadingVisible] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -870,6 +871,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 isVisible={showTableSelector}
                 close={closeTableSelector}
                 currentOrder={{
+                    ...currentOrder,
                     orderType: "1", // Force table selection requirement
                     table: "",
                     tableId: ""

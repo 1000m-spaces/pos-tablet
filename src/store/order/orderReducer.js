@@ -12,6 +12,7 @@ const initializeState = {
     foodapp_order_id: '',
     delivery: null,
     orderType: null,
+    chanel_type_id: null,
   },
   statusAddProductCart: Status.DEFAULT,
   onlineOrders: [],

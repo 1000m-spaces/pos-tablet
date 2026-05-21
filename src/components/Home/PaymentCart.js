@@ -74,7 +74,7 @@ const PaymentCart = () => {
       console.log('Payment channels:', paymentChannels);
       const cashMethod = paymentChannels.find(method => method.trans_name === '41');
       var defaultMethod = cashMethod || paymentChannels[0];
-      if (currentOrder.orderType === '3' || currentOrder.orderType === '2' || currentOrder.orderType === '5') {
+      if (currentOrder.chanel_type_id && currentOrder.chanel_type_id !== '1' && currentOrder.chanel_type_id !== 1) {
         // If default method is not suitable for order type, try to find an alternative
         defaultMethod = paymentChannels.find(method => method.chanel_type_id === '22243');
       }
@@ -309,14 +309,14 @@ const PaymentCart = () => {
             count: counter
           });
 
-          // Format as M-XXXX or SF-XXXX based on order type (e.g., M-0001, SF-0001, etc.)
-          const prefix = (currentOrder?.orderType === '3' || currentOrder?.chanel_type_id === '3') ? 'SF-' : 'M-';
+          // Format as M-XXXX or SF-XXXX based on order channel (SF for food apps, M for store orders)
+          const prefix = (currentOrder?.chanel_type_id && currentOrder?.chanel_type_id !== '1' && currentOrder?.chanel_type_id !== 1) ? 'SF-' : 'M-';
           return `${prefix}${String(counter).padStart(4, '0')}`;
 
         } catch (error) {
           console.error('Error generating display order ID:', error);
           // Fallback to timestamp-based ID if AsyncStorage fails
-          const prefix = (currentOrder?.orderType === '3' || currentOrder?.chanel_type_id === '3') ? 'SF-' : 'M-';
+          const prefix = (currentOrder?.chanel_type_id && currentOrder?.chanel_type_id !== '1' && currentOrder?.chanel_type_id !== 1) ? 'SF-' : 'M-';
           const timestamp = Date.now().toString().slice(-4);
           return `${prefix}${timestamp}`;
         }
@@ -339,7 +339,8 @@ const PaymentCart = () => {
         products: transformedProducts,
         cust_id: 0,
         transType: paymentMethod ? paymentMethod.trans_name : "41", // Use trans_name as transaction type
-        chanel_type_id: currentOrder ? currentOrder.orderType : "1",
+        chanel_type_id: (currentOrder && currentOrder.chanel_type_id) ? currentOrder.chanel_type_id : "1",
+        orderType: (currentOrder && currentOrder.orderType) ? currentOrder.orderType : "1",
         phuthu: 0,
         total_amount: price_paid,
         fix_discount: 0,
@@ -378,6 +379,7 @@ const PaymentCart = () => {
         foodapp_order_id: '',
         delivery: null,
         orderType: null,
+        chanel_type_id: null,
       }));
     } catch (error) {
       console.error('Error processing payment:', error);
@@ -535,7 +537,7 @@ const PaymentCart = () => {
           <Svg name={'arrow_right'} size={16} />
         </View>
       </TouchableOpacity>
-      {['2', '3', '5'].includes(currentOrder?.orderType) && (
+      {currentOrder?.chanel_type_id && currentOrder?.chanel_type_id !== '1' && currentOrder?.chanel_type_id !== 1 && (
         <TouchableOpacity onPress={() => setModal(4)} style={styles.rowBetween}>
           <View style={styles.row}>
             <Svg name={'order_pos'} size={18} color={'red'} />

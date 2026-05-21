@@ -201,21 +201,31 @@ const BillTemplate = ({ selectedOrder }) => {
             return order.service;
         }
 
-        // For offline orders, map chanel_type_id directly
-        if (order.chanel_type_id) {
-            // Direct mapping based on user selection in Cart/TableSelector
-            if (order.chanel_type_id === "1" || order.chanel_type_id === 1) {
+        // For offline orders, map chanel_type_id and orderType
+        if (order.chanel_type_id === "1" || order.chanel_type_id === 1) {
+            if (order.orderType === "1" || order.orderType === 1) {
                 return "Tại quán";
             }
-            if (order.chanel_type_id === "2" || order.chanel_type_id === 2) {
+            if (order.orderType === "2" || order.orderType === 2) {
                 return "Mang đi";
             }
+            return "Tại quán";
+        }
 
-            // Fallback to orderChannels lookup for other types
-            var orderType = orderChannels.find(channel => channel.id === order.chanel_type_id);
-            if (orderType) {
-                return orderType?.name_vn || orderType?.name;
+        if (order.chanel_type_id) {
+            // Fallback to orderChannels lookup for other types (food apps)
+            var channel = orderChannels.find(c => c.id === order.chanel_type_id || c.id?.toString() === order.chanel_type_id?.toString());
+            if (channel) {
+                return channel.name_vn || channel.name;
             }
+        }
+
+        // Fallback using orderType if chanel_type_id is missing
+        if (order.orderType === "1" || order.orderType === 1) {
+            return "Tại quán";
+        }
+        if (order.orderType === "2" || order.orderType === 2) {
+            return "Mang đi";
         }
 
         // Final fallback

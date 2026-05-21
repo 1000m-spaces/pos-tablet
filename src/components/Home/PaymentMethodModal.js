@@ -35,9 +35,9 @@ const PaymentMethodModal = ({ paymentMethods, loading = false, onCloseModal, onS
                 style={[
                     styles.methodItem,
                     selectedMethod?.id === item.id && styles.selectedMethod,
-                    { opacity: currentOrder?.orderType == '1' && item?.chanel_type_id == '22243' ? 0.3 : 1 }
+                    { opacity: (currentOrder?.chanel_type_id == '1' || currentOrder?.chanel_type_id == 1) && item?.chanel_type_id == '22243' ? 0.3 : 1 }
                 ]}
-                disabled={currentOrder?.orderType == '1' && item?.chanel_type_id == '22243'} // Disable if chanel_type_id is '22243' ví food app
+                disabled={(currentOrder?.chanel_type_id == '1' || currentOrder?.chanel_type_id == 1) && item?.chanel_type_id == '22243'} // Disable if chanel_type_id is '22243' ví food app
                 onPress={() => handleSelectMethod(item)}
             >
                 <View style={styles.methodInfo}>

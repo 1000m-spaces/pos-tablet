@@ -299,20 +299,30 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
     // Helper function to get order type suffix (O, T, D, AO, AT)
     const getOrderSuffix = (order) => {
         // Check if this is a 1000M app order (not FoodApp like GRAB/GoFood)
+        console.log('TemTemplate getOrderSuffix - order:', order);
         const is1000MAppOrder = order.source === 'app_order' &&
             (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
+        
+        if (is1000MAppOrder && !order.orderType) {
+            order.orderType = order.chanel_type_id;
+        }
 
         // Check if this is a POS order (offline order)
         const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
 
-        const isDelivery = order.is_delivery == '1' || order.chanel_type_id === "3" || order.chanel_type_id === 3;
-        const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
-        const isTakeaway = order.chanel_type_id === "2" || order.chanel_type_id === 2;
-        const isFoodAppPos = order.chanel_type_id === "3" || order.chanel_type_id === 3;
+        const isStoreChannel = !order.chanel_type_id || order.chanel_type_id === "1" || order.chanel_type_id === 1;
+        const isDineIn = isStoreChannel ? (order.orderType === "1" || order.orderType === 1 || order.orderType === undefined || order.orderType === null) : (order.orderType === "1" || order.orderType === 1);
+        const isTakeaway = isStoreChannel ? (order.orderType === "2" || order.orderType === 2) : (order.orderType === "2" || order.orderType === 2);
+       const isFoodAppPos = (order.chanel_type_id && order.chanel_type_id == 3) || (order.chanel_type_id && order.chanel_type_id == 2 && !is1000MAppOrder) || (order.chanel_type_id && order.chanel_type_id == 4);
+        const isDelivery = order.is_delivery == '1';
+
+        console.log('isDineIn:', isDineIn);
+        console.log('isTakeaway:', isTakeaway);
+        console.log('isFoodAppPos:', isFoodAppPos);
 
         // 1. Offline POS orders: O or T
         if (isPOSOrder) {
-            if (isDineIn) {
+            if (isDineIn && !isFoodAppPos) {
                 return 'O'; // O = On-site/Tại quán
             } else if (isTakeaway || isFoodAppPos) {
                 return 'T'; // T = Take away
@@ -333,6 +343,10 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
         }
 
         // 3. FoodApp orders (GRAB, GoFood, etc.): no suffix
+
+        if (isFoodAppPos) {
+            return 'T'; // No suffix for FoodApp POS orders
+        }
         return '';
     };
 
@@ -343,19 +357,21 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
 
         // Check if this is a POS order (offline order)
         const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
-        const isFoodAppPos = order.chanel_type_id === "3" || order.chanel_type_id === "2" || order.chanel_type_id === "5";
+        const isStoreChannel = !order.chanel_type_id || order.chanel_type_id === "1" || order.chanel_type_id === 1;
+        const isFoodAppPos = (order.chanel_type_id && order.chanel_type_id == 3) || (order.chanel_type_id && order.chanel_type_id == 2 && !is1000MAppOrder) || (order.chanel_type_id && order.chanel_type_id == 4);
+        
         var channelInfo = 'SHOPEE';
-        if (order.chanel_type_id === "2") {
+        if (order.chanel_type_id === "2" || order.chanel_type_id === 2) {
             channelInfo = 'GRAB';
-        } else if (order.chanel_type_id === "5") {
+        } else if (order.chanel_type_id === "5" || order.chanel_type_id === 5) {
             channelInfo = 'BE';
         }
 
-        const isDelivery = order.is_delivery == '1' || order.chanel_type_id === "3" || order.chanel_type_id === 3;
-        const isDineIn = order.chanel_type_id === "1" || order.chanel_type_id === 1;
-        const isTakeaway = order.chanel_type_id === "2" || order.chanel_type_id === 2;
+        const isDineIn = isStoreChannel ? (order.orderType === "1" || order.orderType === 1 || order.orderType === undefined || order.orderType === null) : (order.orderType === "1" || order.orderType === 1);
+        const isTakeaway = isStoreChannel ? (order.orderType === "2" || order.orderType === 2) : (order.orderType === "2" || order.orderType === 2);
+        const isDelivery = order.is_delivery == '1';
 
-        console.log('TemTemplate getOrderTypeText - isFoodAppPos:', isFoodAppPos, 'chanel_type_id:', channelInfo);
+        console.log('TemTemplate getOrderTypeText - isFoodAppPos:', isFoodAppPos, 'chanel_type_id:', order.chanel_type_id);
 
 
         // 2. 1000M app orders: specific format
