@@ -462,20 +462,28 @@ class PrintingService {
         }
 
         try {
+            console.log(`\n║ PRINT_TEM: PrintingService.printLabel called`);
+            console.log(`║ PRINT_TEM: Image URI length: ${imageUri?.length || 0}`);
+            console.log(`║ PRINT_TEM: Printer type: ${printerInfo?.labelConnectionType}, size: ${printerInfo?.sWidth}x${printerInfo?.sHeight}`);
             this.initialize();
 
             if (!printerInfo) {
+                console.error('║ PRINT_TEM: Printer configuration not provided');
                 throw new Error('Printer configuration not provided');
             }
 
             // Connect to printer
+            console.log('║ PRINT_TEM: Connecting to printer...');
             await this.connectToPrinter(this.labelPrinter, printerInfo);
+            console.log('║ PRINT_TEM: Printer connected');
 
             // Get image info and convert to base64
             const imageInfo = await Image.getSize(imageUri);
             const base64 = await RNFS.readFile(imageUri.replace('file://', ''), 'base64');
+            console.log(`║ PRINT_TEM: Image info: ${imageInfo.width}x${imageInfo.height}, base64 length: ${base64.length}`);
 
             // Print the label
+            console.log('║ PRINT_TEM: Calling tsplPrintBitmap...');
             await this.labelPrinter.tsplPrintBitmap(
                 Number(printerInfo.sWidth),
                 Number(printerInfo.sHeight),
@@ -483,11 +491,11 @@ class PrintingService {
                 imageInfo.width
             );
 
-            console.log(`Label printed successfully using image URI: ${imageUri}`);
+            console.log('║ PRINT_TEM: Label printed successfully');
             return true;
 
         } catch (error) {
-            console.error('PrintLabel error:', error);
+            console.error('║ PRINT_TEM: PrintLabel error:', error);
             throw error;
         }
     }

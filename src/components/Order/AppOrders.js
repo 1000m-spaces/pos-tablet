@@ -34,6 +34,7 @@ const transformAppOrder = (apiOrder) => {
   try {
     // Parse the request_products JSON string if it exists
     const requestProducts = apiOrder.request_products ? JSON.parse(apiOrder.request_products) : [];
+    console.log('transformAppOrder: Parsed request apiOrder:', apiOrder);
 
     // Transform products to itemInfo.items structure
     const items = [];
@@ -59,7 +60,7 @@ const transformAppOrder = (apiOrder) => {
             is_combo: true,
             name: extra.name, // Name of the item in combo
             quantity: parseInt(product.quantity) || 1,
-            comment: apiOrder.note_manager || '',
+            comment: apiOrder.note_manager || apiOrder.description || '',
             modifierGroups: [{
               modifierGroupName: 'Combo',
               modifiers: [{
@@ -91,7 +92,7 @@ const transformAppOrder = (apiOrder) => {
           is_combo: isCombo,
           name: product.prodname,
           quantity: parseInt(product.quantity) || 1,
-          comment: requestProduct.note || '',
+          comment: requestProduct.note || apiOrder.description || '',
           modifierGroups: modifierGroups,
           fare: {
             priceDisplay: product.paid_price ? parseInt(product.paid_price).toLocaleString('vi-VN') : '0',

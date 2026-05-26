@@ -27,23 +27,51 @@ const HiddenViewShotComponents = () => {
 
   const viewTemShotRef = useRef(null);
   const viewBillShotRef = useRef(null);
+  const layoutReadyResolverRef = useRef(null);
+  const currentRenderTokenRef = useRef(0);
+
+  const waitForTemplateLayout = (token) => {
+    return new Promise(resolve => {
+      let settled = false;
+      const timeoutMs = 2000;
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          layoutReadyResolverRef.current = null;
+          console.log(`RootNav: Template layout timeout after ${timeoutMs}ms for token ${token}`);
+          resolve(false);
+        }
+      }, timeoutMs);
+
+      layoutReadyResolverRef.current = (eventToken) => {
+        if (settled || eventToken !== token) {
+          return;
+        }
+        settled = true;
+        clearTimeout(timeout);
+        layoutReadyResolverRef.current = null;
+        console.log(`RootNav: Template layout ready for token ${token}`);
+        resolve(true);
+      };
+    });
+  };
+
+  const handleTemplateLayout = () => {
+    if (layoutReadyResolverRef.current) {
+      layoutReadyResolverRef.current(currentRenderTokenRef.current);
+    }
+  };
 
   // Helper function to transform order for label printing
   const transformOrderForLabel = (originalOrder, productIndex = 0, labelIndex = 0, totalLabels = 1) => {
-    console.log(`RootNav: transformOrderForLabel called with productIndex=${productIndex}, labelIndex=${labelIndex}, totalLabels=${totalLabels}`);
-
     // Detect order type based on structure
     const isOnlineOrder = originalOrder.source === 'app_order' || originalOrder.source === 'online_new';
     const isOfflineOrder = originalOrder.products && Array.isArray(originalOrder.products);
 
-    console.log('RootNav: originalOrder data:', {
-      ...originalOrder,
-      isOnlineOrder,
-      isOfflineOrder,
-    });
-
+    // Get product from appropriate structure
     // Get product from appropriate structure
     let product;
+
     if (isOfflineOrder) {
       product = originalOrder.products?.[productIndex];
     } else if (isOnlineOrder && originalOrder.itemInfo?.items) {
@@ -56,8 +84,6 @@ const HiddenViewShotComponents = () => {
     }
 
     console.log(`RootNav: Processing product:`, product.name || product.prodname, 'for label', labelIndex + 1, 'of', totalLabels);
-
-    // Extract product details based on order type
     let productName, productPrice, productComment, productModifiers, productId;
 
     if (isOfflineOrder) {
@@ -254,10 +280,6 @@ const HiddenViewShotComponents = () => {
       address: originalOrder.address || originalOrder.eater?.address?.address || '',
     };
 
-    console.log(`RootNav: transformedOrder table field:`, transformedOrder.table);
-    console.log(`RootNav: transformedOrder decals:`, transformedOrder.decals);
-    console.log(`RootNav: transformedOrder itemInfo:`, transformedOrder.itemInfo);
-
     return transformedOrder;
   };
 
@@ -322,7 +344,13 @@ const HiddenViewShotComponents = () => {
   // Capture snapshot function for print queue service
   const handleCaptureSnapshot = async (type, order, options = {}) => {
     try {
-      console.log(`RootNav: Capturing ${type} snapshot for order:`, order, options, order?.session || order?.offlineOrderId);
+      if (type === 'label') {
+        console.log(`\n╔════════════════════════════════════════════════════════════╗`);
+        console.log(`║ PRINT_TEM: handleCaptureSnapshot [LABEL]`);
+        console.log(`║ Order ID: ${order?.displayID || order?.offlineOrderId}`);
+        console.log(`║ Product Index: ${options.productIndex}, Label: ${options.labelIndex + 1}/${options.totalLabels}`);
+        console.log(`╚════════════════════════════════════════════════════════════╝`);
+      }
 
       // Transform the order based on print type
       let transformedOrder;
@@ -331,33 +359,41 @@ const HiddenViewShotComponents = () => {
         // For label printing, use the enhanced transformation
         const { productIndex = 0, labelIndex = 0, totalLabels = 1 } = options;
         transformedOrder = transformOrderForLabel(order, productIndex, labelIndex, totalLabels);
-        console.log(`RootNav: Transformed order for label printing (product ${productIndex + 1}, label ${labelIndex + 1}/${totalLabels})`);
+        
+        console.log(`║ PRINT_TEM: transformOrderForLabel completed`);
+        console.log(`║ Transformed decals[0].item_name: ${transformedOrder?.decals?.[0]?.item_name}`);
+        console.log(`║ Transformed decals[0].itemIdx: ${transformedOrder?.decals?.[0]?.itemIdx}/${transformedOrder?.decals?.[0]?.totalItems}`);
+        console.log(`║ Transformed decals[0] data length: ${JSON.stringify(transformedOrder?.decals?.[0] || {}).length} bytes`);
       } else if (type === 'bill') {
         // For bill printing, use the simpler transformation
         transformedOrder = transformOrderForBill(order);
-        console.log(`RootNav: Transformed order for bill printing`);
       } else {
         throw new Error(`Unknown snapshot type: ${type}`);
       }
 
-      console.log(`RootNav: Transformed order data for ${type} printing:`, transformedOrder);
-
+      if (type === 'label') {
+        console.log(`║ PRINT_TEM: Setting printingOrderLabel state...`);
+      }
       // Set the transformed printing order to render in appropriate ViewShot component
       if (type === 'label') {
+        const renderToken = currentRenderTokenRef.current + 1;
+        currentRenderTokenRef.current = renderToken;
         setPrintingOrderLabel(transformedOrder);
+        setIsComponentReady(true);
+
+        console.log(`║ PRINT_TEM: Waiting for PrintTemplate layout (token ${renderToken})...`);
+        const layoutReady = await waitForTemplateLayout(renderToken);
+        if (!layoutReady) {
+          console.log(`║ PRINT_TEM: Template layout did not signal in time, continuing with capture fallback`);
+        }
+
+        // Allow one animation frame and a small settle delay after layout
+        await new Promise(resolve => requestAnimationFrame(() => resolve()));
+        await new Promise(resolve => setTimeout(resolve, 150));
       } else if (type === 'bill') {
         setPrintingOrderBill(transformedOrder);
+        setIsComponentReady(true);
       }
-      setIsComponentReady(false);
-
-      // Wait for component to render with new order data - increased delay for reliability
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Mark component as ready for capture
-      setIsComponentReady(true);
-
-      // Additional wait to ensure component state is stable
-      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Additional check to ensure refs are available
       let viewShotRef;
@@ -386,6 +422,9 @@ const HiddenViewShotComponents = () => {
       }
 
       // Capture the snapshot
+      if (type === 'label') {
+        console.log(`║ PRINT_TEM: Calling viewShotRef.current.capture()...`);
+      }
       console.log(`RootNav: Attempting to capture ${type} snapshot...`);
       const capturedData = await viewShotRef.current.capture();
 
@@ -393,10 +432,24 @@ const HiddenViewShotComponents = () => {
         throw new Error(`Failed to capture ${type} snapshot - no data returned`);
       }
 
-      console.log(`RootNav: ${type} snapshot captured successfully:`, typeof capturedData === 'string' ? `${capturedData.substring(0, 50)}...` : 'Data available');
+      if (type === 'label') {
+        console.log(`║ PRINT_TEM: ✓ Snapshot captured successfully`);
+        console.log(`║ PRINT_TEM: Data type: ${typeof capturedData}`);
+        if (typeof capturedData === 'string') {
+          console.log(`║ PRINT_TEM: Data size: ${capturedData.length} bytes`);
+          console.log(`║ PRINT_TEM: First 50 chars: ${capturedData.substring(0, 50)}...`);
+        }
+        console.log(`╚════════════════════════════════════════════════════════════╝\n`);
+      } else {
+        console.log(`RootNav: ${type} snapshot captured successfully:`, typeof capturedData === 'string' ? `${capturedData.substring(0, 50)}...` : 'Data available');
+      }
       return capturedData;
 
     } catch (error) {
+      if (type === 'label') {
+        console.log(`║ PRINT_TEM: ✗ ERROR in handleCaptureSnapshot: ${error.message}`);
+        console.log(`╚════════════════════════════════════════════════════════════╝\n`);
+      }
       console.error(`RootNav: Error capturing ${type} snapshot:`, error);
       // Reset appropriate printing order on error to prevent stale state
       if (type === 'label') {
@@ -533,7 +586,7 @@ const HiddenViewShotComponents = () => {
         ]}
         collapsable={false}
       >
-        {printingOrderLabel && isComponentReady && <PrintTemplate orderPrint={printingOrderLabel} />}
+        {printingOrderLabel && isComponentReady && <PrintTemplate orderPrint={printingOrderLabel} onLayout={handleTemplateLayout} />}
       </ViewShot>
 
       <ViewShot

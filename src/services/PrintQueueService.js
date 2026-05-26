@@ -303,7 +303,7 @@ class PrintQueueService {
                     labelIndex: metadata.labelIndex,
                     totalLabels: metadata.totalLabels
                 };
-                console.log(`PrintQueue: Printing label for product "${metadata.productName}" - Label ${metadata.labelIndex + 1}/${metadata.totalLabels}`);
+                console.log(`║ PRINT_TEM: Multi-label - Product "${metadata.productName}" (${metadata.labelIndex + 1}/${metadata.totalLabels})`);
             } else {
                 // Single label print (backward compatibility)
                 options = {
@@ -311,9 +311,10 @@ class PrintQueueService {
                     labelIndex: 0,
                     totalLabels: 1
                 };
+                console.log(`║ PRINT_TEM: Single-label print`);
             }
 
-            console.log(`PrintQueue: Built options for handleCaptureSnapshot:`, options);
+            console.log(`║ PRINT_TEM: Calling captureCallback with options:`, options);
 
             // Request label snapshot from Main component with proper options
             const uri = await this.captureCallback('label', order, options);
@@ -322,8 +323,11 @@ class PrintQueueService {
                 throw new Error('Failed to capture label snapshot');
             }
 
+            console.log(`║ PRINT_TEM: Snapshot captured, size: ${uri.length} bytes`);
             // Print using the printing service
+            console.log(`║ PRINT_TEM: Calling printingService.printLabel...`);
             await printingService.printLabel(uri, printerInfo);
+            console.log(`║ PRINT_TEM: ✓ printLabel completed`);
 
             // Save print record with metadata
             await this.savePrintRecord(order, 'label', true, null, metadata);
@@ -331,7 +335,7 @@ class PrintQueueService {
             const orderIdentifier = getOrderIdentifierForPrinting(order, true); // true for offline orders
             await AsyncStorage.setPrintedLabels(orderIdentifier);
         } catch (error) {
-            console.error('Label printing error:', error);
+            console.error('║ PRINT_TEM: ✗ Error:', error.message);
             await this.savePrintRecord(order, 'label', false, error.message, metadata);
             throw error;
         }

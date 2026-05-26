@@ -41,11 +41,18 @@ const getDefaultSettings = (dpi = 72) => ({
     margin: 2
 });
 
-const PrintTemplate = ({ orderPrint, settings = {} }) => {
-    console.log("TemTemplate orderPrint:", orderPrint);
-    console.log("TemTemplate decals:", orderPrint?.decals);
-    console.log("TemTemplate itemInfo:", orderPrint?.itemInfo);
-    console.log("TemTemplate table:", orderPrint?.table);
+const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
+    console.log(`\n║ PRINT_TEM: TemTemplate rendered`);
+    console.log(`║ PRINT_TEM: orderPrint.displayID: ${orderPrint?.displayID}`);
+    if (orderPrint?.decals?.[0]) {
+      console.log(`║ PRINT_TEM: decals[0].item_name: ${orderPrint.decals[0].item_name}`);
+      console.log(`║ PRINT_TEM: decals[0].itemIdx: ${orderPrint.decals[0].itemIdx}/${orderPrint.decals[0].totalItems}`);
+    }
+    if (orderPrint?.itemInfo?.items?.[0]) {
+      console.log(`║ PRINT_TEM: itemInfo.items[0].name: ${orderPrint.itemInfo.items[0].name}`);
+      console.log(`║ PRINT_TEM: itemInfo.items[0].itemIdx: ${orderPrint.itemInfo.items[0].itemIdx}/${orderPrint.itemInfo.items[0].totalItems}`);
+    }
+    
     const orderChannels = useSelector(state => getOrderChannelsSelector(state));
     const [printerSettings, setPrinterSettings] = useState(null);
     useEffect(() => {
@@ -421,7 +428,7 @@ const PrintTemplate = ({ orderPrint, settings = {} }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={styles.container} onLayout={onLayout}>
             {itemsToRender.map((item, index) => (
                 <View key={index} style={styles.card}>
                     {/* Header with order number, table info, and page counter in one line */}
