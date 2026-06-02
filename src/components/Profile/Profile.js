@@ -48,6 +48,7 @@ const Profile = ({ navigation }) => {
 
                 // Get user info from AsyncStorage
                 const userData = await AsyncStorage.getUser();
+                console.log('Loaded user data from AsyncStorage:', userData);
                 setUser(userData);
 
                 // Get pending orders

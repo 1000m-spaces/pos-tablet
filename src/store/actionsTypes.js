@@ -25,6 +25,8 @@ export const NEOCAFE = createRequestTypes(
     'CONFIRM_OTP',
     'LOGIN_PHONE',
     'LOGIN',
+    'GET_REVENUE_CASHIER',
+    'CLOSE_SHIFT',
     'LOGOUT',
     'GET_VERSION',
 

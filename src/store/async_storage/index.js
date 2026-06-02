@@ -61,6 +61,7 @@ const getPrinterInfo = async () => {
 const setUser = async user => {
   try {
     await AsyncStorage.setItem('user', JSON.stringify(user));
+    console.log('AsyncStorage: setUser saved', user);
   } catch (e) {
     console.log(e);
   }

@@ -10,16 +10,19 @@ import AsyncStorage from 'store/async_storage/index';
 import DrawerContent from './DrawerContent';
 import { useDispatch, useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
-import { widthDevice } from 'assets/constans';
+import { widthDevice, heightDevice } from 'assets/constans';
 import { syncPendingOrdersAction } from 'store/actions';
 import Toast from 'react-native-toast-message';
 import printQueueService from '../../services/PrintQueueService';
+import Modal from 'react-native-modal';
+import ShiftCloseModal from './ShiftCloseModal';
 
 
 const Main = () => {
   const dispatch = useDispatch();
   const currentScreen = useSelector(state => screenSelector(state));
   const [userShop, setUserShop] = useState(null);
+  const [isShiftCloseVisible, setIsShiftCloseVisible] = useState(false);
 
   // Print queue related state
   const [printQueueStatus, setPrintQueueStatus] = useState('');
@@ -143,7 +146,10 @@ const Main = () => {
     <>
       <Drawer.Navigator
         drawerContent={props => (
-          <DrawerContent {...props} />
+          <DrawerContent
+            onPressShiftClose={() => setIsShiftCloseVisible(true)}
+            {...props}
+          />
         )}
         overlayColor="rgba(0, 0, 0, 0.7)"
         screenOptions={{
@@ -195,6 +201,14 @@ const Main = () => {
         />
       </Drawer.Navigator>
 
+      <Modal
+        isVisible={isShiftCloseVisible}
+        onBackButtonPress={() => setIsShiftCloseVisible(false)}
+        onBackdropPress={() => setIsShiftCloseVisible(false)}
+        propagateSwipe
+        style={styles.containerModal}>
+        <ShiftCloseModal onCloseModal={() => setIsShiftCloseVisible(false)} />
+      </Modal>
     </>
   );
 };
@@ -238,5 +252,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
     marginBottom: 10,
+  },
+  containerModal: {
+    width: heightDevice > widthDevice ? heightDevice * 0.5 : widthDevice * 0.5,
+    height:
+      heightDevice > widthDevice ? widthDevice * 0.45 : heightDevice * 0.45,
+    backgroundColor: 'white',
+    position: 'absolute',
+    borderRadius: 24,
+    left: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
+    top: heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
+    margin: 0,
   },
 });
