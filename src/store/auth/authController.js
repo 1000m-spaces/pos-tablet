@@ -16,18 +16,60 @@ class AuthController {
 
   loginInternalController = async payload => {
     try {
+      console.log('AuthController: loginInternalController request payload', {
+        username: payload.username,
+        hasPassword: !!payload.password,
+      });
       const { data } = await HttpClient.post(UrlApi.loginInternal, {
         username: payload.username,
         password: payload.password,
         // version: 'web'
       });
-      console.log('login::', data)
+      console.log('login::', data);
       return { success: true, data: data };
     } catch (error) {
-      console.log('login error::', error, UrlApi.loginInternal)
+      console.log('login error::', error, UrlApi.loginInternal);
       return { success: false, error: error.message };
     }
   };
+
+  getRevenueCashierController = async payload => {
+    try {
+      const { data } = await HttpClient.post(UrlApi.getRevenueCashier, {
+        user_id: payload.user_id,
+        shop_id: payload.shop_id,
+      });
+      console.log('getRevenueCashier::', data);
+      return { success: true, data: data };
+    } catch (error) {
+      console.log('getRevenueCashier error::', error, UrlApi.getRevenueCashier);
+      return { success: false, error: error.message };
+    }
+  };
+
+  closeShiftController = async payload => {
+    console.log('closeShift payload::', payload);
+    try {
+      const { data } = await HttpClient.post(UrlApi.closeShift, {
+        begin_balance: payload.begin_balance,
+        net_revenue: payload.net_revenue,
+        user_id: payload.user_id,
+        shop_id: payload.shop_id,
+      });
+      console.log('closeShift::', data);
+      if (data && data.status === true) {
+        console.log('closeShift success response::', data);
+        return { success: true, data: data };
+      } else {
+        console.log('closeShift failed response::', data);
+        return { success: false, error: data?.message || 'Chốt ca thất bại' };
+      }
+    } catch (error) {
+      console.log('closeShift error::', error, UrlApi.closeShift);
+      return { success: false, error: error.message };
+    }
+  };
+
   confirmOtpController = async query => {
     const result = await HttpClient.put(UrlApi.confirmPhone, query);
     console.log('RESULT CONFIRM OTP CONTROLLER', result, query);

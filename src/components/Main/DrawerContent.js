@@ -24,8 +24,9 @@ const DrawerList = [
   { icon: 'invoice_pos', label: 'Đơn online', navigateTo: NAVIGATION_APP_ORDER },
   { icon: 'invoice_pos', label: 'Hóa Đơn', navigateTo: NAVIGATION_INVOICE },
   { icon: 'account_pos', label: 'Tài khoản', navigateTo: NAVIGATION_PROFILE },
+  { icon: 'clock', label: 'Chốt ca', isPopup: true },
 ];
-const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation, hasDeliveryOrders }) => {
+const DrawerLayout = ({ icon, label, navigateTo, isPopup, onPressShiftClose, currentScreen, navigation, hasDeliveryOrders }) => {
   const dispatch = useDispatch();
   const blinkAnim = useRef(new Animated.Value(1)).current;
 
@@ -55,6 +56,12 @@ const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation, hasD
   }, [hasDeliveryOrders, navigateTo, blinkAnim]);
 
   const handlePress = () => {
+    if (isPopup) {
+      if (onPressShiftClose) {
+        onPressShiftClose();
+      }
+      return;
+    }
     console.log('DrawerLayout: Attempting to navigate to:', navigateTo);
     console.log('DrawerLayout: Current screen:', currentScreen);
     console.log('DrawerLayout: Navigation object:', navigation);
@@ -76,7 +83,10 @@ const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation, hasD
       }
     } catch (error) {
       console.error('DrawerLayout: Navigation error:', error);
-      console.error('DrawerLayout: Error stack:', error.stack);
+      console.error(
+        'DrawerLayout: Error stack:',
+        error && typeof error === 'object' && 'stack' in error ? error.stack : error,
+      );
     }
   };
 
@@ -125,7 +135,7 @@ const DrawerLayout = ({ icon, label, navigateTo, currentScreen, navigation, hasD
   );
 };
 
-const DrawerItems = ({ currentScreen, navigation, hasDeliveryOrders }) => {
+const DrawerItems = ({ currentScreen, navigation, hasDeliveryOrders, onPressShiftClose }) => {
   return DrawerList.map((el, i) => {
     return (
       <DrawerLayout
@@ -135,13 +145,15 @@ const DrawerItems = ({ currentScreen, navigation, hasDeliveryOrders }) => {
         icon={el.icon}
         label={el.label}
         navigateTo={el.navigateTo}
+        isPopup={el.isPopup}
+        onPressShiftClose={onPressShiftClose}
         hasDeliveryOrders={hasDeliveryOrders}
       />
     );
   });
 };
 
-const DrawerContent = props => {
+const DrawerContent = ({ onPressShiftClose, ...props }) => {
   const dispatch = useDispatch();
   const currentScreen = useSelector(state => screenSelector(state));
   const onlineOrders = useSelector(state => onlineOrderSelector(state));
@@ -240,7 +252,12 @@ const DrawerContent = props => {
             <Svg name={'logo_menu'} size={60} />
           </TouchableOpacity>
           <View style={styles.drawerSection}>
-            <DrawerItems currentScreen={currentScreen} navigation={props.navigation} hasDeliveryOrders={hasNewDeliveryOrders} />
+            <DrawerItems
+              currentScreen={currentScreen}
+              navigation={props.navigation}
+              hasDeliveryOrders={hasNewDeliveryOrders}
+              onPressShiftClose={onPressShiftClose}
+            />
           </View>
         </View>
       </DrawerContentScrollView>

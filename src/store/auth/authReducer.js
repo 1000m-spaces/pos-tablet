@@ -10,6 +10,13 @@ const initializeState = {
   errorConfirm: '',
   userInfo: {userid: -1},
   statusLoginPhone: Status.DEFAULT,
+  // revenue cashier
+  cashierRevenue: null,
+  statusRevenueCashier: Status.DEFAULT,
+  errorRevenueCashier: '',
+  // close shift
+  statusCloseShift: Status.DEFAULT,
+  errorCloseShift: '',
   //Get Version
   forceUpdate: false,
   update: false,
@@ -44,6 +51,47 @@ export default (state = initializeState, {type, payload}) => {
         // tokenConfirm: payload.tokenConfirm,
         userInfo: payload.userInfo,
         statusSendPhone: Status.SUCCESS,
+      };
+    case NEOCAFE.GET_REVENUE_CASHIER_REQUEST:
+      return {
+        ...state,
+        statusRevenueCashier: Status.LOADING,
+        errorRevenueCashier: '',
+      };
+    case NEOCAFE.GET_REVENUE_CASHIER_SUCCESS:
+      return {
+        ...state,
+        cashierRevenue: payload.cashierRevenue,
+        statusRevenueCashier: Status.SUCCESS,
+      };
+    case NEOCAFE.GET_REVENUE_CASHIER_ERROR:
+      return {
+        ...state,
+        statusRevenueCashier: Status.ERROR,
+        errorRevenueCashier: payload.errorMsg,
+      };
+    case NEOCAFE.CLOSE_SHIFT_REQUEST:
+      return {
+        ...state,
+        statusCloseShift: Status.LOADING,
+        errorCloseShift: '',
+      };
+    case NEOCAFE.CLOSE_SHIFT_SUCCESS:
+      return {
+        ...state,
+        statusCloseShift: Status.SUCCESS,
+      };
+    case NEOCAFE.CLOSE_SHIFT_ERROR:
+      return {
+        ...state,
+        statusCloseShift: Status.ERROR,
+        errorCloseShift: payload.errorMsg,
+      };
+    case NEOCAFE.CLOSE_SHIFT_RESET:
+      return {
+        ...state,
+        statusCloseShift: Status.DEFAULT,
+        errorCloseShift: '',
       };
     case NEOCAFE.SEND_PHONE_SUCCESS:
       return {

@@ -5,7 +5,7 @@ import { isTokenConfirm } from './authSelector';
 import { confirmOtpReset, loginPhoneReset, sendPhoneReset } from './authAction';
 import { asyncStorage } from 'store/index';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { resetGetListShop, resetOrder } from 'store/actions';
+// import { resetGetListShop, resetOrder } from 'store/actions';
 import strings from 'localization/Localization';
 
 function* sendPhoneSaga({ payload }) {
@@ -50,6 +50,7 @@ function* sendPhoneSaga({ payload }) {
 
 function* loginInternalSaga({ payload }) {
   try {
+    console.log('loginInternalSaga start', payload);
     const result = yield call(authController.loginInternalController, payload);
     console.log('loginInternalSaga result:', result);
 
@@ -100,6 +101,72 @@ function* loginInternalSaga({ payload }) {
       type: NEOCAFE.SEND_PHONE_ERROR,
       payload: {
         errorMsg: 'Tài khoản hoặc mật khẩu không đúng',
+      },
+    });
+  }
+}
+
+function* getRevenueCashierSaga({ payload }) {
+  try {
+    const result = yield call(
+      authController.getRevenueCashierController,
+      payload,
+    );
+    console.log('getRevenueCashierSaga result:', result);
+
+    if (result.success === true) {
+      yield put({
+        type: NEOCAFE.GET_REVENUE_CASHIER_SUCCESS,
+        payload: {
+          cashierRevenue: result.data,
+        },
+      });
+    } else {
+      yield put({
+        type: NEOCAFE.GET_REVENUE_CASHIER_ERROR,
+        payload: {
+          errorMsg: result.error || 'Lỗi lấy doanh thu thu ngân',
+        },
+      });
+    }
+  } catch (e) {
+    console.log('getRevenueCashierSaga error:', e);
+    yield put({
+      type: NEOCAFE.GET_REVENUE_CASHIER_ERROR,
+      payload: {
+        errorMsg: e.message || 'Lỗi lấy doanh thu thu ngân',
+      },
+    });
+  }
+}
+
+function* closeShiftSaga({ payload }) {
+  try {
+    const result = yield call(
+      authController.closeShiftController,
+      payload,
+    );
+    console.log('closeShiftSaga result:', result);
+
+    if (result.success === true) {
+      yield put({
+        type: NEOCAFE.CLOSE_SHIFT_SUCCESS,
+        payload: result.data,
+      });
+    } else {
+      yield put({
+        type: NEOCAFE.CLOSE_SHIFT_ERROR,
+        payload: {
+          errorMsg: result.error || 'Lỗi chốt ca',
+        },
+      });
+    }
+  } catch (e) {
+    console.log('closeShiftSaga error:', e);
+    yield put({
+      type: NEOCAFE.CLOSE_SHIFT_ERROR,
+      payload: {
+        errorMsg: e.message || 'Lỗi chốt ca',
       },
     });
   }
@@ -166,8 +233,8 @@ function* loginPhone({ payload }) {
 
 function* logout() {
   try {
-    yield put(resetOrder());
-    yield put(resetGetListShop({ isLogout: true }));
+    // yield put(resetOrder());
+    // yield put(resetGetListShop({ isLogout: true }));
     // yield put(resetGetListProduct());
     asyncStorage.clearStorage();
     asyncStorage.setTheFirstLogin('false');
@@ -204,6 +271,8 @@ function* getVersions({ payload }) {
 export default function* watcherSaga() {
   // yield takeLatest(NEOCAFE.SEND_PHONE_REQUEST, sendPhoneSaga);
   yield takeLatest(NEOCAFE.LOGIN_REQUEST, loginInternalSaga);
+  yield takeLatest(NEOCAFE.GET_REVENUE_CASHIER_REQUEST, getRevenueCashierSaga);
+  yield takeLatest(NEOCAFE.CLOSE_SHIFT_REQUEST, closeShiftSaga);
   yield takeLatest(NEOCAFE.CONFIRM_OTP_REQUEST, confirmOtp);
   yield takeLatest(NEOCAFE.LOGIN_PHONE_REQUEST, loginPhone);
   yield takeLatest(NEOCAFE.LOGOUT_REQUEST, logout);

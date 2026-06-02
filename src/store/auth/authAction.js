@@ -12,6 +12,20 @@ export const loginInternal = request => ({
   payload: request,
 });
 
+export const getRevenueCashier = request => ({
+  type: NEOCAFE.GET_REVENUE_CASHIER_REQUEST,
+  payload: request,
+});
+
+export const closeShift = request => ({
+  type: NEOCAFE.CLOSE_SHIFT_REQUEST,
+  payload: request,
+});
+
+export const closeShiftReset = () => ({
+  type: NEOCAFE.CLOSE_SHIFT_RESET,
+});
+
 export const sendPhoneReset = () => ({
   type: NEOCAFE.SEND_PHONE_RESET,
 });

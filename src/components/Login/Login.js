@@ -46,12 +46,17 @@ const Login = props => {
       return;
     }
 
+    console.log('Login flow: submitLogin', {
+      username: username.trim(),
+      password: password,
+    });
+
     // Hash password using MD5
     // const hashedPassword = CryptoJS.MD5(password).toString();
 
     dispatch(loginInternal({
       username: username.trim(),
-      password: password
+      password: password,
     }));
   };
 
