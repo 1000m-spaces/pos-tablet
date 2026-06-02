@@ -1,4 +1,4 @@
-import { takeLatest, call, put, select } from 'redux-saga/effects';
+import { takeLatest, takeEvery, call, put, select } from 'redux-saga/effects';
 import { NEOCAFE } from 'store/actionsTypes';
 import orderController from './orderController';
 // import {isTokenConfirm} from './authSelector';
@@ -6,6 +6,7 @@ import orderController from './orderController';
 import { asyncStorage } from 'store/index';
 import AsyncStorage from 'store/async_storage';
 import { syncPendingOrdersAction } from 'store/actions';
+import logService, { LOG_CATEGORIES } from '../../services/LogService';
 
 function* createOrderSaga({ payload }) {
   // try {
@@ -110,8 +111,17 @@ function* createOrderSaga({ payload }) {
 
     yield call(AsyncStorage.setLastOrder, orderForHistory);
     yield call(AsyncStorage.addPendingOrder, orderForHistory);
+    // Lưu vào lịch sử bất biến (KHÔNG BAO GIỜ bị sync/merge xóa)
+    yield call(AsyncStorage.addOrderHistory, orderForHistory);
+    logService.info(LOG_CATEGORIES.ORDER, `Đặt đơn thành công: ${orderForHistory.session}`, {
+      session: orderForHistory.session,
+      table: orderForHistory.shoptablename,
+      total: orderForHistory.total_amount,
+      products: orderForHistory.products?.length,
+    });
   } catch (storageError) {
     console.log('Error saving failed order to local storage:', storageError);
+    logService.error(LOG_CATEGORIES.ORDER, `Lỗi lưu đơn: ${storageError.message}`);
   }
 
   // yield put({
@@ -214,16 +224,56 @@ function* getOrderPaidSuccessSaga({ payload }) {
   try {
     const result = yield call(orderController.getOrderPaidSuccess, payload);
     if (result && result.success) {
+      // ĐỌC storage mới nhất
       const pendingOrders = yield call(AsyncStorage.getPendingOrders);
-      const pendingItems = pendingOrders.filter(item => item.syncStatus === "pending");
       const resultItems = result.data?.data || [];
+
+      // Đánh dấu đơn server là synced
       resultItems.forEach(item => {
         item.syncStatus = "synced";
       });
-      const dataSynced = [...pendingItems, ...resultItems];
-      console.log('dataSynced:', dataSynced)
+
+      // Danh sách các mã đơn từ server
+      const serverKeys = new Set(resultItems.map(item => item.offline_code || item.session).filter(Boolean));
+
+      // Cập nhật trạng thái synced cho các đơn local đã có trên server
+      const newlySyncedLocalOrders = [];
+      const updatedPendingOrders = pendingOrders.map(order => {
+        const key = order.session || order.offline_code;
+        if (key && serverKeys.has(key) && order.syncStatus !== 'synced') {
+          const updated = { ...order, syncStatus: 'synced' };
+          newlySyncedLocalOrders.push(updated);
+          return updated;
+        }
+        return order;
+      });
+
+      // Cập nhật vào lịch sử đơn hàng (orderHistory) để giao diện đồng bộ
+      for (const order of newlySyncedLocalOrders) {
+        const key = order.session || order.offline_code;
+        if (key) {
+          yield call(AsyncStorage.updateOrderSyncStatus, key, 'synced');
+        }
+      }
+
+      // Giữ TẤT CẢ đơn local (KHÔNG xóa bất kỳ đơn nào)
+      // Thêm đơn server mà local chưa có (tránh trùng lặp)
+      const localKeys = new Set(updatedPendingOrders.map(o => o.session || o.offline_code).filter(Boolean));
+      const newServerOrders = resultItems
+        .filter(item => {
+          const key = item.offline_code || item.session;
+          return key && !localKeys.has(key);
+        })
+        .map(item => ({
+          ...item,
+          session: item.session || item.offline_code,
+          offlineOrderId: item.offlineOrderId || item.offline_code,
+        }));
+
+      const dataSynced = [...updatedPendingOrders, ...newServerOrders];
+      console.log('dataSynced (safe merge):', dataSynced);
       yield call(AsyncStorage.setPendingOrders, dataSynced);
-      put(syncPendingOrdersAction());
+      yield put(syncPendingOrdersAction());
       yield put({
         type: NEOCAFE.GET_ORDER_PAID_SUCCESS_SUCCESS,
         payload: result.data,
@@ -275,7 +325,7 @@ function* estimateAhamove({ payload }) {
 }
 
 export default function* watcherSaga() {
-  yield takeLatest(NEOCAFE.CREATE_ORDER_REQUEST, createOrderSaga);
+  yield takeEvery(NEOCAFE.CREATE_ORDER_REQUEST, createOrderSaga);
   yield takeLatest(NEOCAFE.ADD_PRODUCT_CART_REQUEST, addProductCartSaga);
   yield takeLatest(NEOCAFE.SET_ORDER_REQUEST, setOrderSaga);
   yield takeLatest(NEOCAFE.GET_ONLINE_ORDER_REQUEST, getOnlineOrderSaga);

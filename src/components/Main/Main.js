@@ -14,6 +14,7 @@ import { widthDevice } from 'assets/constans';
 import { syncPendingOrdersAction } from 'store/actions';
 import Toast from 'react-native-toast-message';
 import printQueueService from '../../services/PrintQueueService';
+import logService from '../../services/LogService';
 
 
 const Main = () => {
@@ -28,11 +29,17 @@ const Main = () => {
 
 
   useEffect(() => {
-    // Background job: sync offline orders every 1 minute
+    // Initialize logging service
+    logService.init();
+
+    // Cleanup order history older than 7 days on app start
+    AsyncStorage.cleanupOrderHistory(7);
+
+    // Background job: sync offline orders every 2 minutes
     const intervalId = setInterval(() => {
       dispatch(syncPendingOrdersAction());
       // Optionally refresh local data after dispatching sync action
-    }, 120000); // 60,000 ms = 1 minute
+    }, 120000); // 120,000 ms = 2 minutes
 
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);

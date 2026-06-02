@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **pos-tablet** (2585 symbols, 4420 relationships, 172 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **pos-tablet** (2612 symbols, 4453 relationships, 172 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -28,6 +28,10 @@ This project is indexed by GitNexus as **pos-tablet** (2585 symbols, 4420 relati
 | `gitnexus://repo/pos-tablet/clusters` | All functional areas |
 | `gitnexus://repo/pos-tablet/processes` | All execution flows |
 | `gitnexus://repo/pos-tablet/process/{name}` | Step-by-step execution trace |
+
+## Cross-Repo Groups
+
+This repository is listed under GitNexus **group(s): pos-migration** (see `~/.gitnexus/groups/`). For cross-repo analysis, use MCP tools `impact`, `query`, and `context` with `repo` set to `@<groupName>` or `@<groupName>/<memberPath>` (paths match keys in that group’s `group.yaml`). Use `group_list` / `group_sync` for membership and sync. From the terminal: `npx gitnexus group list`, `npx gitnexus group sync <name>`, `npx gitnexus group impact <name> --target <symbol> --repo <group-path>`.
 
 ## CLI
 

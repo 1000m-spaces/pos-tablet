@@ -769,6 +769,105 @@ const getBackupOrdersMetadata = async () => {
   };
 };
 
+// ============================================================
+// ORDER HISTORY - Lịch sử đơn bất biến (TÁCH BIỆT pendingOrders)
+// Key: 'orderHistory' - CHỈ THÊM, KHÔNG BAO GIỜ SỬA/XÓA (trừ cleanup)
+// ============================================================
+
+const addOrderHistory = async (order) => {
+  try {
+    const existing = await AsyncStorage.getItem('orderHistory');
+    const history = existing ? JSON.parse(existing) : [];
+    history.unshift({
+      ...order,
+      history_created_at: new Date().toISOString(),
+    });
+    await AsyncStorage.setItem('orderHistory', JSON.stringify(history));
+    console.log(`[OrderHistory] Added order ${order.session}, total: ${history.length}`);
+  } catch (error) {
+    console.error('[OrderHistory] Error adding order:', error);
+  }
+};
+
+const getOrderHistory = async () => {
+  try {
+    const value = await AsyncStorage.getItem('orderHistory');
+    if (value) {
+      return JSON.parse(value);
+    }
+    return [];
+  } catch (error) {
+    console.error('[OrderHistory] Error getting history:', error);
+    return [];
+  }
+};
+
+const cleanupOrderHistory = async (maxDays = 7) => {
+  try {
+    const history = await getOrderHistory();
+    if (history.length === 0) return;
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - maxDays);
+
+    const filtered = history.filter(order => {
+      const orderDate = new Date(order.history_created_at || order.created_at);
+      return orderDate >= cutoff;
+    });
+
+    const removed = history.length - filtered.length;
+    if (removed > 0) {
+      await AsyncStorage.setItem('orderHistory', JSON.stringify(filtered));
+      console.log(`[OrderHistory] Cleaned up ${removed} orders older than ${maxDays} days`);
+    }
+  } catch (error) {
+    console.error('[OrderHistory] Error cleaning up:', error);
+  }
+};
+
+const updateOrderSyncStatus = async (session, syncStatus) => {
+  try {
+    // 1. Cập nhật trong lịch sử đơn hàng (orderHistory)
+    const historyValue = await AsyncStorage.getItem('orderHistory');
+    if (historyValue) {
+      const history = JSON.parse(historyValue);
+      const updatedHistory = history.map(order => {
+        if (order.session === session || order.offlineOrderId === session) {
+          return {
+            ...order,
+            syncStatus,
+            synced_at: syncStatus === 'synced' ? new Date().toISOString() : order.synced_at,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return order;
+      });
+      await AsyncStorage.setItem('orderHistory', JSON.stringify(updatedHistory));
+    }
+
+    // 2. Cập nhật trong danh sách chờ sync (pendingOrders)
+    const pendingValue = await AsyncStorage.getItem('pendingOrders');
+    if (pendingValue) {
+      const pending = JSON.parse(pendingValue);
+      const updatedPending = pending.map(order => {
+        if (order.session === session || order.offlineOrderId === session) {
+          return {
+            ...order,
+            syncStatus,
+            synced_at: syncStatus === 'synced' ? new Date().toISOString() : order.synced_at,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return order;
+      });
+      await AsyncStorage.setItem('pendingOrders', JSON.stringify(updatedPending));
+    }
+    console.log(`[AsyncStorage] Updated sync status for ${session} to ${syncStatus}`);
+  } catch (error) {
+    console.error('[AsyncStorage] Error updating order sync status:', error);
+  }
+};
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -826,4 +925,9 @@ export default {
   addToBackupOrders,
   clearBackupOrders,
   getBackupOrdersMetadata,
+  // Order history functions (immutable)
+  addOrderHistory,
+  getOrderHistory,
+  cleanupOrderHistory,
+  updateOrderSyncStatus,
 };
