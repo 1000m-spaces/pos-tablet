@@ -7,24 +7,27 @@ import {
   View,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigation } from '@react-navigation/native';
-import { getRevenueCashier, closeShift, closeShiftReset, logout } from 'store/actions';
+import { getRevenueCashier, closeShift, closeShiftReset, logout, sendPhoneReset } from 'store/actions';
 import AsyncStorage from 'store/async_storage/index';
 import Svg from 'common/Svg/Svg';
 import { TextNormal, TextSemiBold, TextHighLightBold } from 'common/Text/TextFont';
 import Colors from 'theme/Colors';
 import Toast from 'react-native-toast-message';
 import Status from 'common/Status/Status';
-import { NAVIGATION_LOGIN } from 'navigation/routes';
+import { useNavigation } from '@react-navigation/native';
+import { NAVIGATION_SPLASH, NAVIGATION_LOGIN } from 'navigation/routes';
+import Modal from 'react-native-modal';
 
 const DEFAULT_REVENUE = '0';
 
 const ShiftCloseModal = ({ onCloseModal }) => {
   const dispatch = useDispatch();
-  const navigation = useNavigation();
   const refInput = useRef(null);
+  const navigation = useNavigation();
   const [actualRevenue, setActualRevenue] = useState(DEFAULT_REVENUE);
   const [user, setUser] = useState(null);
+  const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+  const [successRevenue, setSuccessRevenue] = useState('0');
 
   const cashierRevenue = useSelector(state => state.auth.cashierRevenue);
   const statusCloseShift = useSelector(state => state.auth.statusCloseShift);
@@ -55,21 +58,12 @@ const ShiftCloseModal = ({ onCloseModal }) => {
 
   useEffect(() => {
     if (statusCloseShift === Status.SUCCESS) {
-      Toast.show({
-        type: 'success',
-        text1: 'Chốt ca thành công',
-        text2: `Tổng tiền thực thu: ${Number(actualRevenue).toLocaleString('vi-VN')} VNĐ`,
-        position: 'top',
-      });
+      // Show success popup instead of navigating immediately
+      setSuccessRevenue(actualRevenue);
+      setIsSuccessModalVisible(true);
       dispatch(closeShiftReset());
-      onCloseModal();
       dispatch(logout());
-      
-      // Navigate to login immediately (same flow as DrawerContent)
-      navigation.reset({
-        index: 0,
-        routes: [{ name: NAVIGATION_LOGIN }],
-      });
+      dispatch(sendPhoneReset());
     } else if (statusCloseShift === Status.ERROR) {
       Toast.show({
         type: 'error',
@@ -112,6 +106,15 @@ const ShiftCloseModal = ({ onCloseModal }) => {
   };
 
   const isSubmitDisabled = !actualRevenue || actualRevenue === '0' || Number(actualRevenue) === 0 || statusCloseShift === Status.LOADING;
+
+  const handleSuccessConfirm = () => {
+    setIsSuccessModalVisible(false);
+    onCloseModal(); // Close outer modal
+    navigation.reset({
+      index: 0,
+      routes: [{ name: NAVIGATION_LOGIN }],
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -164,6 +167,34 @@ const ShiftCloseModal = ({ onCloseModal }) => {
           </TextSemiBold>
         </TouchableOpacity>
       </View>
+
+      {/* Success Modal */}
+      <Modal
+        isVisible={isSuccessModalVisible}
+        onBackButtonPress={() => {}} // Prevent back button
+        onBackdropPress={() => {}} // Prevent backdrop press - non-dismissible
+        animationIn="zoomIn"
+        animationOut="zoomOut"
+        backdropOpacity={0.7}>
+        <View style={styles.successModalContent}>
+          <View style={styles.successIconContainer}>
+            <Svg name={'success'} size={50} color={Colors.primary} />
+          </View>
+          <TextHighLightBold style={styles.successTitle}>
+            {'Chốt ca thành công!'}
+          </TextHighLightBold>
+          <TextNormal style={styles.successSubtitle}>
+            {`Tổng tiền thực thu:\n${Number(successRevenue).toLocaleString('vi-VN')} VNĐ`}
+          </TextNormal>
+          <TouchableOpacity
+            onPress={handleSuccessConfirm}
+            style={styles.successConfirmBtn}>
+            <TextSemiBold style={styles.successConfirmBtnText}>
+              {'XÁC NHẬN'}
+            </TextSemiBold>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -273,6 +304,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmBtnText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  successModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 24,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FAF3EA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  successTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#0D1F3C',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  successSubtitle: {
+    fontSize: 14,
+    color: '#757575',
+    textAlign: 'center',
+    marginBottom: 28,
+    lineHeight: 22,
+  },
+  successConfirmBtn: {
+    width: '100%',
+    height: 48,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successConfirmBtnText: {
     color: 'white',
     fontSize: 15,
     fontWeight: 'bold',

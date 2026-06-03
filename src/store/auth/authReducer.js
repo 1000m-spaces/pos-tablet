@@ -45,6 +45,12 @@ export default (state = initializeState, {type, payload}) => {
         ...state,
         statusSendPhone: Status.LOADING,
       };
+    case NEOCAFE.LOGOUT_REQUEST:
+      return {
+        ...state,
+        statusSendPhone: Status.DEFAULT,
+        errorSendOtp: '',
+      };
     case NEOCAFE.LOGIN_SUCCESS:
       return {
         ...state,

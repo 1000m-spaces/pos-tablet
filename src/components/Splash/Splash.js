@@ -22,6 +22,7 @@ const Splash = ({ navigation }) => {
     Orientation.lockToLandscape();
     const initUser = async () => {
       let userData = await asyncStorage.getUser();
+      console.log('Splash: User data from async storage:', userData);
       // If user data exists, navigate to Main (user is logged in)
       // If no user data, navigate to Login (user needs to log in)
       navigation.reset({

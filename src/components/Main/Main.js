@@ -207,7 +207,9 @@ const Main = () => {
         onBackdropPress={() => setIsShiftCloseVisible(false)}
         propagateSwipe
         style={styles.containerModal}>
-        <ShiftCloseModal onCloseModal={() => setIsShiftCloseVisible(false)} />
+        <ShiftCloseModal
+          onCloseModal={() => setIsShiftCloseVisible(false)}
+        />
       </Modal>
     </>
   );

@@ -60,6 +60,10 @@ const Login = props => {
     }));
   };
 
+  // useEffect(() => {
+  //   console.log('LOGIN SCREEN MOUNTED', { statusLogin, errorMessage });
+  // }, []);
+
   useEffect(() => {
     if (statusLogin === Status.SUCCESS) {
       dispatch(setScreenAction(NAVIGATION_HOME));
