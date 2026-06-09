@@ -40,7 +40,7 @@ class AuthController {
         shop_id: payload.shop_id,
       });
       console.log('getRevenueCashier::', data);
-      return { success: true, data: data };
+      return { success: true, data: data.data };
     } catch (error) {
       console.log('getRevenueCashier error::', error, UrlApi.getRevenueCashier);
       return { success: false, error: error.message };
@@ -53,6 +53,7 @@ class AuthController {
       const { data } = await HttpClient.post(UrlApi.closeShift, {
         begin_balance: payload.begin_balance,
         net_revenue: payload.net_revenue,
+        remaining_advance: payload.remaining_advance,
         user_id: payload.user_id,
         shop_id: payload.shop_id,
       });
