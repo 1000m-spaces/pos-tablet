@@ -25,6 +25,7 @@ const ShiftCloseModal = ({ onCloseModal }) => {
   const refInput = useRef(null);
   const navigation = useNavigation();
   const [actualRevenue, setActualRevenue] = useState(DEFAULT_REVENUE);
+  const [remainingAdvance, setRemainingAdvance] = useState(DEFAULT_REVENUE);
   const [user, setUser] = useState(null);
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
   const [successRevenue, setSuccessRevenue] = useState('0');
@@ -32,7 +33,6 @@ const ShiftCloseModal = ({ onCloseModal }) => {
   const cashierRevenue = useSelector(state => state.auth.cashierRevenue);
   const statusCloseShift = useSelector(state => state.auth.statusCloseShift);
   const errorCloseShift = useSelector(state => state.auth.errorCloseShift);
-
 
   useEffect(() => {
     const loadUserAndFetch = async () => {
@@ -49,6 +49,7 @@ const ShiftCloseModal = ({ onCloseModal }) => {
   }, [dispatch]);
 
   useEffect(() => {
+    console.log('cashierRevenue updated::', cashierRevenue);
     if (cashierRevenue && cashierRevenue.net_revenue !== undefined && cashierRevenue.net_revenue !== null) {
       const val = cashierRevenue.net_revenue;
       const cleanVal = String(val).replace(/[^0-9]/g, '');
@@ -59,7 +60,8 @@ const ShiftCloseModal = ({ onCloseModal }) => {
   useEffect(() => {
     if (statusCloseShift === Status.SUCCESS) {
       // Show success popup instead of navigating immediately
-      setSuccessRevenue(actualRevenue);
+      const total = (Number(cashierRevenue?.begin_balance) || 0) + (Number(remainingAdvance) || 0) + (Number(actualRevenue) || 0);
+      setSuccessRevenue(String(total));
       setIsSuccessModalVisible(true);
       dispatch(closeShiftReset());
       dispatch(logout());
@@ -89,6 +91,20 @@ const ShiftCloseModal = ({ onCloseModal }) => {
     }
   };
 
+  const handleRemainingAdvanceChange = (text) => {
+    // Keep only numbers
+    const cleanText = text.replace(/[^0-9]/g, '');
+    
+    // Manage leading zeros
+    if (cleanText === '') {
+      setRemainingAdvance('0');
+    } else if (cleanText.startsWith('0') && cleanText.length > 1) {
+      setRemainingAdvance(cleanText.replace(/^0+/, ''));
+    } else {
+      setRemainingAdvance(cleanText);
+    }
+  };
+
   const handleConfirm = () => {
     const revenueNumber = Number(actualRevenue) || 0;
     if (revenueNumber === 0) return;
@@ -100,12 +116,13 @@ const ShiftCloseModal = ({ onCloseModal }) => {
     dispatch(closeShift({
       begin_balance: beginBalance,
       net_revenue: revenueNumber,
+      remaining_advance: Number(remainingAdvance) || 0,
       user_id: user.userid,
       shop_id: shopId
     }));
   };
 
-  const isSubmitDisabled = !actualRevenue || actualRevenue === '0' || Number(actualRevenue) === 0 || statusCloseShift === Status.LOADING;
+  const isSubmitDisabled = !actualRevenue || statusCloseShift === Status.LOADING;
 
   const handleSuccessConfirm = () => {
     setIsSuccessModalVisible(false);
@@ -115,6 +132,13 @@ const ShiftCloseModal = ({ onCloseModal }) => {
       routes: [{ name: NAVIGATION_LOGIN }],
     });
   };
+
+  // Calculations
+  const openTime = cashierRevenue?.open_time || 'N/A';
+  const beginBalance = cashierRevenue?.begin_balance || 0;
+  const beginBalanceFormatted = Number(beginBalance).toLocaleString('vi-VN') + 'đ';
+  const totalCash = (Number(beginBalance) || 0) + (Number(remainingAdvance) || 0) + (Number(actualRevenue) || 0);
+  const totalCashFormatted = Number(totalCash).toLocaleString('vi-VN') + 'đ';
 
   return (
     <View style={styles.container}>
@@ -129,20 +153,60 @@ const ShiftCloseModal = ({ onCloseModal }) => {
       <TextHighLightBold style={styles.title}>{'Xác nhận chốt ca'}</TextHighLightBold>
       <TextNormal style={styles.subtitle}>{'Vui lòng kiểm tra và xác nhận lại tiền thực thu'}</TextNormal>
 
-      {/* Input Group */}
-      <View style={styles.inputGroup}>
-        <TextNormal style={styles.inputLabel}>{'CẬP NHẬT TỔNG TIỀN THỰC THU'}</TextNormal>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.input}
-            value={actualRevenue}
-            ref={refInput}
-            onChangeText={handleTextChange}
-            keyboardType={'numeric'}
-            onSubmitEditing={Keyboard.dismiss}
-            placeholderTextColor={Colors.placeholder}
-          />
-          <TextHighLightBold style={styles.suffix}>{'VNĐ'}</TextHighLightBold>
+      {/* Grey Card Container */}
+      <View style={styles.cardContainer}>
+        {/* Row 1: Thời gian bắt đầu */}
+        <View style={styles.infoRow}>
+          <TextNormal style={styles.infoLabel}>{'Thời gian bắt đầu'}</TextNormal>
+          <TextSemiBold style={styles.infoValue}>{openTime}</TextSemiBold>
+        </View>
+
+        {/* Row 2: Tiền tồn đầu ca */}
+        <View style={styles.infoRow}>
+          <TextNormal style={styles.infoLabel}>{'Tiền tồn đầu ca'}</TextNormal>
+          <TextSemiBold style={styles.infoValue}>{beginBalanceFormatted}</TextSemiBold>
+        </View>
+
+        {/* Input: Tiền tạm ứng còn lại */}
+        <View style={styles.inputGroup}>
+          <TextNormal style={styles.inputLabel}>{'TIỀN TẠM ỨNG CÒN LẠI'}</TextNormal>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={remainingAdvance}
+              onChangeText={handleRemainingAdvanceChange}
+              keyboardType={'numeric'}
+              onSubmitEditing={Keyboard.dismiss}
+              placeholderTextColor={Colors.placeholder}
+            />
+            <TextHighLightBold style={styles.suffix}>{'đ'}</TextHighLightBold>
+          </View>
+        </View>
+
+        {/* Input: Tiền mặt thực thu */}
+        <View style={styles.inputGroup}>
+          <TextNormal style={styles.inputLabel}>{'TIỀN MẶT THỰC THU'}</TextNormal>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={actualRevenue}
+              ref={refInput}
+              onChangeText={handleTextChange}
+              keyboardType={'numeric'}
+              onSubmitEditing={Keyboard.dismiss}
+              placeholderTextColor={Colors.placeholder}
+            />
+            <TextHighLightBold style={styles.suffix}>{'đ'}</TextHighLightBold>
+          </View>
+        </View>
+
+        {/* Separator line */}
+        <View style={styles.separator} />
+
+        {/* Row 3: Tổng tiền mặt cuối ca */}
+        <View style={styles.totalRow}>
+          <TextHighLightBold style={styles.totalLabel}>{'TỔNG TIỀN MẶT CUỐI CA'}</TextHighLightBold>
+          <TextHighLightBold style={styles.totalValue}>{totalCashFormatted}</TextHighLightBold>
         </View>
       </View>
 
@@ -184,7 +248,7 @@ const ShiftCloseModal = ({ onCloseModal }) => {
             {'Chốt ca thành công!'}
           </TextHighLightBold>
           <TextNormal style={styles.successSubtitle}>
-            {`Tổng tiền thực thu:\n${Number(successRevenue).toLocaleString('vi-VN')} VNĐ`}
+            {`Tổng tiền mặt cuối ca:\n${Number(successRevenue).toLocaleString('vi-VN')} đ`}
           </TextNormal>
           <TouchableOpacity
             onPress={handleSuccessConfirm}
@@ -242,22 +306,45 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 16,
   },
+  cardContainer: {
+    width: '100%',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 16,
+    padding: 16,
+    marginVertical: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoLabel: {
+    fontSize: 13,
+    color: '#757575',
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0D1F3C',
+  },
   inputGroup: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   inputLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
-    color: '#6D6D6D',
-    marginBottom: 8,
+    color: '#8E9AA0',
+    marginBottom: 6,
+    textTransform: 'uppercase',
   },
   inputWrapper: {
     width: '100%',
-    height: 52,
+    height: 48,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 14,
+    borderColor: '#E0E4EC',
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -265,15 +352,37 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#0D1F3C',
     padding: 0,
   },
   suffix: {
     fontSize: 14,
-    color: '#B6B6B6',
+    color: '#A0A0A0',
+    fontWeight: 'bold',
     marginLeft: 8,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: '#EAEAEA',
+    marginVertical: 14,
+    width: '100%',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#0D1F3C',
+  },
+  totalValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0D1F3C',
   },
   btnRow: {
     flexDirection: 'row',

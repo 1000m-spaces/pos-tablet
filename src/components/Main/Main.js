@@ -263,14 +263,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   containerModal: {
-    width: heightDevice > widthDevice ? heightDevice * 0.5 : widthDevice * 0.5,
-    height:
-      heightDevice > widthDevice ? widthDevice * 0.45 : heightDevice * 0.45,
+    width: widthDevice * 0.45,
+    height: heightDevice * 0.78,
     backgroundColor: 'white',
     position: 'absolute',
     borderRadius: 24,
-    left: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
-    top: heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
+    left: widthDevice * 0.275,
+    top: heightDevice * 0.08,
     margin: 0,
   },
 });
