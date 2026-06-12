@@ -19,7 +19,7 @@ import PaymentCart from './PaymentCart';
 import FastImage from 'react-native-fast-image';
 import { setOrderAction } from 'store/actions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-const Cart = ({ showTable }) => {
+const Cart = ({ showTable, onEditProduct }) => {
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const currentOrder = useSelector(state => currentOrderSelector(state));
@@ -78,49 +78,58 @@ const Cart = ({ showTable }) => {
       showTable();
     }
   };
-  const renderProductCart = ({ item, _ }) => {
+  const renderProductCart = ({ item, index }) => {
     return (
       <View style={styles.containerProduct}>
-        <FastImage
-          style={[styles.image]}
-          source={{
-            uri: item?.prodimg.includes('https')
-              ? `${item?.prodimg}`
-              : `${IMAGE_URL}${item?.prodimg}`,
-            priority: FastImage.priority.high,
-          }}
-        />
-        <View style={styles.wrapperProductInfo}>
-          <TextNormal numberOfLines={1} style={styles.productName}>
-            {item?.prodname}
-          </TextNormal>
-          <TextNormal style={styles.productTopping}>
-            {`${item?.option_item.name_vn},`.replace('undefined,', '') +
-              Array.from(
-                item?.extra_items || [],
-                val => ` ${val.name_vn}`,
-              ).toString()}
-          </TextNormal>
-          {item?.note && item.note.trim() !== '' && (
-            <TextNormal style={styles.productNote} numberOfLines={2}>
-              {item.note}
+        <TouchableOpacity
+          onPress={() => onEditProduct && onEditProduct(item, index)}
+          style={{ flexDirection: 'row', flex: 1 }}
+          activeOpacity={0.7}
+        >
+          <FastImage
+            style={[styles.image]}
+            source={{
+              uri: item?.prodimg.includes('https')
+                ? `${item?.prodimg}`
+                : `${IMAGE_URL}${item?.prodimg}`,
+              priority: FastImage.priority.high,
+            }}
+          />
+          <View style={{ paddingLeft: 6, flex: 1 }}>
+            <TextNormal numberOfLines={1} style={styles.productName}>
+              {item?.prodname}
             </TextNormal>
-          )}
-          <View style={styles.wrapperProduct}>
-            <TextNormal style={styles.productPrice}>
-              {formatMoney(item?.total_price) + 'đ'}
+            <TextNormal style={styles.productTopping}>
+              {`${item?.option_item.name_vn},`.replace('undefined,', '') +
+                Array.from(
+                  item?.extra_items || [],
+                  val => ` ${val.name_vn}`,
+                ).toString()}
             </TextNormal>
-            <View style={styles.wrapperQuantity}>
-              <TouchableOpacity onPress={() => updateQuantity(item, -1)}>
-                <Svg name={'icon_minus_pos'} size={28} color={'white'} />
-              </TouchableOpacity>
-              <TextNormal style={styles.textQuantity}>
-                {item?.quantity}
+            {item?.note && item.note.trim() !== '' && (
+              <TextNormal style={styles.productNote} numberOfLines={2}>
+                {item.note}
               </TextNormal>
-              <TouchableOpacity onPress={() => updateQuantity(item, 1)}>
-                <Svg name={'icon_plus_pos'} size={28} color={'white'} />
-              </TouchableOpacity>
+            )}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 5 }}>
+              <TextNormal style={styles.productPrice}>
+                {formatMoney(item?.total_price) + 'đ'}
+              </TextNormal>
+              <View style={{ width: 100 }} />
             </View>
+          </View>
+        </TouchableOpacity>
+        <View style={{ position: 'absolute', right: 0, bottom: 0, height: 28, justifyContent: 'center' }}>
+          <View style={styles.wrapperQuantity}>
+            <TouchableOpacity onPress={() => updateQuantity(item, -1)}>
+              <Svg name={'icon_minus_pos'} size={28} color={'white'} />
+            </TouchableOpacity>
+            <TextNormal style={styles.textQuantity}>
+              {item?.quantity}
+            </TextNormal>
+            <TouchableOpacity onPress={() => updateQuantity(item, 1)}>
+              <Svg name={'icon_plus_pos'} size={28} color={'white'} />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -245,7 +254,7 @@ const Cart = ({ showTable }) => {
 export default Cart;
 
 const styles = StyleSheet.create({
-  containerProduct: { flexDirection: 'row', flex: 1, marginBottom: 8 },
+  containerProduct: { flexDirection: 'row', flex: 1, marginBottom: 8, position: 'relative' },
   wrapperProductInfo: { paddingLeft: 6, flex: 1 },
   container: {
     backgroundColor: Colors.whiteColor,

@@ -19,7 +19,7 @@ import QuantityProduct from './QuantityProduct';
 import { heightDevice, widthDevice } from 'assets/constans';
 import { TextNormal } from 'common/Text/TextFont';
 import Colors from 'theme/Colors';
-const DetailProduct = ({ isVisiable, close }) => {
+const DetailProduct = ({ isVisiable, close, editingIndex, onSave }) => {
   const dispatch = useDispatch();
   const detailProduct = useSelector(state => productSelector(state));
   const [options, setOptions] = useState([]);
@@ -68,6 +68,8 @@ const DetailProduct = ({ isVisiable, close }) => {
     if (detailProduct) {
       setupOption();
       setupExtra();
+      setQuantity(detailProduct.quantity || 1);
+      setNote(detailProduct.note || '');
     }
   }, [isVisiable]);
   const updateOptionProduct = () => {
@@ -152,14 +154,17 @@ const DetailProduct = ({ isVisiable, close }) => {
         total_price += e.def_price;
       }
     });
-    dispatch(
-      addProductCart({
-        ...detailProduct,
-        quantity,
-        total_price,
-        note: note.trim(),
-      }),
-    );
+    const updatedProduct = {
+      ...detailProduct,
+      quantity,
+      total_price,
+      note: note.trim(),
+    };
+    if (editingIndex !== undefined && editingIndex >= 0 && onSave) {
+      onSave(updatedProduct, editingIndex);
+    } else {
+      dispatch(addProductCart(updatedProduct));
+    }
     close();
   };
   return (
@@ -205,6 +210,7 @@ const DetailProduct = ({ isVisiable, close }) => {
         quantity={quantity}
         onAddingCart={onAddingCart}
         updateQuantity={val => setQuantity(prev => (prev += val))}
+        isEdit={editingIndex !== undefined && editingIndex >= 0}
       />
     </Modal>
   );

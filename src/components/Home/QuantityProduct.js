@@ -10,6 +10,7 @@ const QuantityProduct = ({
   detailProduct,
   updateQuantity,
   onAddingCart,
+  isEdit,
 }) => {
   return (
     <View style={styles.container}>
@@ -26,7 +27,7 @@ const QuantityProduct = ({
       </View>
       <TouchableOpacity onPress={onAddingCart} style={styles.cartBtn}>
         <TextNormal style={styles.textCartBtn}>
-          {`Thêm vào giỏ hàng - ${formatMoney(
+          {`${isEdit ? 'Cập nhật giỏ hàng' : 'Thêm vào giỏ hàng'} - ${formatMoney(
             quantity * detailProduct.prodprice,
           )}đ`}
         </TextNormal>
