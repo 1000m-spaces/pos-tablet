@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FlatList, SafeAreaView, TouchableOpacity, View } from 'react-native';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { getMenuAction, setProductAction, getShopTablesAction, getPaymentChannelsAction } from 'store/actions';
+import { getMenuAction, setProductAction, getShopTablesAction, getPaymentChannelsAction, setOrderAction } from 'store/actions';
 import { currentOrderSelector, productMenuSelector } from 'store/selectors';
 import { useWifiInfo } from '../../hooks/useWifiInfo';
 import ProductItemMenu from './ProductItemMenu';
@@ -24,6 +24,7 @@ const Home = ({ navigation }) => {
   const dispatch = useDispatch();
   const productMenu = useSelector(state => productMenuSelector(state));
   const [showModal, setShowModal] = useState(-1);
+  const [editingIndex, setEditingIndex] = useState(-1);
   const [currentCate, setCurrentCate] = useState(0);
   const [filteredProductMenu, setFilteredProductMenu] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -92,8 +93,46 @@ const Home = ({ navigation }) => {
 
   const handlePressProduct = async item => {
     console.log(item);
+    setEditingIndex(-1);
     dispatch(setProductAction(item));
     item && setShowModal(1);
+  };
+
+  const handleEditProduct = (product, index) => {
+    dispatch(setProductAction(product));
+    setEditingIndex(index);
+    setShowModal(1);
+  };
+
+  const handleSaveProduct = (updatedProduct, index) => {
+    const tempProducts = JSON.parse(JSON.stringify(currentOrder.products));
+    if (index >= 0 && index < tempProducts.length) {
+      const matchIndex = tempProducts.findIndex((prod, idx) => {
+        return (
+          idx !== index &&
+          prod.prodid === updatedProduct.prodid &&
+          prod?.option_item?.id === updatedProduct?.option_item?.id &&
+          JSON.stringify(prod.extraIds) === JSON.stringify(updatedProduct.extraIds)
+        );
+      });
+
+      if (matchIndex !== -1) {
+        tempProducts[matchIndex].quantity += updatedProduct.quantity;
+        const singlePrice = updatedProduct.total_price / updatedProduct.quantity;
+        tempProducts[matchIndex].total_price = tempProducts[matchIndex].quantity * singlePrice;
+        tempProducts.splice(index, 1);
+      } else {
+        tempProducts[index] = updatedProduct;
+      }
+
+      dispatch(
+        setOrderAction({
+          ...currentOrder,
+          products: tempProducts,
+          applied_products: tempProducts,
+        }),
+      );
+    }
   };
 
   const onClose = () => {
@@ -168,9 +207,14 @@ const Home = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           />
         </View>
-        <Cart showTable={onShowTable} />
+        <Cart showTable={onShowTable} onEditProduct={handleEditProduct} />
         {showModal === 1 && (
-          <DetailProduct close={onClose} isVisiable={showModal === 1} />
+          <DetailProduct
+            close={onClose}
+            isVisiable={showModal === 1}
+            editingIndex={editingIndex}
+            onSave={handleSaveProduct}
+          />
         )}
         {showModal === 2 && (
           <TableSelector

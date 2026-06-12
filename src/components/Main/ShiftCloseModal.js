@@ -24,7 +24,8 @@ const ShiftCloseModal = ({ onCloseModal }) => {
   const dispatch = useDispatch();
   const refInput = useRef(null);
   const navigation = useNavigation();
-  const [actualRevenue, setActualRevenue] = useState(DEFAULT_REVENUE);
+  const [actualRevenue, setActualRevenue] = useState('');
+  const [beginBalance, setBeginBalance] = useState('0');
   const [remainingAdvance, setRemainingAdvance] = useState(DEFAULT_REVENUE);
   const [user, setUser] = useState(null);
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
@@ -50,17 +51,17 @@ const ShiftCloseModal = ({ onCloseModal }) => {
 
   useEffect(() => {
     console.log('cashierRevenue updated::', cashierRevenue);
-    if (cashierRevenue && cashierRevenue.net_revenue !== undefined && cashierRevenue.net_revenue !== null) {
-      const val = cashierRevenue.net_revenue;
+    if (cashierRevenue && cashierRevenue.begin_balance !== undefined && cashierRevenue.begin_balance !== null) {
+      const val = cashierRevenue.begin_balance;
       const cleanVal = String(val).replace(/[^0-9]/g, '');
-      setActualRevenue(cleanVal || DEFAULT_REVENUE);
+      setBeginBalance(cleanVal || '0');
     }
   }, [cashierRevenue]);
 
   useEffect(() => {
     if (statusCloseShift === Status.SUCCESS) {
       // Show success popup instead of navigating immediately
-      const total = (Number(cashierRevenue?.begin_balance) || 0) + (Number(remainingAdvance) || 0) + (Number(actualRevenue) || 0);
+      const total = (Number(beginBalance) || 0) + (Number(remainingAdvance) || 0) + (Number(actualRevenue) || 0);
       setSuccessRevenue(String(total));
       setIsSuccessModalVisible(true);
       dispatch(closeShiftReset());
@@ -83,11 +84,25 @@ const ShiftCloseModal = ({ onCloseModal }) => {
     
     // Manage leading zeros
     if (cleanText === '') {
-      setActualRevenue('0');
+      setActualRevenue('');
     } else if (cleanText.startsWith('0') && cleanText.length > 1) {
       setActualRevenue(cleanText.replace(/^0+/, ''));
     } else {
       setActualRevenue(cleanText);
+    }
+  };
+
+  const handleBeginBalanceChange = (text) => {
+    // Keep only numbers
+    const cleanText = text.replace(/[^0-9]/g, '');
+    
+    // Manage leading zeros
+    if (cleanText === '') {
+      setBeginBalance('');
+    } else if (cleanText.startsWith('0') && cleanText.length > 1) {
+      setBeginBalance(cleanText.replace(/^0+/, ''));
+    } else {
+      setBeginBalance(cleanText);
     }
   };
 
@@ -106,23 +121,21 @@ const ShiftCloseModal = ({ onCloseModal }) => {
   };
 
   const handleConfirm = () => {
-    const revenueNumber = Number(actualRevenue) || 0;
-    if (revenueNumber === 0) return;
+    if (actualRevenue === '') return;
     if (!user) return;
 
-    const beginBalance = cashierRevenue?.begin_balance || 0;
     const shopId = user.shops?.id || user.shopid || 0;
 
     dispatch(closeShift({
-      begin_balance: beginBalance,
-      net_revenue: revenueNumber,
+      begin_balance: Number(beginBalance) || 0,
+      net_revenue: Number(actualRevenue) || 0,
       remaining_advance: Number(remainingAdvance) || 0,
       user_id: user.userid,
       shop_id: shopId
     }));
   };
 
-  const isSubmitDisabled = !actualRevenue || statusCloseShift === Status.LOADING;
+  const isSubmitDisabled = actualRevenue === '' || statusCloseShift === Status.LOADING;
 
   const handleSuccessConfirm = () => {
     setIsSuccessModalVisible(false);
@@ -135,8 +148,6 @@ const ShiftCloseModal = ({ onCloseModal }) => {
 
   // Calculations
   const openTime = cashierRevenue?.open_time || 'N/A';
-  const beginBalance = cashierRevenue?.begin_balance || 0;
-  const beginBalanceFormatted = Number(beginBalance).toLocaleString('vi-VN') + 'đ';
   const totalCash = (Number(beginBalance) || 0) + (Number(remainingAdvance) || 0) + (Number(actualRevenue) || 0);
   const totalCashFormatted = Number(totalCash).toLocaleString('vi-VN') + 'đ';
 
@@ -161,10 +172,20 @@ const ShiftCloseModal = ({ onCloseModal }) => {
           <TextSemiBold style={styles.infoValue}>{openTime}</TextSemiBold>
         </View>
 
-        {/* Row 2: Tiền tồn đầu ca */}
-        <View style={styles.infoRow}>
-          <TextNormal style={styles.infoLabel}>{'Tiền tồn đầu ca'}</TextNormal>
-          <TextSemiBold style={styles.infoValue}>{beginBalanceFormatted}</TextSemiBold>
+        {/* Input: Tiền tồn đầu ca */}
+        <View style={styles.inputGroup}>
+          <TextNormal style={styles.inputLabel}>{'TIỀN TỒN ĐẦU CA'}</TextNormal>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              value={beginBalance}
+              onChangeText={handleBeginBalanceChange}
+              keyboardType={'numeric'}
+              onSubmitEditing={Keyboard.dismiss}
+              placeholderTextColor={Colors.placeholder}
+            />
+            <TextHighLightBold style={styles.suffix}>{'đ'}</TextHighLightBold>
+          </View>
         </View>
 
         {/* Input: Tiền tạm ứng còn lại */}
