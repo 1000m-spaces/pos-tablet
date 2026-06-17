@@ -54,14 +54,18 @@ const ShiftCloseModal = ({ onCloseModal }) => {
     if (cashierRevenue && cashierRevenue.begin_balance !== undefined && cashierRevenue.begin_balance !== null) {
       const val = cashierRevenue.begin_balance;
       const cleanVal = String(val).replace(/[^0-9]/g, '');
-      setBeginBalance(cleanVal || '0');
+      const formatted = cleanVal.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      setBeginBalance(formatted || '0');
     }
   }, [cashierRevenue]);
 
   useEffect(() => {
     if (statusCloseShift === Status.SUCCESS) {
       // Show success popup instead of navigating immediately
-      const total = (Number(beginBalance) || 0) + (Number(remainingAdvance) || 0) + (Number(actualRevenue) || 0);
+      const rawBeginBalance = Number(beginBalance.replace(/[^0-9]/g, '')) || 0;
+      const rawRemainingAdvance = Number(remainingAdvance.replace(/[^0-9]/g, '')) || 0;
+      const rawActualRevenue = Number(actualRevenue.replace(/[^0-9]/g, '')) || 0;
+      const total = rawBeginBalance + rawRemainingAdvance + rawActualRevenue;
       setSuccessRevenue(String(total));
       setIsSuccessModalVisible(true);
       dispatch(closeShiftReset());
@@ -76,19 +80,21 @@ const ShiftCloseModal = ({ onCloseModal }) => {
       });
       dispatch(closeShiftReset());
     }
-  }, [statusCloseShift]);
+  }, [statusCloseShift, beginBalance, remainingAdvance, actualRevenue]);
 
   const handleTextChange = (text) => {
     // Keep only numbers
     const cleanText = text.replace(/[^0-9]/g, '');
     
-    // Manage leading zeros
+    // Manage leading zeros and format
     if (cleanText === '') {
       setActualRevenue('');
     } else if (cleanText.startsWith('0') && cleanText.length > 1) {
-      setActualRevenue(cleanText.replace(/^0+/, ''));
+      const formatted = cleanText.replace(/^0+/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      setActualRevenue(formatted);
     } else {
-      setActualRevenue(cleanText);
+      const formatted = cleanText.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      setActualRevenue(formatted);
     }
   };
 
@@ -96,13 +102,15 @@ const ShiftCloseModal = ({ onCloseModal }) => {
     // Keep only numbers
     const cleanText = text.replace(/[^0-9]/g, '');
     
-    // Manage leading zeros
+    // Manage leading zeros and format
     if (cleanText === '') {
       setBeginBalance('');
     } else if (cleanText.startsWith('0') && cleanText.length > 1) {
-      setBeginBalance(cleanText.replace(/^0+/, ''));
+      const formatted = cleanText.replace(/^0+/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      setBeginBalance(formatted);
     } else {
-      setBeginBalance(cleanText);
+      const formatted = cleanText.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      setBeginBalance(formatted);
     }
   };
 
@@ -110,13 +118,15 @@ const ShiftCloseModal = ({ onCloseModal }) => {
     // Keep only numbers
     const cleanText = text.replace(/[^0-9]/g, '');
     
-    // Manage leading zeros
+    // Manage leading zeros and format
     if (cleanText === '') {
       setRemainingAdvance('0');
     } else if (cleanText.startsWith('0') && cleanText.length > 1) {
-      setRemainingAdvance(cleanText.replace(/^0+/, ''));
+      const formatted = cleanText.replace(/^0+/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      setRemainingAdvance(formatted);
     } else {
-      setRemainingAdvance(cleanText);
+      const formatted = cleanText.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      setRemainingAdvance(formatted);
     }
   };
 
@@ -127,9 +137,9 @@ const ShiftCloseModal = ({ onCloseModal }) => {
     const shopId = user.shops?.id || user.shopid || 0;
 
     dispatch(closeShift({
-      begin_balance: Number(beginBalance) || 0,
-      net_revenue: Number(actualRevenue) || 0,
-      remaining_advance: Number(remainingAdvance) || 0,
+      begin_balance: Number(beginBalance.replace(/[^0-9]/g, '')) || 0,
+      net_revenue: Number(actualRevenue.replace(/[^0-9]/g, '')) || 0,
+      remaining_advance: Number(remainingAdvance.replace(/[^0-9]/g, '')) || 0,
       user_id: user.userid,
       shop_id: shopId
     }));
@@ -148,7 +158,10 @@ const ShiftCloseModal = ({ onCloseModal }) => {
 
   // Calculations
   const openTime = cashierRevenue?.open_time || 'N/A';
-  const totalCash = (Number(beginBalance) || 0) + (Number(remainingAdvance) || 0) + (Number(actualRevenue) || 0);
+  const rawBeginBalance = Number(beginBalance.replace(/[^0-9]/g, '')) || 0;
+  const rawRemainingAdvance = Number(remainingAdvance.replace(/[^0-9]/g, '')) || 0;
+  const rawActualRevenue = Number(actualRevenue.replace(/[^0-9]/g, '')) || 0;
+  const totalCash = rawBeginBalance + rawRemainingAdvance + rawActualRevenue;
   const totalCashFormatted = Number(totalCash).toLocaleString('vi-VN') + 'đ';
 
   return (
