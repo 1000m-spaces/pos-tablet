@@ -14,7 +14,8 @@ const TableSelector = ({ isVisible, close, currentOrder, onSelectTable: onSelect
   const tables = useSelector((state) => getTablesSelector(state));
   const [blockedTables, setBlockedTables] = useState({});
   const [serviceType, setServiceType] = useState(currentOrder?.orderType ? currentOrder.orderType.toString() : "1"); // "1" for Tại quán, "2" for Mang đi
-  const isTableSelectionRequired = serviceType === "1" || serviceType === 1;
+  const hasSelectedTable = !!(currentOrder?.table || currentOrder?.tableId);
+  const isTableSelectionRequired = (serviceType === "1" || serviceType === 1) && !hasSelectedTable;
   console.log('tables::', tables)
   console.log('currentOrder::', currentOrder)
 
