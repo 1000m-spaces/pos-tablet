@@ -9,6 +9,7 @@ import ViewShot from 'react-native-view-shot';
 import PrintTemplate from '../components/Order/TemTemplate';
 import BillTemplate from '../components/Order/BillTemplate';
 import printQueueService from '../services/PrintQueueService';
+
 import AsyncStorage from '../store/async_storage';
 
 // Helper functions for printing dimensions
@@ -64,7 +65,12 @@ const HiddenViewShotComponents = () => {
 
   // Helper function to transform order for label printing
   const transformOrderForLabel = (originalOrder, productIndex = 0, labelIndex = 0, totalLabels = 1) => {
+    console.log(`RootNav: Transforming order for label printing:`, originalOrder);
     // Detect order type based on structure
+    if (!originalOrder.orderType) {
+      console.warn('RootNav: Warning - originalOrder.orderType is undefined. Defaulting to "offline".');
+      originalOrder.orderType = '1';
+    }
     const isOnlineOrder = originalOrder.source === 'app_order' || originalOrder.source === 'online_new';
     const isOfflineOrder = originalOrder.products && Array.isArray(originalOrder.products);
 
@@ -285,6 +291,7 @@ const HiddenViewShotComponents = () => {
 
   // Helper function to transform order for bill printing
   const transformOrderForBill = (originalOrder) => {
+    console.log('Transforming order for bill printing:', originalOrder);
     // Detect order type
     const isOnlineOrder = originalOrder.source === 'app_order' || originalOrder.source === 'online_new';
     const isOfflineOrder = originalOrder.products && Array.isArray(originalOrder.products);

@@ -367,6 +367,10 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                 throw new Error('Printer settings not configured');
             }
 
+            console.log('Preparing to queue label print for currentOrder:', currentOrder);
+
+            order.orderType = currentOrder.orderType
+
             const targetOrder = order || selectedOrder;
             console.log('Queueing label print for order:', targetOrder.displayID);
 
