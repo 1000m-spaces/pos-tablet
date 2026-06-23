@@ -211,73 +211,64 @@ const PaymentCart = () => {
       // Calculate totals
       const price_paid = transformedProducts.reduce((sum, product) => sum + product.amount, 0);
 
-      // Generate random 4-character order ID (uppercase letters and numbers)
-      const generateOfflineOrderId = async () => {
-        const now = new Date();
-        const year = String(now.getFullYear()).slice(-2); // Last 2 digits of year
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const currentDateKey = `${year}${month}${day}`;
-
-        // Characters pool: uppercase letters and numbers (A-Z, 0-9)
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-
-        // Function to generate random 4-character code
-        const generateRandomCode = () => {
-          let code = '';
-          for (let i = 0; i < 4; i++) {
-            code += chars.charAt(Math.floor(Math.random() * chars.length));
-          }
-          return code;
-        };
-
-        try {
-          // Get stored counter data
-          const counterData = await AsyncStorage.getOfflineOrderCounter();
-          let usedCodes = [];
-          if (counterData) {
-            const { lastDate, codes } = counterData;
-            // If same date, use existing codes list; if different date, reset
-            if (lastDate === currentDateKey) {
-              usedCodes = codes || [];
-            } else {
-              usedCodes = []; // Clear codes for new date
-            }
-          }
-          // Generate unique code (max 100 attempts to prevent infinite loop)
-          let newCode;
-          let attempts = 0;
-          do {
-            newCode = generateRandomCode();
-            attempts++;
-          } while (usedCodes.includes(newCode) && attempts < 100);
-
-          // If couldn't generate unique code after 100 attempts, force add timestamp
-          if (usedCodes.includes(newCode)) {
-            console.warn('Could not generate unique code, adding timestamp suffix');
-            newCode = generateRandomCode();
-          }
-
-          // Add new code to used codes list
-          usedCodes.push(newCode);
-
-          // Store updated counter with codes list
-          await AsyncStorage.setOfflineOrderCounter({
-            lastDate: currentDateKey,
-            codes: usedCodes
-          });
-
-          return newCode;
-
-        } catch (error) {
-          console.error('Error generating offline order ID:', error);
-          // Fallback to random 4-character code if AsyncStorage fails
-          const fallbackId = generateRandomCode();
-          return fallbackId;
-        }
+      // Generate UUID v4 without dashes for offline order ID
+      const generateOfflineOrderId = () => {
+        return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, c => {
+          const r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
       };
 
-      const offlineOrderId = await generateOfflineOrderId();
+      // [COMMENTED OUT] Old random 4-character code generation
+      // const generateOfflineOrderId = async () => {
+      //   const now = new Date();
+      //   const year = String(now.getFullYear()).slice(-2);
+      //   const month = String(now.getMonth() + 1).padStart(2, '0');
+      //   const day = String(now.getDate()).padStart(2, '0');
+      //   const currentDateKey = `${year}${month}${day}`;
+      //   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      //   const generateRandomCode = () => {
+      //     let code = '';
+      //     for (let i = 0; i < 4; i++) {
+      //       code += chars.charAt(Math.floor(Math.random() * chars.length));
+      //     }
+      //     return code;
+      //   };
+      //   try {
+      //     const counterData = await AsyncStorage.getOfflineOrderCounter();
+      //     let usedCodes = [];
+      //     if (counterData) {
+      //       const { lastDate, codes } = counterData;
+      //       if (lastDate === currentDateKey) {
+      //         usedCodes = codes || [];
+      //       } else {
+      //         usedCodes = [];
+      //       }
+      //     }
+      //     let newCode;
+      //     let attempts = 0;
+      //     do {
+      //       newCode = generateRandomCode();
+      //       attempts++;
+      //     } while (usedCodes.includes(newCode) && attempts < 100);
+      //     if (usedCodes.includes(newCode)) {
+      //       console.warn('Could not generate unique code, adding timestamp suffix');
+      //       newCode = generateRandomCode();
+      //     }
+      //     usedCodes.push(newCode);
+      //     await AsyncStorage.setOfflineOrderCounter({
+      //       lastDate: currentDateKey,
+      //       codes: usedCodes
+      //     });
+      //     return newCode;
+      //   } catch (error) {
+      //     console.error('Error generating offline order ID:', error);
+      //     const fallbackId = generateRandomCode();
+      //     return fallbackId;
+      //   }
+      // };
+
+      const offlineOrderId = generateOfflineOrderId();
       const session = `POS-${offlineOrderId}`;
 
       // Generate display order ID in format M-XXXX

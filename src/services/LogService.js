@@ -29,7 +29,7 @@ import { Platform, Share } from 'react-native';
 
 const LOG_DIR = `${RNFS.DocumentDirectoryPath}/pos_logs`;
 const MAX_LOG_DAYS = 10;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per file
+const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB per file
 
 // Danh sách category
 export const LOG_CATEGORIES = {

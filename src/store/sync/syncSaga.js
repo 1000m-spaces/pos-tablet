@@ -83,6 +83,8 @@ function* syncPendingOrdersSaga() {
         // Call the sync API
         const response = yield call(syncController.syncOrders, syncPayload);
 
+        console.log('SSSSSSSync response:', response);
+
         if (response.success) {
             // Update sync status for successfully synced orders
             const ordersSyncedServer = response.result?.data || [];
