@@ -1,4 +1,4 @@
-import { heightDevice, widthDevice } from 'assets/constans';
+import { heightDevice, widthDevice, isTablet } from 'assets/constans';
 import { TextNormal } from 'common/Text/TextFont';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View, ScrollView } from 'react-native';
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 16,
     alignSelf: 'center',
-    marginVertical: 100,
+    marginVertical: isTablet ? 100 : 20,
   },
   serviceTypeContainer: {
     flexDirection: 'row',

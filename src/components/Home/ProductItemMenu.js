@@ -1,5 +1,5 @@
 import { TextNormalSemiBold, TextSmallMedium } from 'common/Text/TextFont';
-import { IMAGE_URL, widthDevice } from 'assets/constans';
+import { IMAGE_URL, widthDevice, isTablet } from 'assets/constans';
 import React, { memo } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { formatMoney } from 'assets/constans';
@@ -50,7 +50,7 @@ const ProductItemMenu = ({ onPressDetail, product }) => {
           }}
           resizeMode={FastImage.resizeMode.cover}
         />
-        <View style={{ padding: 16, alignItems: 'center' }}>
+        <View style={{ padding: isTablet ? 16 : 8, alignItems: 'center' }}>
           <TextSmallMedium numberOfLines={2} style={styles.textName}>
             {product.prodname}
           </TextSmallMedium>
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     marginRight: widthDevice * 0.02,
-    height: widthDevice * 0.2378,
+    height: widthDevice * (isTablet ? 0.2378 : 0.26),
     marginBottom: 24,
     // flex: 1,
     width: widthDevice * 0.16136,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   textName: {
-    fontSize: 16,
+    fontSize: isTablet ? 16 : 12,
     textAlign: 'center',
     fontWeight: '500',
     // backgroundColor: 'red',
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '500',
     textAlign: 'center',
-    fontSize: 16,
-    paddingTop: 8,
+    fontSize: isTablet ? 16 : 12,
+    paddingTop: isTablet ? 8 : 4,
   },
 });

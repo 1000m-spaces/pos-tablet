@@ -10,7 +10,7 @@ import AsyncStorage from 'store/async_storage/index';
 import DrawerContent from './DrawerContent';
 import { useDispatch, useSelector } from 'react-redux';
 import { screenSelector } from 'store/selectors';
-import { widthDevice, heightDevice } from 'assets/constans';
+import { widthDevice, heightDevice, isTablet } from 'assets/constans';
 import { syncPendingOrdersAction } from 'store/actions';
 import Toast from 'react-native-toast-message';
 import printQueueService from '../../services/PrintQueueService';
@@ -165,7 +165,7 @@ const Main = () => {
           drawerActiveBackgroundColor: Colors.primary,
           drawerActiveTintColor: Colors.whiteColor,
           drawerStyle: {
-            width: widthDevice * 0.09,
+            width: widthDevice * (isTablet ? 0.09 : 0.14),
           },
           swipeEnabled: false,
           drawerPosition: 'left',

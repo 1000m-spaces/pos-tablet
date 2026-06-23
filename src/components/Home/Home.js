@@ -13,7 +13,7 @@ import DetailProduct from './DetailProduct';
 import Cart from './Cart';
 import TableSelector from './TableSelector';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { widthDevice } from 'assets/constans';
+import { widthDevice, isTablet } from 'assets/constans';
 import { TextSmallTwelve } from 'common/Text/TextFont';
 import Svg from 'common/Svg/Svg';
 import PrinterSettingsModal from 'common/PrinterSettingsModal';
@@ -157,7 +157,7 @@ const Home = ({ navigation }) => {
         flex: 1,
         backgroundColor: Colors.bgInput,
       }}>
-      <View style={{ height: 42, flexDirection: 'row', width: widthDevice * 0.91, justifyContent: 'flex-end', alignItems: 'center', paddingRight: 24 }}>
+      <View style={{ height: 42, flexDirection: 'row', width: widthDevice * (isTablet ? 0.91 : 0.86), justifyContent: 'flex-end', alignItems: 'center', paddingRight: 24 }}>
         <TouchableOpacity
           style={{ flexDirection: 'row', marginRight: 16 }}
           onPress={() => {
@@ -184,7 +184,7 @@ const Home = ({ navigation }) => {
         backgroundColor: Colors.bgInput,
         flexDirection: 'row',
       }}>
-        <View style={{ flex: 1, width: widthDevice * 0.5757 }}>
+        <View style={{ flex: 1, width: widthDevice * (isTablet ? 0.5757 : 0.53) }}>
           <Header
             currentCate={currentCate}
             productMenu={productMenu}

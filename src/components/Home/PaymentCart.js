@@ -1,4 +1,4 @@
-import { formatMoney, heightDevice, widthDevice } from 'assets/constans';
+import { formatMoney, heightDevice, widthDevice, isTablet } from 'assets/constans';
 import Svg from 'common/Svg/Svg';
 import { TextNormal } from 'common/Text/TextFont';
 import React, { useEffect, useState, useRef } from 'react';
@@ -629,14 +629,13 @@ export default PaymentCart;
 
 const styles = StyleSheet.create({
   containerModal: {
-    width: heightDevice > widthDevice ? heightDevice * 0.5 : widthDevice * 0.5,
-    height:
-      heightDevice > widthDevice ? widthDevice * 0.45 : heightDevice * 0.45,
+    width: widthDevice * (isTablet ? 0.5 : 0.75),
+    height: heightDevice * (isTablet ? 0.45 : 0.85),
     backgroundColor: 'white',
     position: 'absolute',
     borderRadius: 16,
-    left: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
-    top: heightDevice > widthDevice ? widthDevice * 0.25 : heightDevice * 0.25,
+    left: widthDevice * (isTablet ? 0.25 : 0.125),
+    top: heightDevice * (isTablet ? 0.25 : 0.075),
     margin: 0,
   },
   orderBtnText: {

@@ -17,7 +17,7 @@ import { screenSelector, onlineOrderSelector } from 'store/selectors';
 import { setScreenAction, logout, getOnlineOrder } from 'store/actions';
 import AsyncStorage from 'store/async_storage/index';
 import { NAVIGATION_LOGIN } from 'navigation/routes';
-import { versionNameApp, versionDisplayApp, versionSystem, widthDevice } from 'assets/constans';
+import { versionNameApp, versionDisplayApp, versionSystem, widthDevice, isTablet } from 'assets/constans';
 const DrawerList = [
   { icon: 'menu_pos', label: 'Menu', navigateTo: NAVIGATION_HOME },
   { icon: 'order_pos', label: 'FoodApp', navigateTo: NAVIGATION_ORDER },
@@ -103,19 +103,20 @@ const DrawerLayout = ({ icon, label, navigateTo, isPopup, onPressShiftClose, cur
                 : hasDeliveryOrders && navigateTo === NAVIGATION_APP_ORDER
                   ? 'rgba(255, 0, 0, 0.8)'
                   : 'transparent',
-            width: 70,
-            height: 60,
+            width: isTablet ? 70 : 55,
+            height: isTablet ? 60 : 45,
             borderRadius: 12,
-            marginLeft: 30,
+            marginLeft: isTablet ? 30 : 10,
             opacity: hasDeliveryOrders && navigateTo === NAVIGATION_APP_ORDER ? blinkAnim : 1,
           }}>
           <Svg
             name={icon}
-            size={24}
+            size={isTablet ? 24 : 18}
             color={currentScreen === navigateTo || (hasDeliveryOrders && navigateTo === NAVIGATION_APP_ORDER) ? 'white' : '#B9B9B9'}
           />
           <TextNormal
             style={{
+              fontSize: isTablet ? 14 : 9,
               color:
                 currentScreen && currentScreen === navigateTo
                   ? Colors.whiteColor
@@ -245,13 +246,13 @@ const DrawerContent = ({ onPressShiftClose, ...props }) => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#021526', width: widthDevice * 0.09, alignItems: 'center', justifyContent: 'center' }}>
-      <DrawerContentScrollView contentContainerStyle={{ width: widthDevice * 0.09, alignItems: 'center' }} {...props}>
-        <View style={styles.drawerContent}>
+    <View style={{ flex: 1, backgroundColor: '#021526', width: widthDevice * (isTablet ? 0.09 : 0.14), alignItems: 'center', justifyContent: 'center' }}>
+      <DrawerContentScrollView contentContainerStyle={{ width: widthDevice * (isTablet ? 0.09 : 0.14), alignItems: 'center' }} {...props}>
+        <View style={[styles.drawerContent, { width: widthDevice * (isTablet ? 0.09 : 0.14) }]}>
           <TouchableOpacity activeOpacity={0.8}>
-            <Svg name={'logo_menu'} size={60} />
+            <Svg name={'logo_menu'} size={isTablet ? 60 : 40} />
           </TouchableOpacity>
-          <View style={styles.drawerSection}>
+          <View style={[styles.drawerSection, { width: widthDevice * (isTablet ? 0.09 : 0.14) }]}>
             <DrawerItems
               currentScreen={currentScreen}
               navigation={props.navigation}
@@ -264,14 +265,14 @@ const DrawerContent = ({ onPressShiftClose, ...props }) => {
       <View style={styles.bottomDrawerSection}>
         <DrawerItem
           icon={({ color, size }) => (
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginLeft: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginLeft: isTablet ? 20 : 0 }}>
               {/* <Icons
                 type={'AntDesign'}
                 name={'close'}
                 color={'white'}
                 size={30}
               /> */}
-              <Text style={{ color: 'white', flexWrap: 'wrap', fontSize: 12, marginLeft: 5 }} numberOfLines={2}>
+              <Text style={{ color: 'white', flexWrap: 'wrap', fontSize: isTablet ? 12 : 9, marginLeft: isTablet ? 5 : 2 }} numberOfLines={2}>
                 Sign Out
               </Text>
             </View>
@@ -282,8 +283,8 @@ const DrawerContent = ({ onPressShiftClose, ...props }) => {
       </View>
       <DrawerItem
         icon={({ color, size }) => (
-          <View style={{ justifyContent: 'center', alignItems: 'center', marginLeft: 20 }}>
-            <TextNormal style={{ color: 'white' }}>Version: {versionDisplayApp}</TextNormal>
+          <View style={{ justifyContent: 'center', alignItems: 'center', marginLeft: isTablet ? 20 : 0 }}>
+            <TextNormal style={{ color: 'white', fontSize: isTablet ? 12 : 8, textAlign: 'center' }}>Version: {versionDisplayApp}</TextNormal>
           </View>
         )}
         label={''}
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingTop: 20,
-    width: widthDevice * 0.09,
+    width: widthDevice * (isTablet ? 0.09 : 0.14),
   },
   userInfoSection: {
     paddingLeft: 20,
@@ -331,7 +332,7 @@ const styles = StyleSheet.create({
   drawerSection: {
     marginTop: 10,
     alignItems: 'center',
-    width: widthDevice * 0.09,
+    width: widthDevice * (isTablet ? 0.09 : 0.14),
     justifyContent: 'center',
     // backgroundColor: 'red',
   },

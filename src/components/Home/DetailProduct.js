@@ -16,7 +16,7 @@ import { addProductCart, setProductAction } from 'store/actions';
 import ProductSection from './ProductSection';
 import ExtraSection from './ExtraSection';
 import QuantityProduct from './QuantityProduct';
-import { heightDevice, widthDevice } from 'assets/constans';
+import { heightDevice, widthDevice, isTablet } from 'assets/constans';
 import { TextNormal } from 'common/Text/TextFont';
 import Colors from 'theme/Colors';
 const DetailProduct = ({ isVisiable, close, editingIndex, onSave }) => {
@@ -221,13 +221,11 @@ export default DetailProduct;
 const styles = StyleSheet.create({
   containerView: { borderRadius: 16, paddingVertical: 24 },
   containerModal: {
-    width: heightDevice > widthDevice ? heightDevice * 0.5 : widthDevice * 0.5,
-    height: heightDevice > widthDevice ? widthDevice * 0.75 : heightDevice * 0.75,
+    width: widthDevice * (isTablet ? 0.5 : 0.7),
+    height: heightDevice * (isTablet ? 0.75 : 0.85),
     backgroundColor: 'white',
     borderRadius: 16,
-    // position: 'absolute',
-    // top: 103,
-    left: heightDevice > widthDevice ? heightDevice * 0.25 : widthDevice * 0.25,
+    left: widthDevice * (isTablet ? 0.25 : 0.15),
     margin: 10,
   },
   line: { height: 6, backgroundColor: '#F5F5F5' },

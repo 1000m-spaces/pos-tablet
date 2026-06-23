@@ -4,6 +4,8 @@ import { VERSION_DISPLAY, BUILD_DATE, APP_VERSION } from '../generated/build-inf
 // import {heightDevices, widthDevices} from '../app';
 export const heightDevice = Dimensions.get('window').width > Dimensions.get('window').height ? Dimensions.get('window').height : Dimensions.get('window').width;
 export const widthDevice = Dimensions.get('window').width > Dimensions.get('window').height ? Dimensions.get('window').width : Dimensions.get('window').height;
+export const isTablet = DeviceInfo.isTablet();
+
 
 export const versionSystem = DeviceInfo.getSystemVersion();
 export const versionNameApp = APP_VERSION;

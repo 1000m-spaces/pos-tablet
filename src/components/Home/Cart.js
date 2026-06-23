@@ -5,6 +5,8 @@ import {
   IMAGE_URL,
   widthDevice,
   orderTypes,
+  isTablet,
+
 } from 'assets/constans';
 import Svg from 'common/Svg/Svg';
 import { TextNormal } from 'common/Text/TextFont';
@@ -152,6 +154,7 @@ const Cart = ({ showTable, onEditProduct }) => {
         ]}>
         <TextNormal
           style={{
+            fontSize: isTablet ? 14 : 11,
             fontWeight: orderType === item.id ? '500' : '400',
             color:
               orderType === item.id ? Colors.whiteColor : Colors.inactiveText,
@@ -275,11 +278,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   containerCateTab: {
-    paddingHorizontal: 12,
-    height: 36,
+    paddingHorizontal: isTablet ? 12 : 8,
+    height: isTablet ? 36 : 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: isTablet ? 14 : 8,
     borderRadius: 8,
     borderStyle: 'solid',
     borderWidth: 1,
@@ -320,7 +323,7 @@ const styles = StyleSheet.create({
   },
   row: {
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: isTablet ? 16 : 8,
     paddingHorizontal: 8,
   },
   centerOrderTypeButton: {
@@ -330,11 +333,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
     width: '45%',
-    minHeight: 60,
+    minHeight: isTablet ? 60 : 42,
     justifyContent: 'center',
   },
   centerOrderTypeText: {
-    fontSize: 15,
+    fontSize: isTablet ? 15 : 12,
     fontWeight: '500',
     color: Colors.whiteColor,
     textAlign: 'center',
