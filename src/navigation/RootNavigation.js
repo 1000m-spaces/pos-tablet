@@ -9,6 +9,7 @@ import ViewShot from 'react-native-view-shot';
 import PrintTemplate from '../components/Order/TemTemplate';
 import BillTemplate from '../components/Order/BillTemplate';
 import printQueueService from '../services/PrintQueueService';
+
 import AsyncStorage from '../store/async_storage';
 
 // Helper functions for printing dimensions
@@ -64,7 +65,12 @@ const HiddenViewShotComponents = () => {
 
   // Helper function to transform order for label printing
   const transformOrderForLabel = (originalOrder, productIndex = 0, labelIndex = 0, totalLabels = 1) => {
+    console.log(`RootNav: Transforming order for label printing:`, originalOrder);
     // Detect order type based on structure
+    if (!originalOrder.orderType) {
+      console.warn('RootNav: Warning - originalOrder.orderType is undefined. Defaulting to "offline".');
+      originalOrder.orderType = originalOrder.is_take_away && originalOrder.is_take_away !== '0' ? '2' : '1';
+    }
     const isOnlineOrder = originalOrder.source === 'app_order' || originalOrder.source === 'online_new';
     const isOfflineOrder = originalOrder.products && Array.isArray(originalOrder.products);
 
@@ -162,7 +168,7 @@ const HiddenViewShotComponents = () => {
       tableName: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
       table: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
       shopTableName: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
-      shopTableid: originalOrder.shopTableid || "0",
+      shopTableid: originalOrder.shopTableid || originalOrder.shoptableid || "0",
 
       // Timing information
       date: originalOrder.created_at || originalOrder.createdAt || originalOrder.timestamp || new Date().toISOString(),
@@ -285,6 +291,7 @@ const HiddenViewShotComponents = () => {
 
   // Helper function to transform order for bill printing
   const transformOrderForBill = (originalOrder) => {
+    console.log('Transforming order for bill printing:', originalOrder);
     // Detect order type
     const isOnlineOrder = originalOrder.source === 'app_order' || originalOrder.source === 'online_new';
     const isOfflineOrder = originalOrder.products && Array.isArray(originalOrder.products);

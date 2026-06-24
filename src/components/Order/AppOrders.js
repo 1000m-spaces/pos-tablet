@@ -16,9 +16,9 @@ import Colors from 'theme/Colors';
 import OrderTable from './OrderTable';
 import PrinterSettingsModal from 'common/PrinterSettingsModal';
 import AsyncStorage from 'store/async_storage/index';
-import { getOrderShipping, resetGetOrderShipping, getOnlineOrder, resetGetOnlineOrder } from 'store/order/orderAction';
+import { getOrderPaidSuccess, resetGetOrderPaidSuccess, getOnlineOrder, resetGetOnlineOrder } from 'store/order/orderAction';
 import { usePrinter } from '../../services/PrinterService';
-import { confirmOrderOnlineStatusSelector, getStatusGetOnlineOrder, onlineOrderSelector, shippingOrdersSelector, shippingOrdersStatusSelector } from 'store/selectors';
+import { confirmOrderOnlineStatusSelector, getStatusGetOnlineOrder, onlineOrderSelector, paidSuccessOrdersSelector, paidSuccessOrdersStatusSelector } from 'store/selectors';
 import Status from 'common/Status/Status';
 
 const appOrderFilters = [
@@ -114,7 +114,9 @@ const transformAppOrder = (apiOrder) => {
     return {
       shipping_status: apiOrder.shipping_status || '',
       is_complete: apiOrder.is_complete || "0",
-      displayID: apiOrder.id,
+      displayID: apiOrder.orderid || apiOrder.id,
+      orderid: apiOrder.orderid || '',
+      cust_id: apiOrder.cust_id,
       state: apiOrder.shipping_status == '0' ? 'ORDER_CREATED' : apiOrder.shipping_status,
       orderValue: apiOrder.price_paid ? parseInt(apiOrder.price_paid).toLocaleString('vi-VN') : '0',
       itemInfo: {
@@ -136,6 +138,9 @@ const transformAppOrder = (apiOrder) => {
       // Add order type for label formatting
       chanel_type_id: chanelTypeId,
       is_delivery: apiOrder.is_delivery,
+      is_takeaway: apiOrder.is_takeaway || '0',
+      tableId: apiOrder.shoptableid || apiOrder.tableId || null,
+      shoptablename: apiOrder.shoptablename || apiOrder.tableName || null,
       // Preserve full address for delivery orders
       address: apiOrder.address || '',
       // Add timestamps
@@ -167,8 +172,8 @@ const AppOrders = () => {
   const isOnlineOrderSelector = useSelector(state => onlineOrderSelector(state));
   const isStatusGetOnlineOrder = useSelector(state => getStatusGetOnlineOrder(state));
   const isStatustConfirmOrderOnline = useSelector(state => confirmOrderOnlineStatusSelector(state));
-  const isShippingOrdersSelector = useSelector(state => shippingOrdersSelector(state));
-  const isShippingOrdersStatus = useSelector(state => shippingOrdersStatusSelector(state));
+  const isPaidSuccessOrdersSelector = useSelector(state => paidSuccessOrdersSelector(state));
+  const isPaidSuccessOrdersStatus = useSelector(state => paidSuccessOrdersStatusSelector(state));
 
   const fetchAppOrders = useCallback(async () => {
     if (!userShop) {
@@ -190,7 +195,10 @@ const AppOrders = () => {
 
         setData(transformedAppOrders);
       } else {
-        const transformedOrders = isShippingOrdersSelector?.data?.map(transformAppOrder)
+        console.log('AppOrders fetchAppOrders: Transforming paid success orders:', isPaidSuccessOrdersSelector);
+        const transformedOrders = isPaidSuccessOrdersSelector?.data
+          ?.filter(apiOrder => apiOrder.cust_id && apiOrder.cust_id !== '0' && apiOrder.cust_id !== 0)
+          ?.map(transformAppOrder)
           .filter(order => order !== null);
         setData(transformedOrders)
       }
@@ -216,16 +224,32 @@ const AppOrders = () => {
     }
   };
 
+  const handleRefresh = () => {
+    if (!isLoading && userShop) {
+      setIsLoading(true);
+      console.log('AppOrders manual refresh: dispatch getOrderPaidSuccess', { rest_id: userShop.id, is_online: 1 });
+      dispatch(getOrderPaidSuccess({
+        rest_id: userShop.id,
+        is_online: 1
+      }));
+    }
+  };
+
   useEffect(() => {
     loadUserShop();
   }, []);
 
   useEffect(() => {
     if (userShop) {
-      dispatch(getOrderShipping({
-        rest_id: userShop.id
-      }))
-      dispatch(getOnlineOrder({ rest_id: userShop.id }));
+      if (orderType === 1) {
+        dispatch(getOnlineOrder({ rest_id: userShop.id }));
+      } else {
+        console.log('AppOrders: dispatch getOrderPaidSuccess', { rest_id: userShop.id, is_online: 1 });
+        dispatch(getOrderPaidSuccess({
+          rest_id: userShop.id,
+          is_online: 1
+        }));
+      }
     }
   }, [userShop, orderType]);
 
@@ -240,30 +264,27 @@ const AppOrders = () => {
   // Note: resetConfirmOrderOnline is handled in OrderTable.js after auto-print completes
   useEffect(() => {
     (async () => {
-      if (isStatustConfirmOrderOnline === Status.SUCCESS) {
+      if (isStatustConfirmOrderOnline === Status.SUCCESS && orderType === 1) {
         dispatch(resetGetOnlineOrder());
         dispatch(getOnlineOrder({ rest_id: userShop.id }));
         // await triggerAutoPrint(isOrderDataSaved);
       }
     }
     )
-  }, [isStatustConfirmOrderOnline]);
+  }, [isStatustConfirmOrderOnline, orderType]);
 
   useEffect(() => {
     loadDataOrderOnline();
   }, [orderType, isOnlineOrderSelector, isStatustConfirmOrderOnline, isStatusGetOnlineOrder]);
 
   useEffect(() => {
-    if (userShop?.id) {
+    if (userShop?.id && orderType === 1) {
       const intervalId = setInterval(() => {
         dispatch(getOnlineOrder({ rest_id: userShop?.id }));
-        dispatch(getOrderShipping({
-          rest_id: userShop.id
-        }))
       }, 20000)
       return () => clearInterval(intervalId);
     }
-  }, [userShop])
+  }, [userShop, orderType])
 
   const loadDataOrderOnline = () => {
     if (orderType === 1 && isStatusGetOnlineOrder === Status.SUCCESS) {
@@ -282,7 +303,7 @@ const AppOrders = () => {
       } else if (isStatusGetOnlineOrder === Status.ERROR) {
         Toast.show({
           type: 'error',
-          text1: isShippingOrdersSelector?.error || 'Lỗi khi tải đơn hàng mới',
+          text1: isPaidSuccessOrdersSelector?.error || 'Lỗi khi tải đơn hàng mới',
           position: 'bottom',
         });
       }
@@ -298,23 +319,26 @@ const AppOrders = () => {
   };
 
   useEffect(() => {
-    if (orderType === 2 && isShippingOrdersStatus === 'SUCCESS') {
-      dispatch(resetGetOrderShipping());
-      if (isShippingOrdersSelector?.status && isShippingOrdersSelector?.data) {
-        const transformedOrders = isShippingOrdersSelector.data?.map(transformAppOrder)
+    if (orderType === 2 && isPaidSuccessOrdersStatus === 'SUCCESS') {
+      console.log('AppOrders: getOrderPaidSuccess success, data:', isPaidSuccessOrdersSelector);
+      dispatch(resetGetOrderPaidSuccess());
+      if (isPaidSuccessOrdersSelector?.status && isPaidSuccessOrdersSelector?.data) {
+        const transformedOrders = isPaidSuccessOrdersSelector.data
+          ?.filter(apiOrder => apiOrder.cust_id && apiOrder.cust_id !== '0' && apiOrder.cust_id !== 0)
+          ?.map(transformAppOrder)
           .filter(order => order !== null);
         setData(transformedOrders);
-      } else if (isShippingOrdersSelector?.status === false) {
-        console.log('isShippingOrdersSelector:::', isShippingOrdersSelector)
+      } else if (isPaidSuccessOrdersSelector?.status === false) {
+        console.log('AppOrders: getOrderPaidSuccess status is false:', isPaidSuccessOrdersSelector);
         Toast.show({
           type: 'error',
-          text1: isShippingOrdersSelector?.error || 'Lỗi khi tải lịch sử đơn hàng',
+          text1: isPaidSuccessOrdersSelector?.error || 'Lỗi khi tải lịch sử đơn hàng',
           position: 'bottom',
         });
       }
       setIsLoading(false);
-    } else if (isShippingOrdersStatus === 'ERROR') {
-      console.log('isShippingOrdersSelector:::', isShippingOrdersSelector)
+    } else if (isPaidSuccessOrdersStatus === 'ERROR') {
+      console.log('AppOrders: getOrderPaidSuccess failed:', isPaidSuccessOrdersSelector);
       Toast.show({
         type: 'error',
         text1: 'Lỗi khi tải lịch sử đơn hàng',
@@ -322,12 +346,12 @@ const AppOrders = () => {
       });
       setIsLoading(false);
     }
-  }, [isShippingOrdersStatus, isShippingOrdersSelector, orderType]);
+  }, [isPaidSuccessOrdersStatus, isPaidSuccessOrdersSelector, orderType]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      dispatch(resetGetOrderShipping());
+      dispatch(resetGetOrderPaidSuccess());
       dispatch(resetGetOnlineOrder());
     };
   }, [dispatch]);
@@ -396,6 +420,16 @@ const AppOrders = () => {
                       {userShop ? userShop.name_vn : 'Loading...'}
                     </TextNormal>
                   </View>
+                  {orderType === 2 && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, { opacity: isLoading ? 0.5 : 1, alignItems: 'center' }]}
+                      onPress={handleRefresh}
+                      disabled={isLoading}
+                    >
+                      <Svg name={'refresh'} size={24} />
+                      <TextNormal style={styles.actionButtonText}>Làm mới</TextNormal>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={[styles.actionButton, { opacity: isLoading ? 0.5 : 1 }]}
                     onPress={() => {
@@ -427,7 +461,7 @@ const AppOrders = () => {
             </View>
 
             {/* Content */}
-            {isLoading || isShippingOrdersStatus === 'LOADING' || isStatustConfirmOrderOnline === Status.LOADING || isStatusGetOnlineOrder === Status.LOADING ? (
+            {isLoading || isPaidSuccessOrdersStatus === Status.LOADING || isStatustConfirmOrderOnline === Status.LOADING || isStatusGetOnlineOrder === Status.LOADING ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={Colors.primary} />
                 <TextNormal style={styles.loadingText}>
@@ -444,7 +478,9 @@ const AppOrders = () => {
                 setConfirmedOrderId={setConfirmedOrderId}
                 orderTableMapRef={orderTableMapRef}
                 historyDelivery={orderType === 2}
-                dataShippingSuccess={isShippingOrdersSelector?.data || []}
+                dataShippingSuccess={(isPaidSuccessOrdersSelector?.data || []).filter(
+                  apiOrder => apiOrder.cust_id && apiOrder.cust_id !== '0' && apiOrder.cust_id !== 0
+                )}
                 shop={userShop}
               />
             )}
