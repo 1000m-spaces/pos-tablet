@@ -69,7 +69,7 @@ const HiddenViewShotComponents = () => {
     // Detect order type based on structure
     if (!originalOrder.orderType) {
       console.warn('RootNav: Warning - originalOrder.orderType is undefined. Defaulting to "offline".');
-      originalOrder.orderType = '1';
+      originalOrder.orderType = originalOrder.is_take_away && originalOrder.is_take_away !== '0' ? '2' : '1';
     }
     const isOnlineOrder = originalOrder.source === 'app_order' || originalOrder.source === 'online_new';
     const isOfflineOrder = originalOrder.products && Array.isArray(originalOrder.products);
@@ -168,7 +168,7 @@ const HiddenViewShotComponents = () => {
       tableName: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
       table: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
       shopTableName: originalOrder.shopTableName || originalOrder.shoptablename || originalOrder.table,
-      shopTableid: originalOrder.shopTableid || "0",
+      shopTableid: originalOrder.shopTableid || originalOrder.shoptableid || "0",
 
       // Timing information
       date: originalOrder.created_at || originalOrder.createdAt || originalOrder.timestamp || new Date().toISOString(),

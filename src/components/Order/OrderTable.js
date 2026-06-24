@@ -123,11 +123,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const tableMapRef = orderTableMapRef || localOrderTableMapRef;
 
     // Build table header based on order type
-    const tableHead = ["Đối tác", "Mã đơn hàng", "Tem", "Trạng thái đơn", "Số món", "Số tiền"];
+    const tableHead = historyDelivery
+        ? ["Mã đơn hàng", "Tem", "Trạng thái đơn", "Số món", "Số tiền"]
+        : ["Đối tác", "Mã đơn hàng", "Tem", "Trạng thái đơn", "Số món", "Số tiền"];
     if (!isFoodApp) {
-        if (historyDelivery) {
-            tableHead.push("Call");
-        } else {
+        if (!historyDelivery) {
             tableHead.push("Xác nhận");
         }
     }
@@ -142,7 +142,7 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         setTableWidth(calculatedTableWidth);
         const columnWidth = calculatedTableWidth / numColumns;
         setWidthArr(Array(numColumns).fill(columnWidth));
-    }, [])
+    }, [numColumns])
 
     // Load printed labels on mount for initial render state
     useEffect(() => {
@@ -660,57 +660,62 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     };
 
     const tableData = orders?.map((order, index) => {
-        const row = [
-            // Đối tác
-            <ServiceIcon
-                service={order.service}
-                shipping_provider={order?.shipping_provider}
-                isFoodApp={isFoodApp}
-                key={order.displayID + "_service"}
-            />,
-            // Mã đơn hàng
-            order.displayID,
-            // Tem
+        const row = [];
+
+        // Đối tác
+        if (!historyDelivery) {
+            row.push(
+                <ServiceIcon
+                    service={order.service}
+                    shipping_provider={order?.shipping_provider}
+                    isFoodApp={isFoodApp}
+                    key={order.displayID + "_service"}
+                />
+            );
+        }
+
+        // Mã đơn hàng
+        row.push(order.displayID);
+
+        // Tem
+        row.push(
             <Badge
                 text={printedLabels.includes(order.displayID) ? "Đã in" : "Chưa in"}
                 colorText={printedLabels.includes(order.displayID) ? "#069C2E" : "#EF0000"}
                 colorBg={printedLabels.includes(order.displayID) ? "#CDEED8" : "#FED9DA"}
                 width="60%"
                 key={order.displayID + "_tem"}
-            />,
-            // Trạng thái đơn
-            <Badge text={getStatusText(order.state)} colorText={getStatusColor(order.state)} colorBg={getStatusColorBg(order.state)} width="80%" key={order.displayID + "_status"} />,
-            // Số món
-            order.itemInfo?.items?.length,
-            // Số tiền
-            order.orderValue,
-        ];
+            />
+        );
 
-        // Add Call/Xác nhận button at the end if not a food app order
-        if (!isFoodApp) {
-            if (historyDelivery) {
-                // Add "Call" button for delivery history
-                row.push(
-                    <View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                        <TouchableOpacity
-                            style={{ justifyContent: 'center', alignItems: 'center', height: '80%', width: '60%', backgroundColor: '#19b400', borderRadius: 10 }}
-                            onPress={() => checkShipFee(dataShippingSuccess[index])}>
-                            <TextNormal>Gọi tài xế</TextNormal>
-                        </TouchableOpacity>
-                    </View>
-                );
-            } else {
-                // Add "Xác nhận" button for new orders
-                row.push(
-                    <View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                        <TouchableOpacity
-                            style={{ justifyContent: 'center', alignItems: 'center', height: '80%', width: '60%', backgroundColor: '#19b400', borderRadius: 10 }}
-                            onPress={() => handleConfirmOrder(order.displayID)}>
-                            <TextNormal>Xác nhận đơn</TextNormal>
-                        </TouchableOpacity>
-                    </View>
-                );
-            }
+        // Trạng thái đơn
+        row.push(
+            <Badge
+                text={historyDelivery ? "Đã thanh toán" : getStatusText(order.state)}
+                colorText={historyDelivery ? "#069C2E" : getStatusColor(order.state)}
+                colorBg={historyDelivery ? "#CDEED8" : getStatusColorBg(order.state)}
+                width="80%"
+                key={order.displayID + "_status"}
+            />
+        );
+
+        // Số món
+        row.push(order.itemInfo?.items?.length);
+
+        // Số tiền
+        row.push(order.orderValue);
+
+        // Add Xác nhận button at the end if not a food app order and not historyDelivery
+        if (!isFoodApp && !historyDelivery) {
+            row.push(
+                <View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <TouchableOpacity
+                        style={{ justifyContent: 'center', alignItems: 'center', height: '80%', width: '60%', backgroundColor: '#19b400', borderRadius: 10 }}
+                        onPress={() => handleConfirmOrder(order.displayID)}>
+                        <TextNormal>Xác nhận đơn</TextNormal>
+                    </TouchableOpacity>
+                </View>
+            );
         }
 
         return row;
