@@ -105,7 +105,7 @@ const OrderBackupDialog = ({ visible, onClose }) => {
                 products: order.products || [],
                 customerName: order.customerName || order.customer_name || order.guest_name || '',
                 shoptablename: order.shoptablename || order.shopTableName || 'N/A',
-                tableId: order.tableId || null,
+                tableId: order.tableId || order.shoptableid || null,
             }));
 
             if (enhancedOrders.length > 0) {
