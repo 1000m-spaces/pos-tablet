@@ -338,9 +338,9 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
             metaLabel: Math.max(6, Math.round(W * 0.042)),     // ~6 (bold for thermal)
             metaValue: Math.max(8, Math.round(W * 0.072)),     // ~10 (slightly smaller)
             badge: Math.max(5, Math.round(W * 0.045)),         // ~6
-            itemName: Math.max(9, Math.round(W * 0.083)),      // ~11
+            itemName: Math.max(8, Math.round(W * 0.07)),       // ~10 (reduced)
             sizeBadge: Math.max(6, Math.round(W * 0.053)),     // ~7
-            modifier: Math.max(6, Math.round(W * 0.053)),      // ~7
+            modifier: Math.max(5, Math.round(W * 0.042)),      // ~6 (reduced)
             shopInfo: Math.max(5, Math.round(W * 0.045)),      // ~6 (increased for clarity)
             time: Math.max(5, Math.round(W * 0.042)),          // ~6 (was 4, too blurry)
             price: Math.max(10, Math.round(W * 0.098)),        // ~14 (larger like mockup)
@@ -387,18 +387,22 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
                             {channelText}
                         </Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Image
-                                source={require('../../assets/images/logo_1000m_white.png')}
-                                style={{
-                                    width: Math.round(W * 0.15),
-                                    height: Math.round(W * 0.15),
-                                    marginRight: 3,
-                                }}
-                                resizeMode="contain"
-                            />
-                            <Text style={{ color: '#fff', fontSize: Math.max(7, Math.round(W * 0.06)), fontWeight: '900' }}>
+                            <Text style={{ color: '#fff', fontSize: Math.max(7, Math.round(W * 0.06)), fontWeight: '900', zIndex: 2 }}>
                                 1000M
                             </Text>
+                            <View style={{ width: Math.round(W * 0.12), height: Math.round(W * 0.08) }}>
+                                <Image
+                                    source={require('../../assets/images/logo_1000m_white.png')}
+                                    style={{
+                                        position: 'absolute',
+                                        top: -Math.round(W * 0.02),
+                                        left: -5,
+                                        width: Math.round(W * 0.22),
+                                        height: Math.round(W * 0.22),
+                                    }}
+                                    resizeMode="contain"
+                                />
+                            </View>
                         </View>
                     </View>
 
@@ -482,10 +486,8 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
 
                 {/* ══════ BODY (Item + Modifiers + Separator) ══════ */}
                 <View style={{
-                    height: bodyH,
                     paddingHorizontal: px,
                     paddingTop: 4,
-                    justifyContent: 'space-between',
                 }}>
                     {/* Item content */}
                     <View>
@@ -520,20 +522,21 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
                         {modifiers.length > 0 && (
                             <Text style={{
                                 fontSize: fs.modifier,
-                                fontWeight: '700',
+                                fontWeight: '400',
                                 color: '#000',
                                 lineHeight: Math.round(fs.modifier * 1.1),
-                            }} numberOfLines={2} ellipsizeMode="tail">
+                            }} numberOfLines={3} ellipsizeMode="tail">
                                 {modifiers.join(' • ')}
                             </Text>
                         )}
                     </View>
 
-                    {/* ── Dashed separator at bottom of body ── */}
+                    {/* ── Dashed separator ── */}
                     <View style={{
                         borderTopWidth: 1,
                         borderTopColor: '#000',
                         borderStyle: 'dashed',
+                        marginTop: 3,
                     }} />
                 </View>
 
