@@ -1,602 +1,614 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, PixelRatio } from 'react-native';
-import { useSelector } from 'react-redux';
-import AsyncStorage from 'store/async_storage/index'
-import { getOrderChannelsSelector } from 'store/selectors';
+import { View, Text, Image } from 'react-native';
+import AsyncStorage from 'store/async_storage/index';
+import Svg, { Rect } from 'react-native-svg';
+import QRCode from 'react-native-qrcode-svg';
+import { encodeCode128B, generateBarSpecs, getBarcodeWidth } from 'utils/barcodeUtils';
 
 // Convert mm to pixels for actual label printer output
 const mmToPixels = (mm, dpi = 72) => {
-    const LABEL_PRINTER_DPI = dpi; // Configurable DPI for actual printing
-    const pixelValue = Math.round((mm * LABEL_PRINTER_DPI) / 25.4);
-    return pixelValue;
+    return Math.round((mm * dpi) / 25.4);
 };
-
-// Calculate font size optimized for label printing
-const calculateDynamicFontSize = (baseSize) => {
-    // For label printing, use a much more conservative font scaling
-    // Don't rely on screen pixel ratio as it makes labels too large
-    const FONT_SCALE_FACTOR = 1; // Reduce font sizes by 40% for label printing
-
-    return Math.max(Math.round(baseSize * FONT_SCALE_FACTOR), 5); // Minimum font size of 8
-};
-
-// Default printer settings (50mm x 30mm at default DPI)
-const getDefaultSettings = (dpi = 72) => ({
-    width: mmToPixels(50, dpi), // 50mm
-    height: mmToPixels(30, dpi), // 30mm
-    fontSize: {
-        storeName: calculateDynamicFontSize(12),
-        orderNumber: calculateDynamicFontSize(13),
-        tableInfo: calculateDynamicFontSize(10),
-        dateTime: calculateDynamicFontSize(8),
-        priceText: calculateDynamicFontSize(8),
-        pageCounter: calculateDynamicFontSize(10),
-        itemName: calculateDynamicFontSize(12),
-        modifier: calculateDynamicFontSize(10),
-        note: calculateDynamicFontSize(10),
-        quantity: calculateDynamicFontSize(10),
-        channelInfo: calculateDynamicFontSize(8)
-    },
-    padding: 5,
-    margin: 2
-});
 
 const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
     console.log(`\n║ PRINT_TEM: TemTemplate rendered`);
     console.log(`║ PRINT_TEM: orderPrint.displayID: ${orderPrint?.displayID}`);
-    if (orderPrint?.decals?.[0]) {
-      console.log(`║ PRINT_TEM: decals[0].item_name: ${orderPrint.decals[0].item_name}`);
-      console.log(`║ PRINT_TEM: decals[0].itemIdx: ${orderPrint.decals[0].itemIdx}/${orderPrint.decals[0].totalItems}`);
-    }
-    if (orderPrint?.itemInfo?.items?.[0]) {
-      console.log(`║ PRINT_TEM: itemInfo.items[0].name: ${orderPrint.itemInfo.items[0].name}`);
-      console.log(`║ PRINT_TEM: itemInfo.items[0].itemIdx: ${orderPrint.itemInfo.items[0].itemIdx}/${orderPrint.itemInfo.items[0].totalItems}`);
-    }
-    
-    const orderChannels = useSelector(state => getOrderChannelsSelector(state));
+
     const [printerSettings, setPrinterSettings] = useState(null);
+    const [shopInfo, setShopInfo] = useState({ name: '', address: '' });
+
     useEffect(() => {
-        const loadPrinterSettings = async () => {
+        const loadSettings = async () => {
             try {
+                // Load printer settings
                 const printerInfo = await AsyncStorage.getLabelPrinterInfo();
-                if (printerInfo && printerInfo.sWidth && printerInfo.sHeight) {
-                    const dpi = printerInfo.labelPrinterDPI || 72;
+                if (printerInfo) {
                     setPrinterSettings({
-                        width: mmToPixels(Number(printerInfo.sWidth), dpi),
-                        height: mmToPixels(Number(printerInfo.sHeight), dpi),
-                        dpi: dpi,
-                        fontSize: {
-                            storeName: calculateDynamicFontSize(12),
-                            orderNumber: calculateDynamicFontSize(13),
-                            tableInfo: calculateDynamicFontSize(10),
-                            dateTime: calculateDynamicFontSize(8),
-                            priceText: calculateDynamicFontSize(8),
-                            pageCounter: calculateDynamicFontSize(10),
-                            itemName: calculateDynamicFontSize(12),
-                            modifier: calculateDynamicFontSize(10),
-                            note: calculateDynamicFontSize(10),
-                            quantity: calculateDynamicFontSize(10),
-                            channelInfo: calculateDynamicFontSize(8)
-                        }
+                        sWidth: Number(printerInfo.sWidth) || 70,
+                        sHeight: Number(printerInfo.sHeight) || 50,
+                        dpi: Number(printerInfo.labelPrinterDPI) || 72,
+                    });
+                }
+
+                // Load shop info (following BillTemplate.js pattern)
+                const user = await AsyncStorage.getUser();
+                if (user && user.shops) {
+                    setShopInfo({
+                        name: user.shops.name_vn || user.shops.name || '1000M',
+                        address: user.shops.addr || user.shops.address || '',
+                    });
+                } else {
+                    const shopData = await AsyncStorage.getShopInfo?.() || {};
+                    setShopInfo({
+                        name: shopData.name || '1000M',
+                        address: shopData.address || '',
                     });
                 }
             } catch (error) {
-                console.error('Error loading printer settings:', error);
+                console.error('TemTemplate: Error loading settings:', error);
             }
         };
-
-        loadPrinterSettings();
+        loadSettings();
     }, []);
 
-    // Get default settings with appropriate DPI
-    const DEFAULT_SETTINGS = getDefaultSettings(printerSettings?.dpi || 72);
-
-    // Merge default settings with provided settings and printer settings
-    const config = {
-        ...DEFAULT_SETTINGS,
-        ...settings,
-        ...(printerSettings || {}),
-        fontSize: {
-            ...DEFAULT_SETTINGS.fontSize,
-            ...(settings.fontSize || {}),
-            ...(printerSettings?.fontSize || {})
-        }
-    };
-
-
-
-    const styles = StyleSheet.create({
-        container: {
-            backgroundColor: 'white',
-            maxWidth: config.width,
-        },
-        card: {
-            padding: config.padding,
-            height: config.height,
-        },
-        // Header line with order number, table, and page counter
-        headerLine: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginBottom: config.margin * 2,
-        },
-        orderNumber: {
-            fontSize: config.fontSize.orderNumber,
-            fontWeight: '900',
-            color: '#000',
-        },
-        tableInfo: {
-            fontSize: config.fontSize.orderNumber,
-            fontWeight: '900',
-            color: '#000',
-            marginLeft: 2,
-        },
-        pageCounter: {
-            fontSize: config.fontSize.orderNumber,
-            fontWeight: '900',
-            color: '#000',
-            marginLeft: 4,
-        },
-        spacerFlex: {
-            flex: 1,
-        },
-        // Item name section
-        itemNameSection: {
-            marginBottom: config.margin * 2,
-        },
-        itemName: {
-            fontSize: config.fontSize.itemName,
-            fontWeight: '700',
-            color: '#000',
-            lineHeight: config.fontSize.itemName + 2,
-        },
-        // Modifier section
-        modifierSection: {
-            marginBottom: config.margin,
-        },
-        modifierText: {
-            fontSize: config.fontSize.modifier,
-            color: '#000',
-            lineHeight: config.fontSize.modifier + 2,
-        },
-        // Item note section
-        itemNoteSection: {
-            marginBottom: config.margin,
-        },
-        itemNoteText: {
-            fontSize: config.fontSize.note,
-            fontWeight: '700',
-            color: '#000',
-            lineHeight: config.fontSize.note + 2,
-        },
-        // Order note section
-        orderNoteSection: {
-            marginBottom: config.margin,
-        },
-        orderNoteText: {
-            fontSize: config.fontSize.note,
-            fontWeight: '700',
-            color: '#000',
-            lineHeight: config.fontSize.note + 2,
-        },
-        // Service type section
-        serviceTypeSection: {
-            marginBottom: config.margin * 2,
-        },
-        serviceTypeText: {
-            fontSize: config.fontSize.modifier,
-            fontWeight: '700',
-            color: '#000',
-        },
-        // Bottom section
-        bottomSection: {
-            // marginBottom: 10,
-        },
-        bottomRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            maxWidth: config.width,
-        },
-        additionalOrderId: {
-            flex: 1,
-            fontSize: config.fontSize.channelInfo,
-            fontWeight: '700',
-            color: '#000',
-            textAlign: 'left',
-        },
-        dateTime: {
-            flex: 1.5,
-            fontSize: config.fontSize.dateTime,
-            color: '#000',
-            textAlign: 'center',
-        },
-        priceText: {
-            flex: 1,
-            fontSize: config.fontSize.priceText,
-            fontWeight: '700',
-            color: '#000',
-            textAlign: 'right',
-        },
-        addressText: {
-            fontSize: config.fontSize.dateTime,
-            fontWeight: '700',
-            color: '#000',
-            lineHeight: config.fontSize.dateTime + 2,
-        },
-    });
-
-    // Use decals array if available, otherwise fall back to itemInfo structure
+    // ─────── Prepare items to render ───────
     let itemsToRender = [];
-    console.log('TemTemplate orderPrint:', orderPrint);
     if (orderPrint?.decals) {
-        // itemsToRender = orderPrint.decals;
         itemsToRender = orderPrint.decals.map((decal, idx) => {
-            // lấy item gốc tương ứng để đọc modifierGroups
             const originalItem = orderPrint?.itemInfo?.items?.[idx];
-
-            // tính tổng modifier price
             const modifierTotal =
                 originalItem?.modifierGroups?.reduce((groupSum, group) => {
-
                     const modifierSum =
                         group.modifiers?.reduce((sum, modifier) => {
                             return sum + Number(modifier.modifierPrice || 0);
                         }, 0) || 0;
-
                     return groupSum + modifierSum;
-
                 }, 0) || 0;
-
-            // giá cuối
             const finalPrice = Number(decal.price || 0) + modifierTotal;
-
-            return {
-                ...decal,
-
-                price: finalPrice,
-
-                priceDisplay: finalPrice,
-            };
+            return { ...decal, price: finalPrice, priceDisplay: finalPrice };
         });
-        console.log('TemTemplate using decals array, count:', itemsToRender.length);
     } else if (orderPrint?.itemInfo?.items) {
-        console.log('TemTemplate using itemInfo.items, raw items count:', orderPrint.itemInfo.items.length);
-        itemsToRender = orderPrint.itemInfo.items.map((item, idx) => {
-            const mappedItem = {
-                ...item,
-                item_name: item.name,
-                stringName: item.modifierGroups?.flatMap(mg =>
-                    mg.modifiers?.map(m => m.modifierName) || []
-                ).join(' / ') || '',
-                extrastring: '',
-                note_prod: item.comment || '',
-            };
-            console.log(`TemTemplate mapped item ${idx}:`, {
-                raw: item,
-                mapped: mappedItem,
-            });
-            return mappedItem;
-        });
-    } else {
-        console.log('TemTemplate no decals and no itemInfo.items found');
+        itemsToRender = orderPrint.itemInfo.items.map((item) => ({
+            ...item,
+            item_name: item.name,
+            stringName: item.modifierGroups?.flatMap(mg =>
+                mg.modifiers?.map(m => m.modifierName) || []
+            ).join(' / ') || '',
+            extrastring: '',
+            note_prod: item.comment || '',
+        }));
     }
 
-    console.log("TemTemplate itemsToRender:", itemsToRender);
-    console.log("TemTemplate first rendered item:", itemsToRender?.[0]);
+    // ─────── Helper functions ───────
 
-    // Helper function to get order ID for label header (without suffix)
+    // Get order ID (display number)
     const getOrderId = (order) => {
         if (order.foodapp_order_id && order.foodapp_order_id.length > 0) {
             return order.foodapp_order_id;
         }
         const orderId = order.displayID || order.bill_id;
-        console.log('TemTemplate getOrder - raw order:', order);
-
-        // Check if this is a POS order (offline order)
-        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
-
-        if (isPOSOrder) {
-            return orderId;
-        }
-
-        // Online/App orders use # prefix
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') ||
+            order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
+        if (isPOSOrder) return orderId;
         return '#' + orderId;
     };
 
-    // Helper function to get order type suffix (O, T, D, AO, AT)
+    // Get order suffix (O, T, D, AO, AT)
     const getOrderSuffix = (order) => {
-        // Check if this is a 1000M app order (not FoodApp like GRAB/GoFood)
-        console.log('TemTemplate getOrderSuffix - order:', order);
         const is1000MAppOrder = order.source === 'app_order' &&
             (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
-        
         if (is1000MAppOrder && !order.orderType) {
             order.orderType = order.chanel_type_id;
         }
-
-        // Check if this is a POS order (offline order)
-        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
-
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') ||
+            order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
         const isStoreChannel = !order.chanel_type_id || order.chanel_type_id === "1" || order.chanel_type_id === 1;
-        const isDineIn = isStoreChannel ? (order.orderType === "1" || order.orderType === 1 || order.orderType === undefined || order.orderType === null) : (order.orderType === "1" || order.orderType === 1);
-        const isTakeaway = isStoreChannel ? (order.orderType === "2" || order.orderType === 2) : (order.orderType === "2" || order.orderType === 2);
-       const isFoodAppPos = (order.chanel_type_id && order.chanel_type_id == 3) || (order.chanel_type_id && order.chanel_type_id == 2 && !is1000MAppOrder) || (order.chanel_type_id && order.chanel_type_id == 4);
+        const isDineIn = isStoreChannel
+            ? (order.orderType === "1" || order.orderType === 1 || order.orderType === undefined || order.orderType === null)
+            : (order.orderType === "1" || order.orderType === 1);
+        const isTakeaway = order.orderType === "2" || order.orderType === 2;
+        const isFoodAppPos = (order.chanel_type_id && order.chanel_type_id == 3) ||
+            (order.chanel_type_id && order.chanel_type_id == 2 && !is1000MAppOrder) ||
+            (order.chanel_type_id && order.chanel_type_id == 4);
         const isDelivery = order.is_delivery == '1';
 
-        console.log('isDineIn:', isDineIn);
-        console.log('isTakeaway:', isTakeaway);
-        console.log('isFoodAppPos:', isFoodAppPos);
-
-        // 1. Offline POS orders: O or T
         if (isPOSOrder) {
-            if (isDineIn && !isFoodAppPos) {
-                return 'O'; // O = On-site/Tại quán
-            } else if (isTakeaway || isFoodAppPos) {
-                return 'T'; // T = Take away
-            }
-            return ''; // No suffix if not explicitly set
+            if (isDineIn && !isFoodAppPos) return 'O';
+            if (isTakeaway || isFoodAppPos) return 'T';
+            return '';
         }
-
-        // 2. 1000M App orders: D, AO, or AT
         if (is1000MAppOrder) {
-            if (isDelivery) {
-                return 'D'; // Delivery
-            } else if (isDineIn) {
-                return 'AO'; // App Order - dùng tại quán
-            } else if (isTakeaway) {
-                return 'AT'; // App Order - take away
-            }
-            return ''; // No suffix if not explicitly set
+            if (isDelivery) return 'D';
+            if (isDineIn) return 'AO';
+            if (isTakeaway) return 'AT';
+            return '';
         }
-
-        // 3. FoodApp orders (GRAB, GoFood, etc.): no suffix
-
-        if (isFoodAppPos) {
-            return 'T'; // No suffix for FoodApp POS orders
-        }
+        if (isFoodAppPos) return 'T';
         return '';
     };
 
-    const getOrderTypeText = (order) => {
-        // Check if this is a 1000M app order (not FoodApp like GRAB/GoFood)
+    // Get channel display text (for header)
+    const getChannelText = (order) => {
         const is1000MAppOrder = order.source === 'app_order' &&
             (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') ||
+            order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
 
-        // Check if this is a POS order (offline order)
-        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') || order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
-        const isStoreChannel = !order.chanel_type_id || order.chanel_type_id === "1" || order.chanel_type_id === 1;
-        const isFoodAppPos = (order.chanel_type_id && order.chanel_type_id == 3) || (order.chanel_type_id && order.chanel_type_id == 2 && !is1000MAppOrder) || (order.chanel_type_id && order.chanel_type_id == 4);
-        
-        var channelInfo = 'SHOPEE';
-        if (order.chanel_type_id === "2" || order.chanel_type_id === 2) {
-            channelInfo = 'GRAB';
-        } else if (order.chanel_type_id === "5" || order.chanel_type_id === 5) {
-            channelInfo = 'BE';
+        if (isPOSOrder) {
+            const isFoodAppPos = (order.chanel_type_id && order.chanel_type_id == 3) ||
+                (order.chanel_type_id && order.chanel_type_id == 2 && !is1000MAppOrder) ||
+                (order.chanel_type_id && order.chanel_type_id == 4);
+            if (isFoodAppPos) {
+                if (order.chanel_type_id == 2) return 'Grabfood';
+                if (order.chanel_type_id == 3) return 'ShopeeFood';
+                if (order.chanel_type_id == 4) return 'GoFood';
+                if (order.chanel_type_id == 5) return 'Be';
+                return 'FoodApp';
+            }
+            return 'POS';
         }
+        if (is1000MAppOrder) return '1000M App';
+        // Online FoodApp orders
+        if (order.chanel_type_id == 2) return 'Grabfood';
+        if (order.chanel_type_id == 3) return 'ShopeeFood';
+        if (order.chanel_type_id == 4) return 'GoFood';
+        if (order.chanel_type_id == 5) return 'Be';
+        return order.service || 'Đơn hàng';
+    };
 
-        const isDineIn = isStoreChannel ? (order.orderType === "1" || order.orderType === 1 || order.orderType === undefined || order.orderType === null) : (order.orderType === "1" || order.orderType === 1);
-        const isTakeaway = isStoreChannel ? (order.orderType === "2" || order.orderType === 2) : (order.orderType === "2" || order.orderType === 2);
+    // Get order type badge text
+    const getOrderTypeBadge = (order) => {
+        const is1000MAppOrder = order.source === 'app_order' &&
+            (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
+        const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') ||
+            order.displayID?.startsWith('M-') || order.displayID?.startsWith('SF-');
+        const isStoreChannel = !order.chanel_type_id || order.chanel_type_id === "1" || order.chanel_type_id === 1;
+        const isDineIn = isStoreChannel
+            ? (order.orderType === "1" || order.orderType === 1 || order.orderType === undefined || order.orderType === null)
+            : (order.orderType === "1" || order.orderType === 1);
+        const isTakeaway = order.orderType === "2" || order.orderType === 2;
         const isDelivery = order.is_delivery == '1';
 
-        console.log('TemTemplate getOrderTypeText - isFoodAppPos:', isFoodAppPos, 'chanel_type_id:', order.chanel_type_id);
-
-
-        // 2. 1000M app orders: specific format
-        if (is1000MAppOrder) {
-            if (isDelivery) {
-                return 'Đơn App Delivery';
-            } else if (isDineIn) {
-                return 'Đơn App Pick UP - dùng tại quán';
-            } else {
-                return 'Đơn App Pick UP - take away';
-            }
-        }
-
-        // 1. Offline POS orders: "Đơn Offline - Dùng tại quán" or "Đơn Offline - Take away"
-
-        if (isPOSOrder && !isFoodAppPos) {
-            if (isDineIn) {
-                return 'Đơn Offline - Dùng tại quán';
-            } else if (isTakeaway) {
-                return 'Đơn Offline - Take away';
-            } else {
-                return 'Đơn Offline';
-            }
-        }
-
-        // 3. FoodApp orders (GRAB, GoFood, etc.): use service field
-        const isOnlineOrder = order.source === 'app_order' || order.source === 'online_new';
-        if (isOnlineOrder && order.service) {
-            return order.service;
-        }
-
-        if (isFoodAppPos && !is1000MAppOrder && !isOnlineOrder) {
-            return channelInfo;
-        }
-
-        // Final fallback
-        return order.service || 'Mang đi';
+        if (isDelivery) return 'DELIVERY';
+        if (isTakeaway) return 'MANG VỀ';
+        if (isDineIn) return 'TẠI QUÁN';
+        return 'MANG VỀ';
     };
 
-    // Helper function to format price
+    // Format price
     const formatPrice = (price) => {
-        if (!price) return '';
-        if (typeof price === 'number') {
-            return price.toLocaleString('vi-VN') + 'đ';
-        }
-        return price.toString() + 'đ';
+        if (!price) return '0đ';
+        const num = typeof price === 'number' ? price : parseInt(String(price).replace(/[^\d]/g, '')) || 0;
+        return num.toLocaleString('vi-VN') + 'đ';
     };
 
-    return (
-        <View style={styles.container} onLayout={onLayout}>
-            {itemsToRender.map((item, index) => (
-                <View key={index} style={styles.card}>
-                    {/* Header with order number, table info, and page counter in one line */}
-                    <View style={styles.headerLine}>
-                        <Text style={styles.orderNumber}>
-                            {getOrderId(orderPrint)}
-                        </Text>
-                        <View style={styles.spacerFlex} />
-                        <Text style={styles.orderNumber}>
-                            - {getOrderSuffix(orderPrint)}
-                        </Text>
-                        {
-                            (orderPrint.table || orderPrint.shopTableName || orderPrint.shoptablename) && (
-                                <Text style={styles.tableInfo}>
-                                    - {orderPrint.table || orderPrint.shopTableName || orderPrint.shoptablename || 'Thẻ ——'}
-                                </Text>
-                            )
-                        }
-                        <Text style={styles.pageCounter}>
-                            ({item.itemIdx}/{item.totalItems})
-                        </Text>
-                    </View>
+    // Format date/time
+    const formatTime = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        const pad = (n) => n.toString().padStart(2, '0');
+        return `${pad(d.getHours())}:${pad(d.getMinutes())} • ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    };
 
-                    {/* Item Name */}
-                    <View style={styles.itemNameSection}>
-                        <Text style={styles.itemName} numberOfLines={2} ellipsizeMode="tail">
-                            {item.item_name}
-                        </Text>
-                    </View>
-
-                    {/* Modifiers/Options/Notes */}
-                    {(() => {
-                        const allOptions = [];
-                        console.log('TemTemplate formatting options for item:', item);
-
-                        // Add options from option array
-                        if (item.option) {
-                            console.log("TemTemplate item.option:", item.option);
-                            if (Array.isArray(item.option)) {
-                                // New format: array of objects
-                                const optionNames = item.option
-                                    .filter(opt => opt && opt.optdetailid && opt.optdetailname)
-                                    .map(opt => opt.optdetailname);
-                                console.log('TemTemplate extracted optionNames from item.option:', optionNames);
-                                allOptions.push(...optionNames);
-                            } else if (typeof item.option === 'string' && item.option !== '') {
-                                console.log('TemTemplate extracted option string from item.option:', item.option);
-                                allOptions.push(item.option);
+    // Extract size from options (L, M, S, etc.)
+    const extractSize = (item) => {
+        const sizePatterns = ['L', 'M', 'S', 'XL', 'Lớn', 'Nhỏ', 'Vừa'];
+        // Check options array
+        if (Array.isArray(item.option)) {
+            for (const opt of item.option) {
+                const name = opt?.optdetailname || '';
+                for (const s of sizePatterns) {
+                    if (name.toUpperCase() === s.toUpperCase() || name.toUpperCase().includes(`SIZE ${s.toUpperCase()}`)) {
+                        return s.charAt(0).toUpperCase();
+                    }
+                }
+            }
+        }
+        // Check modifierGroups
+        if (Array.isArray(item.modifierGroups)) {
+            for (const group of item.modifierGroups) {
+                const gName = (group.modifierGroupName || '').toLowerCase();
+                if (gName.includes('size') || gName.includes('kích thước') || gName.includes('cỡ')) {
+                    if (Array.isArray(group.modifiers) && group.modifiers.length > 0) {
+                        const modName = group.modifiers[0].modifierName || '';
+                        for (const s of sizePatterns) {
+                            if (modName.toUpperCase().includes(s.toUpperCase())) {
+                                return s.charAt(0).toUpperCase();
                             }
-                            console.log("TemTemplate allOptions after item.option:", allOptions);
                         }
+                    }
+                }
+            }
+        }
+        return null;
+    };
 
-                        // Add other option fields
-                        if (item.stringName && item.stringName !== '') {
-                            console.log('TemTemplate adding stringName:', item.stringName);
-                            allOptions.push(item.stringName);
-                        }
-                        const optNameFields = ['opt_name1', 'opt_name2', 'opt_name3'];
-                        optNameFields.forEach(fieldName => {
-                            const fieldValue = item[fieldName];
-                            if (fieldValue === undefined || fieldValue === null) {
-                                console.log(`TemTemplate ${fieldName} is empty or missing`);
-                                return;
-                            }
-                            console.log(`TemTemplate processing ${fieldName}:`, fieldValue);
-                            if (Array.isArray(fieldValue)) {
-                                const values = fieldValue
-                                    .filter(opt => opt !== undefined && opt !== null)
-                                    .map(opt => opt.toString());
-                                console.log(`TemTemplate ${fieldName} array values:`, values);
-                                allOptions.push(...values);
-                            } else if (typeof fieldValue === 'string') {
-                                if (fieldValue !== '') {
-                                    allOptions.push(fieldValue);
-                                }
-                            } else {
-                                allOptions.push(fieldValue.toString());
-                            }
-                            console.log(`TemTemplate allOptions after ${fieldName}:`, allOptions);
-                        });
-                        if (item.extrastring && item.extrastring !== '') {
-                            console.log('TemTemplate adding extrastring:', item.extrastring);
-                            allOptions.push(item.extrastring);
-                        }
-                        if (item.note_prod && item.note_prod !== '') {
-                            console.log('TemTemplate adding note_prod:', item.note_prod);
-                            allOptions.push(item.note_prod);
-                        }
-                        if (orderPrint.note && orderPrint.note !== '') {
-                            console.log('TemTemplate adding orderPrint.note:', orderPrint.note);
-                            allOptions.push(orderPrint.note);
-                        }
+    // Collect modifier text (with • separator, excluding size)
+    const getModifiers = (item) => {
+        const allOptions = [];
+        const sizePatterns = ['L', 'M', 'S', 'XL', 'Lớn', 'Nhỏ', 'Vừa'];
 
-                        console.log('TemTemplate allOptions before dedupe:', allOptions);
-                        // Remove duplicates
-                        const uniqueOptions = [...new Set(allOptions)];
-                        console.log('TemTemplate uniqueOptions after dedupe:', uniqueOptions);
+        const isSizeOption = (name) => {
+            if (!name) return false;
+            const upper = name.toUpperCase();
+            return sizePatterns.some(s =>
+                upper === s.toUpperCase() || upper.includes(`SIZE ${s.toUpperCase()}`)
+            );
+        };
 
-                        return uniqueOptions.length > 0 && (
-                            <View style={styles.modifierSection}>
-                                <Text style={styles.modifierText} numberOfLines={3} ellipsizeMode="tail">
-                                    {uniqueOptions.join('/')}
-                                </Text>
-                            </View>
-                        );
-                    })()}
+        // From option array
+        if (Array.isArray(item.option)) {
+            item.option
+                .filter(opt => opt?.optdetailname && !isSizeOption(opt.optdetailname))
+                .forEach(opt => allOptions.push(opt.optdetailname));
+        } else if (typeof item.option === 'string' && item.option !== '') {
+            if (!isSizeOption(item.option)) allOptions.push(item.option);
+        }
 
-                    {/* Bottom section with additional order info, date/time, and price */}
-                    <View style={styles.bottomSection}>
-                        {/* Show address for 1000M app delivery orders only */}
-                        {(() => {
-                            const is1000MAppOrder = orderPrint.source === 'app_order' &&
-                                (orderPrint.service === 'Delivery' || orderPrint.service === 'Pick up' || orderPrint.is_delivery !== undefined);
-                            const isDelivery = orderPrint.is_delivery == '1' || orderPrint.chanel_type_id === "3" || orderPrint.chanel_type_id === 3;
-                            return is1000MAppOrder && isDelivery && orderPrint.address && (
-                                <View style={{ marginBottom: config.margin }}>
-                                    <Text style={styles.addressText} numberOfLines={2} ellipsizeMode="tail">
-                                        {orderPrint.address}
-                                    </Text>
-                                </View>
-                            );
-                        })()}
-                        <View style={styles.bottomRow}>
-                            {/* Additional order identifier - always render for consistent layout */}
-                            <Text style={styles.additionalOrderId}>
-                                {getOrderTypeText(orderPrint)}
-                            </Text>
-                            <Text style={styles.dateTime}>
-                                {orderPrint.date ? new Date(orderPrint.date).toLocaleString('vi-VN', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                }) : ''}
-                            </Text>
-                            <Text style={styles.priceText}>
-                                {(() => {
-                                    // Calculate base price
-                                    let basePrice = item.price || item.priceDisplay || item.fare?.priceDisplay || 0;
+        // From stringName
+        if (item.stringName && item.stringName !== '') {
+            const parts = item.stringName.split(/[\/,]/).map(s => s.trim()).filter(Boolean);
+            parts.filter(p => !isSizeOption(p)).forEach(p => allOptions.push(p));
+        }
 
-                                    // Convert formatted string prices to numbers if needed
-                                    if (typeof basePrice === 'string') {
-                                        const priceStr = basePrice.toString().replace(/[^\d]/g, '');
-                                        basePrice = parseInt(priceStr) || 0;
-                                    }
+        // From opt_name1/2/3
+        ['opt_name1', 'opt_name2', 'opt_name3'].forEach(field => {
+            const val = item[field];
+            if (!val) return;
+            if (Array.isArray(val)) {
+                val.filter(v => v != null && !isSizeOption(v.toString())).forEach(v => allOptions.push(v.toString()));
+            } else if (typeof val === 'string' && val !== '' && !isSizeOption(val)) {
+                allOptions.push(val);
+            }
+        });
 
-                                    // Calculate extra items price
-                                    const extraPrice = item.extra_items ?
-                                        item.extra_items.reduce((sum, extra) => sum + (extra.price || 0), 0) : 0;
+        // From extrastring
+        if (item.extrastring && item.extrastring !== '') allOptions.push(item.extrastring);
 
-                                    // Calculate modifier price from modifierGroups
-                                    const modifierPrice = item.modifierGroups ?
-                                        item.modifierGroups.reduce((sum, group) => {
-                                            if (group.modifiers) {
-                                                return sum + group.modifiers.reduce((modSum, mod) => modSum + (mod.price || 0), 0);
-                                            }
-                                            return sum;
-                                        }, 0) : 0;
+        // From note_prod
+        if (item.note_prod && item.note_prod !== '') allOptions.push(item.note_prod);
 
-                                    // Total price including extras and modifiers
-                                    const totalPrice = basePrice + extraPrice + modifierPrice;
+        // From orderPrint.note
+        if (orderPrint.note && orderPrint.note !== '') allOptions.push(orderPrint.note);
 
-                                    return formatPrice(totalPrice);
-                                })()}
+        // Deduplicate
+        return [...new Set(allOptions)];
+    };
+
+    // Calculate total price for one item
+    const calcPrice = (item) => {
+        let basePrice = item.price || item.priceDisplay || item.fare?.priceDisplay || 0;
+        if (typeof basePrice === 'string') {
+            basePrice = parseInt(basePrice.replace(/[^\d]/g, '')) || 0;
+        }
+        const extraPrice = item.extra_items
+            ? item.extra_items.reduce((sum, ex) => sum + (ex.price || 0), 0) : 0;
+        const modPrice = item.modifierGroups
+            ? item.modifierGroups.reduce((sum, g) => {
+                return sum + (g.modifiers?.reduce((ms, m) => ms + (m.price || 0), 0) || 0);
+            }, 0) : 0;
+        return basePrice + extraPrice + modPrice;
+    };
+
+    // ─────── SVG Barcode Component ───────
+    const BarcodeView = ({ value, moduleWidth = 0.7, barHeight = 18 }) => {
+        const binary = encodeCode128B(value);
+        const bars = generateBarSpecs(binary, moduleWidth, barHeight);
+        const totalWidth = getBarcodeWidth(binary, moduleWidth);
+        if (!binary) return null;
+        return (
+            <Svg width={totalWidth} height={barHeight}>
+                {bars.map((bar, i) => (
+                    <Rect key={i} x={bar.x} y={0} width={bar.w} height={bar.h} fill="#000" />
+                ))}
+            </Svg>
+        );
+    };
+
+    // ─────── Render one label (portrait card, will be rotated) ───────
+    const renderLabel = (item, index) => {
+        const dpi = printerSettings?.dpi || 72;
+        const labelW_mm = printerSettings?.sWidth || 70;
+        const labelH_mm = printerSettings?.sHeight || 50;
+        const margin_mm = 0; // No margin — fill entire label edge-to-edge
+
+        // Portrait card: width = shorter side, height = longer side
+        const W = mmToPixels(Math.min(labelW_mm, labelH_mm) - margin_mm, dpi);  // ~138px @70dpi
+        const H = mmToPixels(Math.max(labelW_mm, labelH_mm) - margin_mm, dpi);  // ~193px @70dpi
+
+        const orderId = getOrderId(orderPrint);
+        const suffix = getOrderSuffix(orderPrint);
+        const channelText = getChannelText(orderPrint);
+        const typeBadge = getOrderTypeBadge(orderPrint);
+        const size = extractSize(item);
+        const modifiers = getModifiers(item);
+        const price = calcPrice(item);
+        const table = orderPrint.table || orderPrint.shopTableName || orderPrint.shoptablename || '';
+        const tableDisplay = table ? `THẺ ${table}`.toUpperCase() : '';
+        const cupText = `${item.itemIdx || (index + 1)}/${item.totalItems || itemsToRender.length}`;
+        const barcodeValue = `${orderId}-${cupText.replace('/', '')}`.replace('#', '');
+        const qrValue = barcodeValue;
+
+        // ═══ Font sizes — calibrated for full label canvas (DPI 70) ═══
+        const fs = {
+            channelName: Math.max(6, Math.round(W * 0.053)),   // ~7
+            logo: Math.max(5, Math.round(W * 0.045)),          // ~6
+            orderId: Math.max(14, Math.round(W * 0.136)),      // ~19
+            metaLabel: Math.max(6, Math.round(W * 0.042)),     // ~6 (bold for thermal)
+            metaValue: Math.max(8, Math.round(W * 0.072)),     // ~10 (slightly smaller)
+            badge: Math.max(5, Math.round(W * 0.045)),         // ~6
+            itemName: Math.max(9, Math.round(W * 0.083)),      // ~11
+            sizeBadge: Math.max(6, Math.round(W * 0.053)),     // ~7
+            modifier: Math.max(6, Math.round(W * 0.053)),      // ~7
+            shopInfo: Math.max(5, Math.round(W * 0.045)),      // ~6 (increased for clarity)
+            time: Math.max(5, Math.round(W * 0.042)),          // ~6 (was 4, too blurry)
+            price: Math.max(10, Math.round(W * 0.098)),        // ~14 (larger like mockup)
+            greeting: Math.max(5, Math.round(W * 0.042)),      // ~6 (was 4, too blurry)
+            barcodeText: Math.max(5, Math.round(W * 0.038)),   // ~5 (increased min)
+        };
+
+        // Padding (reduced to let content span wider)
+        const px = Math.max(4, Math.round(W * 0.04));          // ~5
+
+        // Section heights — reduced header/body to give footer more room (prevents bottom clipping)
+        const headerH = Math.round(H * 0.38);   // ~81px @75mm
+        const bodyH = Math.round(H * 0.21);      // ~45px @75mm
+        // footer = remaining ~41% = ~87px @75mm
+
+        // Barcode / QR sizing
+        const barcodeModuleW = Math.max(0.4, W * 0.004);       // ~0.5
+        const barcodeH = Math.max(10, Math.round(H * 0.065));  // ~12
+        const qrSize = Math.max(16, Math.round(W * 0.15));  // ~20
+
+        return (
+            <View key={index} style={{ width: W, height: H, backgroundColor: '#fff', overflow: 'hidden' }}>
+                {/* ══════ HEADER (Black) ══════ */}
+                <View style={{
+                    height: headerH,
+                    backgroundColor: '#000',
+                    paddingHorizontal: px,
+                    paddingTop: 5,    // Safety margin to prevent POS/logo cut-off (increased to 5 to prevent printer clipping)
+                    paddingBottom: 5,
+                    justifyContent: 'space-between',
+                }}>
+                    {/* Row 1: Channel name + Logo + 1000M — absolute so it doesn't push layout below */}
+                    <View style={{
+                        position: 'absolute',
+                        top: 8,
+                        left: px,
+                        right: px,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        zIndex: 1,
+                    }}>
+                        <Text style={{ color: '#fff', fontSize: fs.channelName, fontWeight: '900', fontStyle: 'italic' }}>
+                            {channelText}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Image
+                                source={require('../../assets/images/logo_1000m_white.png')}
+                                style={{
+                                    width: Math.round(W * 0.15),
+                                    height: Math.round(W * 0.15),
+                                    marginRight: 3,
+                                }}
+                                resizeMode="contain"
+                            />
+                            <Text style={{ color: '#fff', fontSize: Math.max(7, Math.round(W * 0.06)), fontWeight: '900' }}>
+                                1000M
                             </Text>
                         </View>
                     </View>
+
+                    {/* Row 2: Big order number — absolute to stay in center of header */}
+                    <View style={{
+                        position: 'absolute',
+                        top: 22,
+                        left: px,
+                        right: px,
+                        zIndex: 1,
+                    }}>
+                        <Text
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.6}
+                            style={{
+                                color: '#fff',
+                                fontSize: fs.orderId,
+                                fontWeight: '900',
+                                textAlign: 'center',
+                            }}
+                        >
+                            {orderId}{suffix ? `-${suffix}` : ''}
+                        </Text>
+                    </View>
+
+                    {/* Row 3: Table | Cup count | Badge — absolute at bottom of header */}
+                    <View style={{
+                        position: 'absolute',
+                        bottom: 5,
+                        left: px,
+                        right: px,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        borderTopWidth: 1,
+                        borderTopColor: '#fff',
+                        paddingTop: 3,
+                        zIndex: 1,
+                    }}>
+                        {/* Thẻ bàn */}
+                        <View style={{ flex: 1.2 }}>
+                            <Text style={{ color: '#fff', fontSize: fs.metaValue, fontWeight: '900' }}>
+                                {tableDisplay || '——'}
+                            </Text>
+                        </View>
+
+                        {/* Divider */}
+                        <View style={{
+                            width: 1,
+                            height: fs.metaValue + 8,
+                            backgroundColor: '#fff',
+                            marginHorizontal: 4,
+                        }} />
+
+                        {/* LY */}
+                        <View style={{ flex: 0.7 }}>
+                            <Text style={{ color: '#fff', fontSize: fs.metaLabel, fontWeight: '900' }}>
+                                LY
+                            </Text>
+                            <Text style={{ color: '#fff', fontSize: fs.metaValue, fontWeight: '900' }}>
+                                {cupText}
+                            </Text>
+                        </View>
+
+                        {/* Badge */}
+                        <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                            <View style={{
+                                borderWidth: 1.5,
+                                borderColor: '#fff',
+                                borderRadius: 8,
+                                paddingHorizontal: 5,
+                                paddingVertical: 2,
+                            }}>
+                                <Text style={{ color: '#fff', fontSize: fs.badge, fontWeight: '900' }}>
+                                    {typeBadge}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+
+                {/* ══════ BODY (Item + Modifiers + Separator) ══════ */}
+                <View style={{
+                    height: bodyH,
+                    paddingHorizontal: px,
+                    paddingTop: 4,
+                    justifyContent: 'space-between',
+                }}>
+                    {/* Item content */}
+                    <View>
+                        {/* Item name + Size badge */}
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 1 }}>
+                            <Text style={{
+                                flex: 1,
+                                fontSize: fs.itemName,
+                                fontWeight: '900',
+                                color: '#000',
+                                lineHeight: Math.round(fs.itemName * 1.15),
+                            }} numberOfLines={2} ellipsizeMode="tail">
+                                {item.item_name}
+                            </Text>
+                            {size && (
+                                <View style={{
+                                    backgroundColor: '#000',
+                                    borderRadius: 2,
+                                    paddingHorizontal: 3,
+                                    paddingVertical: 1,
+                                    marginLeft: 2,
+                                    marginTop: 1,
+                                }}>
+                                    <Text style={{ color: '#fff', fontSize: fs.sizeBadge, fontWeight: '900' }}>
+                                        {size}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Modifiers */}
+                        {modifiers.length > 0 && (
+                            <Text style={{
+                                fontSize: fs.modifier,
+                                fontWeight: '700',
+                                color: '#000',
+                                lineHeight: Math.round(fs.modifier * 1.1),
+                            }} numberOfLines={2} ellipsizeMode="tail">
+                                {modifiers.join(' • ')}
+                            </Text>
+                        )}
+                    </View>
+
+                    {/* ── Dashed separator at bottom of body ── */}
+                    <View style={{
+                        borderTopWidth: 1,
+                        borderTopColor: '#000',
+                        borderStyle: 'dashed',
+                    }} />
+                </View>
+
+                {/* ══════ FOOTER ══════ */}
+                <View style={{
+                    flex: 1,
+                    paddingHorizontal: px,
+                    paddingTop: 2,
+                    paddingBottom: 2,   // Reduced to pull content up — prevents printer clipping at bottom
+                    justifyContent: 'flex-start',
+                }}>
+                    {/* Info section */}
+                    <View>
+                        {/* Shop info + Price */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                            <View style={{ flex: 1, marginRight: 2 }}>
+                                <Text style={{ fontSize: fs.shopInfo, fontWeight: '800', color: '#000' }}
+                                    numberOfLines={2} ellipsizeMode="tail">
+                                    {shopInfo.name}{shopInfo.address ? ` · ${shopInfo.address}` : ''}
+                                </Text>
+                                <Text style={{ fontSize: fs.time, fontWeight: '500', color: '#000' }}>
+                                    {formatTime(orderPrint.date)}
+                                </Text>
+                            </View>
+                            <Text style={{ fontSize: fs.price, fontWeight: '900', color: '#000', marginRight: -2 }}>
+                                {formatPrice(price)}
+                            </Text>
+                        </View>
+
+                        {/* Greeting */}
+                        <Text style={{ fontSize: fs.greeting, fontWeight: '600', fontStyle: 'italic', color: '#000' }}>
+                            Dùng trong 2 giờ để giữ trọn vị ngon — Cảm ơn Quý khách!
+                        </Text>
+                    </View>
+
+                    {/* Barcode + QR at bottom */}
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 3 }}>
+                        <View style={{ alignItems: 'center', flex: 1 }}>
+                            <BarcodeView value={barcodeValue} moduleWidth={barcodeModuleW} barHeight={barcodeH} />
+                            <Text style={{ fontSize: fs.barcodeText, fontWeight: '600', color: '#000', marginTop: 1 }}>
+                                {barcodeValue}
+                            </Text>
+                        </View>
+                        <View style={{ marginLeft: 4 }}>
+                            <QRCode value={qrValue || 'N/A'} size={qrSize} />
+                        </View>
+                    </View>
+                </View>
+            </View>
+        );
+    };
+
+    // ─────── Main render ───────
+    // Render directly in portrait. Rotation is handled post-capture if needed.
+    const dpi = printerSettings?.dpi || 72;
+    const labelW_mm = printerSettings?.sWidth || 70;
+    const labelH_mm = printerSettings?.sHeight || 50;
+    const margin_mm = 0; // No margin — fill entire label
+
+    // Card dimensions (always portrait: width = min(W,H), height = max(W,H))
+    const cardW = mmToPixels(Math.min(labelW_mm, labelH_mm) - margin_mm, dpi);
+    const cardH = mmToPixels(Math.max(labelW_mm, labelH_mm) - margin_mm, dpi);
+
+    return (
+        <View style={{ backgroundColor: '#fff' }} onLayout={onLayout}>
+            {itemsToRender.map((item, index) => (
+                <View
+                    key={index}
+                    style={{
+                        width: cardW,
+                        height: cardH,
+                    }}
+                    collapsable={false}
+                >
+                    {renderLabel(item, index)}
                 </View>
             ))}
         </View>

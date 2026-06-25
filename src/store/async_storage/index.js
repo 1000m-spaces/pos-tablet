@@ -425,8 +425,8 @@ const getLabelPrinterInfo = async () => {
     if (printerInfo) {
       return {
         IP: printerInfo.IP || "",
-        sWidth: printerInfo.sWidth || 50,
-        sHeight: printerInfo.sHeight || 30,
+        sWidth: printerInfo.sWidth || 70,
+        sHeight: printerInfo.sHeight || 50,
         autoPrint: printerInfo.autoPrint || false,
         connectionType: printerInfo.connectionType || 'network',
         usbDevice: printerInfo.usbDevice || '',
@@ -446,8 +446,8 @@ const getLabelPrinterInfo = async () => {
   }
   return {
     IP: "",
-    sWidth: 50,
-    sHeight: 30,
+    sWidth: 70,
+    sHeight: 50,
     autoPrint: false,
     connectionType: 'network',
     usbDevice: '',

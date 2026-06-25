@@ -216,7 +216,23 @@ class PrintingService {
 
                 // Capture and print
                 if (viewShotRef && viewShotRef.current) {
-                    const uri = await viewShotRef.current.capture();
+                    let uri = await viewShotRef.current.capture();
+
+                    const labelW_mm = labelPrinterInfo?.sWidth || 70;
+                    const labelH_mm = labelPrinterInfo?.sHeight || 50;
+                    if (Number(labelW_mm) >= Number(labelH_mm)) {
+                        console.log(`║ PRINT_TEM: Landscape settings detected (${labelW_mm}x${labelH_mm}mm). Rotating image by 90 degrees...`);
+                        try {
+                            const RNPhotoManipulator = require('react-native-photo-manipulator').default;
+                            const { RotationMode } = require('react-native-photo-manipulator');
+                            const rotatedUri = await RNPhotoManipulator.rotateImage(uri, RotationMode.R90);
+                            uri = rotatedUri;
+                            console.log(`║ PRINT_TEM: ✓ Label rotated successfully: ${uri}`);
+                        } catch (err) {
+                            console.error(`║ PRINT_TEM: ✗ Failed to rotate label image:`, err);
+                        }
+                    }
+
                     const imageInfo = await Image.getSize(uri);
                     const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
 
@@ -234,7 +250,7 @@ class PrintingService {
             // Update print status using consistent order identifier
             const orderIdentifier = getOrderIdentifierForPrinting(orderData, true); // true for offline orders
             await AsyncStorage.setPrintedLabels(orderIdentifier);
-            
+
             Toast.show({
                 type: 'success',
                 text1: 'In tem thành công'

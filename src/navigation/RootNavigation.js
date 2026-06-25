@@ -366,7 +366,7 @@ const HiddenViewShotComponents = () => {
         // For label printing, use the enhanced transformation
         const { productIndex = 0, labelIndex = 0, totalLabels = 1 } = options;
         transformedOrder = transformOrderForLabel(order, productIndex, labelIndex, totalLabels);
-        
+
         console.log(`║ PRINT_TEM: transformOrderForLabel completed`);
         console.log(`║ Transformed decals[0].item_name: ${transformedOrder?.decals?.[0]?.item_name}`);
         console.log(`║ Transformed decals[0].itemIdx: ${transformedOrder?.decals?.[0]?.itemIdx}/${transformedOrder?.decals?.[0]?.totalItems}`);
@@ -433,7 +433,7 @@ const HiddenViewShotComponents = () => {
         console.log(`║ PRINT_TEM: Calling viewShotRef.current.capture()...`);
       }
       console.log(`RootNav: Attempting to capture ${type} snapshot...`);
-      const capturedData = await viewShotRef.current.capture();
+      let capturedData = await viewShotRef.current.capture();
 
       if (!capturedData) {
         throw new Error(`Failed to capture ${type} snapshot - no data returned`);
@@ -442,6 +442,23 @@ const HiddenViewShotComponents = () => {
       if (type === 'label') {
         console.log(`║ PRINT_TEM: ✓ Snapshot captured successfully`);
         console.log(`║ PRINT_TEM: Data type: ${typeof capturedData}`);
+
+        // Post-capture rotation for landscape orientation
+        const labelW_mm = printerInfo?.sWidth || 70;
+        const labelH_mm = printerInfo?.sHeight || 50;
+        if (Number(labelW_mm) >= Number(labelH_mm)) {
+          console.log(`║ PRINT_TEM: Landscape settings detected (${labelW_mm}x${labelH_mm}mm). Rotating image by 90 degrees...`);
+          try {
+            const RNPhotoManipulator = require('react-native-photo-manipulator').default;
+            const { RotationMode } = require('react-native-photo-manipulator');
+            const rotatedUri = await RNPhotoManipulator.rotateImage(capturedData, RotationMode.R90);
+            capturedData = rotatedUri;
+            console.log(`║ PRINT_TEM: ✓ Label rotated successfully: ${capturedData}`);
+          } catch (err) {
+            console.error(`║ PRINT_TEM: ✗ Failed to rotate label:`, err);
+          }
+        }
+
         if (typeof capturedData === 'string') {
           console.log(`║ PRINT_TEM: Data size: ${capturedData.length} bytes`);
           console.log(`║ PRINT_TEM: First 50 chars: ${capturedData.substring(0, 50)}...`);
@@ -582,13 +599,17 @@ const HiddenViewShotComponents = () => {
         options={{
           format: "jpg",
           quality: 1.0,
-          result: 'tmpfile'
+          result: 'tmpfile',
         }}
         style={[
           styles.hiddenViewShot,
           {
-            width: printerInfo ? mmToPixels(Number(printerInfo.sWidth) - 2, printerInfo.labelPrinterDPI) : mmToPixels(50 - 2),
-            minHeight: printerInfo ? mmToPixels(Number(printerInfo.sHeight) - 2, printerInfo.labelPrinterDPI) : mmToPixels(30 - 2),
+            width: printerInfo
+              ? mmToPixels(Math.min(Number(printerInfo.sWidth), Number(printerInfo.sHeight)), printerInfo.labelPrinterDPI)
+              : mmToPixels(50),
+            minHeight: printerInfo
+              ? mmToPixels(Math.max(Number(printerInfo.sWidth), Number(printerInfo.sHeight)), printerInfo.labelPrinterDPI)
+              : mmToPixels(70),
           }
         ]}
         collapsable={false}
