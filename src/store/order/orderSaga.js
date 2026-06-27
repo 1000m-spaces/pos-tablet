@@ -274,6 +274,28 @@ function* estimateAhamove({ payload }) {
   }
 }
 
+function* callShipperOnlineSaga({ payload }) {
+  try {
+    const result = yield call(orderController.callShipperOnlineController, payload);
+    if (result && result.success) {
+      yield put({
+        type: NEOCAFE.CALL_SHIPPER_ONLINE_SUCCESS,
+        payload: result.data,
+      });
+    } else {
+      yield put({
+        type: NEOCAFE.CALL_SHIPPER_ONLINE_ERROR,
+        payload: { errorMsg: result.error || 'Xảy ra lỗi khi gọi shipper online' },
+      });
+    }
+  } catch (error) {
+    yield put({
+      type: NEOCAFE.CALL_SHIPPER_ONLINE_ERROR,
+      payload: { errorMsg: error.message || 'Xảy ra lỗi khi gọi shipper online' },
+    });
+  }
+}
+
 export default function* watcherSaga() {
   yield takeLatest(NEOCAFE.CREATE_ORDER_REQUEST, createOrderSaga);
   yield takeLatest(NEOCAFE.ADD_PRODUCT_CART_REQUEST, addProductCartSaga);
@@ -284,4 +306,5 @@ export default function* watcherSaga() {
   yield takeLatest(NEOCAFE.GET_ORDER_PAID_SUCCESS_REQUEST, getOrderPaidSuccessSaga);
   yield takeLatest(NEOCAFE.CALL_DRIVER_BACK_REQUEST, callDriverBackSaga);
   yield takeLatest(NEOCAFE.GET_ESTIMATE_AHAMOVE_REQUEST, estimateAhamove);
+  yield takeLatest(NEOCAFE.CALL_SHIPPER_ONLINE_REQUEST, callShipperOnlineSaga);
 }

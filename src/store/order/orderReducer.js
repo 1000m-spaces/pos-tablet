@@ -29,10 +29,31 @@ const initializeState = {
   order: null,
   statusGetEstimateAhamove: Status.DEFAULT,
   resultEsstimate: {},
+  statusCallShipperOnline: Status.DEFAULT,
 };
 
 export default (state = initializeState, { type, payload }) => {
   switch (type) {
+    case NEOCAFE.CALL_SHIPPER_ONLINE_REQUEST:
+      return {
+        ...state,
+        statusCallShipperOnline: Status.LOADING,
+      };
+    case NEOCAFE.CALL_SHIPPER_ONLINE_SUCCESS:
+      return {
+        ...state,
+        statusCallShipperOnline: Status.SUCCESS,
+      };
+    case NEOCAFE.CALL_SHIPPER_ONLINE_ERROR:
+      return {
+        ...state,
+        statusCallShipperOnline: Status.ERROR,
+      };
+    case NEOCAFE.CALL_SHIPPER_ONLINE_RESET:
+      return {
+        ...state,
+        statusCallShipperOnline: Status.DEFAULT,
+      };
     case NEOCAFE.GET_ESTIMATE_AHAMOVE_SUCCESS:
       return {
         ...state,

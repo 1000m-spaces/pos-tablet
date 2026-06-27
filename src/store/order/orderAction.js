@@ -67,3 +67,10 @@ export const getEstimateAhamove = payload => ({
 export const resetEstimateAhamove = () => ({
   type: NEOCAFE.GET_ESTIMATE_AHAMOVE_RESET,
 });
+export const callShipperOnline = payload => ({
+  type: NEOCAFE.CALL_SHIPPER_ONLINE_REQUEST,
+  payload,
+});
+export const resetCallShipperOnline = () => ({
+  type: NEOCAFE.CALL_SHIPPER_ONLINE_RESET,
+});
