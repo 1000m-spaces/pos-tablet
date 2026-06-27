@@ -9,96 +9,20 @@ import { syncPendingOrdersAction } from 'store/actions';
 import logService, { LOG_CATEGORIES } from '../../services/LogService';
 
 function* createOrderSaga({ payload }) {
-  // try {
-  // const result = yield call(orderController.createOrderController, payload);
-  // if (result.success === true && result?.data && result?.data?.status) {
-  //   const { data } = result.data;
-  //   console.log('result success order:', data);
+  const session = payload?.session || 'unknown';
+  logService.info(LOG_CATEGORIES.ORDER, `[Saga] createOrderSaga BẮT ĐẦU: ${session}`, {
+    session,
+    displayID: payload?.displayID,
+    table: payload?.shopTableName,
+    total: payload?.total_amount,
+    products: payload?.products?.length,
+    offline_code: payload?.offline_code,
+  });
 
-  //   // Save successful order to local storage for history
-  //   try {
-  //     const orderForHistory = {
-  //       ...payload,
-  //       syncStatus: 'synced',
-  //       synced_at: new Date().toISOString(),
-  //       api_response: data, // Store API response data
-  //       order_id: data.order_id || data.id, // Store server order ID if available
-  //       updated_at: new Date().toISOString()
-  //     };
-
-  //     // Save as last order
-  //     yield call(AsyncStorage.setLastOrder, orderForHistory);
-
-  //     // Add to pending orders list (which serves as order history)
-  //     yield call(AsyncStorage.addPendingOrder, orderForHistory);
-
-  //     console.log('Order saved to local storage after successful API call:', orderForHistory);
-  //   } catch (storageError) {
-  //     console.log('Error saving order to local storage:', storageError);
-  //     // Don't fail the entire operation if storage fails
-  //   }
-
-  //   yield put({
-  //     type: NEOCAFE.CREATE_ORDER_SUCCESS,
-  //     payload: data,
-  //   });
-  // } else if (result.success === true && result?.data?.status === false) {
-  //   console.log('result errorr order:', result);
-
-  //   // Save failed order to local storage for retry (consolidate error handling here)
-  //   try {
-  //     const failedOrder = {
-  //       ...payload,
-  //       syncStatus: 'pending',
-  //       error_reason: result?.data?.error || 'API returned false status',
-  //       failed_at: new Date().toISOString(),
-  //       retry_count: 0,
-  //       updated_at: new Date().toISOString()
-  //     };
-
-  //     yield call(AsyncStorage.setLastOrder, failedOrder);
-  //     yield call(AsyncStorage.addPendingOrder, failedOrder);
-  //     console.log('Failed order saved to local storage for retry:', failedOrder);
-  //   } catch (storageError) {
-  //     console.log('Error saving failed order to local storage:', storageError);
-  //   }
-
-  //   yield put({
-  //     type: NEOCAFE.CREATE_ORDER_ERROR,
-  //     payload: { errorMsg: result?.data?.error },
-  //   });
-  // } else {
-  //   // Save failed order to local storage for retry (consolidate error handling here)
-  //   try {
-  //     const failedOrder = {
-  //       ...payload,
-  //       syncStatus: 'pending',
-  //       error_reason: 'Invalid API response format',
-  //       failed_at: new Date().toISOString(),
-  //       retry_count: 0,
-  //       updated_at: new Date().toISOString()
-  //     };
-
-  //     yield call(AsyncStorage.setLastOrder, failedOrder);
-  //     yield call(AsyncStorage.addPendingOrder, failedOrder);
-  //     console.log('Failed order saved to local storage for retry:', failedOrder);
-  //   } catch (storageError) {
-  //     console.log('Error saving failed order to local storage:', storageError);
-  //   }
-
-  //   yield put({
-  //     type: NEOCAFE.CREATE_ORDER_ERROR,
-  //     payload: { errorMsg: 'Xảy ra lỗi trong quá trình tạo đơn' },
-  //   });
-  // }
-  // } catch (e) {
-  // console.log('API call exception:', e);
   yield put({
     type: NEOCAFE.CREATE_ORDER_SUCCESS,
   });
 
-  // Save failed order to local storage for retry (consolidate error handling here)
-  console.log('payloaDDDDDDDDDDDD:', payload);
   try {
     const orderForHistory = {
       ...payload,
@@ -109,29 +33,31 @@ function* createOrderSaga({ payload }) {
       updated_at: new Date().toISOString()
     };
 
+    // Bước 1: Lưu đơn cuối cùng
+    logService.info(LOG_CATEGORIES.ORDER, `[Saga] Bước 1/3: setLastOrder cho ${session}`);
     yield call(AsyncStorage.setLastOrder, orderForHistory);
+
+    // Bước 2: Thêm vào pendingOrders
+    logService.info(LOG_CATEGORIES.ORDER, `[Saga] Bước 2/3: addPendingOrder cho ${session}`);
     yield call(AsyncStorage.addPendingOrder, orderForHistory);
-    // Lưu vào lịch sử bất biến (KHÔNG BAO GIỜ bị sync/merge xóa)
+
+    // Bước 3: Thêm vào orderHistory (lịch sử bất biến)
+    logService.info(LOG_CATEGORIES.ORDER, `[Saga] Bước 3/3: addOrderHistory cho ${session}`);
     yield call(AsyncStorage.addOrderHistory, orderForHistory);
-    logService.info(LOG_CATEGORIES.ORDER, `Đặt đơn thành công: ${orderForHistory.session}`, {
-      session: orderForHistory.session,
-      table: orderForHistory.shoptablename,
+
+    logService.info(LOG_CATEGORIES.ORDER, `[Saga] createOrderSaga HOÀN TẤT: ${session} — đã lưu cả pendingOrders + orderHistory`, {
+      session,
+      displayID: orderForHistory.displayID,
+      table: orderForHistory.shopTableName,
       total: orderForHistory.total_amount,
-      products: orderForHistory.products?.length,
     });
   } catch (storageError) {
-    console.log('Error saving failed order to local storage:', storageError);
-    logService.error(LOG_CATEGORIES.ORDER, `Lỗi lưu đơn: ${storageError.message}`);
+    logService.error(LOG_CATEGORIES.ORDER, `[Saga] createOrderSaga LỖI STORAGE: ${session} - ${storageError.message}`, {
+      session,
+      error: storageError.message,
+      stack: storageError.stack ? storageError.stack.substring(0, 300) : '',
+    });
   }
-
-  // yield put({
-  //   type: NEOCAFE.CREATE_ORDER_ERROR,
-  //   payload: {
-  //     errorMsg:
-  //       'Xảy ra lỗi trong quá trình tạo đơn, vui lòng liên hệ nhân viên chăm sóc khách hàng',
-  //   },
-  // });
-  // }
 }
 function* setOrderSaga({ payload }) {
   try {
@@ -222,11 +148,17 @@ function* getOrderShippingSaga({ payload }) {
 
 function* getOrderPaidSuccessSaga({ payload }) {
   try {
+    logService.info(LOG_CATEGORIES.SYNC, `[GetPaidSuccess] BẮT ĐẦU lấy đơn đã thanh toán`);
     const result = yield call(orderController.getOrderPaidSuccess, payload);
     if (result && result.success) {
       // ĐỌC storage mới nhất
       const pendingOrders = yield call(AsyncStorage.getPendingOrders);
       const resultItems = result.data?.data || [];
+
+      logService.info(LOG_CATEGORIES.SYNC, `[GetPaidSuccess] Server trả về ${resultItems.length} đơn, local có ${pendingOrders.length} đơn`, {
+        serverSessions: resultItems.map(i => i.offline_code || i.session).filter(Boolean),
+        localSessions: pendingOrders.map(o => o.session).filter(Boolean),
+      });
 
       // Đánh dấu đơn server là synced
       resultItems.forEach(item => {
@@ -248,10 +180,15 @@ function* getOrderPaidSuccessSaga({ payload }) {
         return order;
       });
 
+      logService.info(LOG_CATEGORIES.SYNC, `[GetPaidSuccess] ${newlySyncedLocalOrders.length} đơn local mới chuyển sang synced`, {
+        newlySynced: newlySyncedLocalOrders.map(o => o.session),
+      });
+
       // Cập nhật vào lịch sử đơn hàng (orderHistory) để giao diện đồng bộ
       for (const order of newlySyncedLocalOrders) {
         const key = order.session || order.offline_code;
         if (key) {
+          logService.info(LOG_CATEGORIES.SYNC, `[GetPaidSuccess] Cập nhật orderHistory: ${key} → synced`);
           yield call(AsyncStorage.updateOrderSyncStatus, key, 'synced');
         }
       }
@@ -271,18 +208,25 @@ function* getOrderPaidSuccessSaga({ payload }) {
         }));
 
       const dataSynced = [...updatedPendingOrders, ...newServerOrders];
-      console.log('dataSynced (safe merge):', dataSynced);
+      logService.info(LOG_CATEGORIES.SYNC, `[GetPaidSuccess] GHI pendingOrders: ${dataSynced.length} đơn (${updatedPendingOrders.length} local + ${newServerOrders.length} server mới)`, {
+        allSessions: dataSynced.map(o => `${o.session}:${o.syncStatus}`),
+      });
       yield call(AsyncStorage.setPendingOrders, dataSynced);
+      logService.info(LOG_CATEGORIES.SYNC, `[GetPaidSuccess] Trigger syncPendingOrders sau merge`);
       yield put(syncPendingOrdersAction());
       yield put({
         type: NEOCAFE.GET_ORDER_PAID_SUCCESS_SUCCESS,
         payload: result.data,
       });
     } else {
+      logService.warn(LOG_CATEGORIES.SYNC, `[GetPaidSuccess] API thất bại hoặc result null`);
       yield put({ type: NEOCAFE.GET_ORDER_PAID_SUCCESS_ERROR });
     }
   } catch (error) {
-    console.log('error:', error)
+    logService.error(LOG_CATEGORIES.SYNC, `[GetPaidSuccess] EXCEPTION: ${error.message}`, {
+      error: error.message,
+      stack: error.stack ? error.stack.substring(0, 300) : '',
+    });
     yield put({ type: NEOCAFE.GET_ORDER_PAID_SUCCESS_ERROR });
   }
 }
