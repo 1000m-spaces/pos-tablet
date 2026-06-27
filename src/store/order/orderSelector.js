@@ -10,3 +10,4 @@ export const paidSuccessOrdersSelector = state => state.order.paidSuccessOrders;
 export const paidSuccessOrdersStatusSelector = state => state.order.statusGetOrderPaidSuccess;
 export const getResultEsstimate = state => state.order.resultEsstimate;
 export const getStatusEstimateAhamove = state => state.order.statusGetEstimateAhamove;
+export const callShipperOnlineStatusSelector = state => state.order.statusCallShipperOnline;

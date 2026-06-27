@@ -121,6 +121,21 @@ class OrderController {
       return { success: false, data: error.toString() };
     }
   };
+  callShipperOnlineController = async payload => {
+    try {
+      console.log('payload callShipperOnlineController', payload);
+      const { data } = await HttpClient.post(UrlApi.callShipperOnline, payload);
+      console.log('data callShipperOnlineController', data);
+      if (data && data.status === true) {
+        return { success: true, data: data };
+      } else {
+        return { success: false, error: data.error || 'Failed to call shipper online' };
+      }
+    } catch (error) {
+      console.log('error callShipperOnlineController', error);
+      return { success: false, error: error.message };
+    }
+  };
 
 }
 export default new OrderController();

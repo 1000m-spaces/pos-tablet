@@ -98,6 +98,7 @@ export const UrlApi = {
   showingPackage: BASE_PATH_CAFE + 'subscriptions/packages/all',
   unrenewPackage: BASE_PATH_CAFE + 'subscriptions/users/unrenew',
   storeShipmentAddress: BASE_PATH_MENU + 'addAddressWhenSubscriptionFalse',
+  callShipperOnline: BASE_PATH_MENU + 'callShipperOnline',
 
   getListStore: BASE_PATH_MENU + 'getListShop',
 
