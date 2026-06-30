@@ -32,18 +32,18 @@ function* createOrderSaga({ payload }) {
       retry_count: 0,
       updated_at: new Date().toISOString()
     };
+    // Bước 1: Thêm vào orderHistory (lịch sử bất biến)
+    logService.info(LOG_CATEGORIES.ORDER, `[Saga] Bước 1/3: addOrderHistory cho ${session}`);
+    yield call(AsyncStorage.addOrderHistory, orderForHistory);
 
-    // Bước 1: Lưu đơn cuối cùng
-    logService.info(LOG_CATEGORIES.ORDER, `[Saga] Bước 1/3: setLastOrder cho ${session}`);
+    // Bước 2: Lưu đơn cuối cùng
+    logService.info(LOG_CATEGORIES.ORDER, `[Saga] Bước 2/3: setLastOrder cho ${session}`);
     yield call(AsyncStorage.setLastOrder, orderForHistory);
 
-    // Bước 2: Thêm vào pendingOrders
-    logService.info(LOG_CATEGORIES.ORDER, `[Saga] Bước 2/3: addPendingOrder cho ${session}`);
+    // Bước 3: Thêm vào pendingOrders
+    logService.info(LOG_CATEGORIES.ORDER, `[Saga] Bước 3/3: addPendingOrder cho ${session}`);
     yield call(AsyncStorage.addPendingOrder, orderForHistory);
 
-    // Bước 3: Thêm vào orderHistory (lịch sử bất biến)
-    logService.info(LOG_CATEGORIES.ORDER, `[Saga] Bước 3/3: addOrderHistory cho ${session}`);
-    yield call(AsyncStorage.addOrderHistory, orderForHistory);
 
     logService.info(LOG_CATEGORIES.ORDER, `[Saga] createOrderSaga HOÀN TẤT: ${session} — đã lưu cả pendingOrders + orderHistory`, {
       session,
@@ -184,13 +184,17 @@ function* getOrderPaidSuccessSaga({ payload }) {
         newlySynced: newlySyncedLocalOrders.map(o => o.session),
       });
 
-      // Cập nhật vào lịch sử đơn hàng (orderHistory) để giao diện đồng bộ
+      // Cập nhật vào lịch sử đơn hàng (orderHistory) bằng batch
+      const syncStatusMap = {};
       for (const order of newlySyncedLocalOrders) {
         const key = order.session || order.offline_code;
         if (key) {
-          logService.info(LOG_CATEGORIES.SYNC, `[GetPaidSuccess] Cập nhật orderHistory: ${key} → synced`);
-          yield call(AsyncStorage.updateOrderSyncStatus, key, 'synced');
+          syncStatusMap[key] = 'synced';
         }
+      }
+      if (Object.keys(syncStatusMap).length > 0) {
+        logService.info(LOG_CATEGORIES.SYNC, `[GetPaidSuccess] Kích hoạt updateOrdersSyncStatusBatch`, { syncStatusMap });
+        yield call(AsyncStorage.updateOrdersSyncStatusBatch, syncStatusMap);
       }
 
       // Giữ TẤT CẢ đơn local (KHÔNG xóa bất kỳ đơn nào)

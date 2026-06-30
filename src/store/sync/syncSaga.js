@@ -1,4 +1,4 @@
-import { call, put, takeLatest } from 'redux-saga/effects';
+import { call, put, takeLatest, takeLeading } from 'redux-saga/effects';
 import { NEOCAFE } from 'store/actionsTypes';
 import syncController from './syncController';
 import AsyncStorageService from 'store/async_storage';
@@ -180,14 +180,19 @@ function* syncPendingOrdersSaga() {
             logService.info(LOG_CATEGORIES.SYNC, `[Sync] Ghi lại pendingOrders: ${updatedOrders.length} đơn`);
             yield call(AsyncStorageService.setPendingOrders, updatedOrders);
 
-            // Update sync status in immutable order history for synced/failed orders
+            // Update sync status in immutable order history for synced/failed orders in batch
+            const syncStatusMap = {};
             for (const order of updatedOrders) {
                 const wasAttempted = ordersToSync.some(o => o.session === order.session);
                 if (wasAttempted && (order.syncStatus === 'synced' || order.syncStatus === 'failed')) {
-                    logService.info(LOG_CATEGORIES.SYNC, `[Sync] Cập nhật orderHistory: ${order.session} → ${order.syncStatus}`);
-                    yield call(AsyncStorageService.updateOrderSyncStatus, order.session, order.syncStatus);
+                    syncStatusMap[order.session] = order.syncStatus;
                 }
             }
+            if (Object.keys(syncStatusMap).length > 0) {
+                logService.info(LOG_CATEGORIES.SYNC, `[Sync] Kích hoạt updateOrdersSyncStatusBatch`, { syncStatusMap });
+                yield call(AsyncStorageService.updateOrdersSyncStatusBatch, syncStatusMap);
+            }
+
 
             yield put({
                 type: NEOCAFE.SYNC_PENDING_ORDERS_SUCCESS,
@@ -284,13 +289,19 @@ function* syncPendingOrdersSaga() {
 
                 yield call(AsyncStorageService.setPendingOrders, updatedOrders);
 
-                // Update sync status in immutable order history for permanent failures after exception
+                // Update sync status in immutable order history for permanent failures after exception in batch
+                const syncStatusMap = {};
                 for (const order of updatedOrders) {
                     const wasAttempted = ordersToSync.some(o => o.session === order.session);
                     if (wasAttempted && order.syncStatus === 'failed') {
-                        yield call(AsyncStorageService.updateOrderSyncStatus, order.session, 'failed');
+                        syncStatusMap[order.session] = 'failed';
                     }
                 }
+                if (Object.keys(syncStatusMap).length > 0) {
+                    logService.info(LOG_CATEGORIES.SYNC, `[Sync] Kích hoạt updateOrdersSyncStatusBatch (lỗi)`, { syncStatusMap });
+                    yield call(AsyncStorageService.updateOrdersSyncStatusBatch, syncStatusMap);
+                }
+
             }
         } catch (storageError) {
             logService.error(LOG_CATEGORIES.SYSTEM, `[Sync] Lỗi ghi storage trong exception handler: ${storageError.message}`, {
@@ -307,7 +318,7 @@ function* syncPendingOrdersSaga() {
 
 function* syncSaga() {
     yield takeLatest(NEOCAFE.SYNC_ORDERS_REQUEST, syncOrdersSaga);
-    yield takeLatest(NEOCAFE.SYNC_PENDING_ORDERS_REQUEST, syncPendingOrdersSaga);
+    yield takeLeading(NEOCAFE.SYNC_PENDING_ORDERS_REQUEST, syncPendingOrdersSaga);
 }
 
 export default syncSaga; 

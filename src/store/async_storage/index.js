@@ -873,7 +873,7 @@ const getOrderHistory = async () => {
   }
 };
 
-const cleanupOrderHistory = async (maxDays = 7) => {
+const cleanupOrderHistory = async (maxDays = 5) => {
   try {
     const history = await getOrderHistory();
     if (history.length === 0) return;
@@ -893,6 +893,29 @@ const cleanupOrderHistory = async (maxDays = 7) => {
     }
   } catch (error) {
     console.error('[OrderHistory] Error cleaning up:', error);
+  }
+};
+
+const cleanupPendingOrders = async (maxDays = 5) => {
+  try {
+    const pending = await getPendingOrders();
+    if (pending.length === 0) return;
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - maxDays);
+
+    const filtered = pending.filter(order => {
+      const orderDate = new Date(order.updated_at || order.created_at);
+      return orderDate >= cutoff;
+    });
+
+    const removed = pending.length - filtered.length;
+    if (removed > 0) {
+      await setPendingOrders(filtered);
+      logService.info(LOG_CATEGORIES.SYNC, `[PendingOrders] Cleaned up ${removed} orders older than ${maxDays} days`);
+    }
+  } catch (error) {
+    logService.error(LOG_CATEGORIES.SYSTEM, `[PendingOrders] Error cleaning up: ${error.message}`);
   }
 };
 
@@ -956,6 +979,60 @@ const updateOrderSyncStatus = async (session, syncStatus) => {
   }
 };
 
+const updateOrdersSyncStatusBatch = async (syncStatusMap) => {
+  const count = Object.keys(syncStatusMap || {}).length;
+  logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch BẮT ĐẦU cho ${count} đơn`, {
+    syncStatusMap
+  });
+  if (count === 0) return;
+
+  try {
+    const historyValue = await AsyncStorage.getItem('orderHistory');
+    if (historyValue) {
+      const history = JSON.parse(historyValue);
+      
+      if (!Array.isArray(history)) {
+        logService.warn(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch: orderHistory không phải là mảng`, {
+          type: typeof history,
+          valuePreview: String(historyValue).substring(0, 200)
+        });
+        return;
+      }
+
+      let isUpdated = false;
+      const updatedHistory = history.map(order => {
+        const key = order.session || order.offlineOrderId;
+        if (key && syncStatusMap[key]) {
+          isUpdated = true;
+          return {
+            ...order,
+            syncStatus: syncStatusMap[key],
+            synced_at: syncStatusMap[key] === 'synced' ? new Date().toISOString() : order.synced_at,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return order;
+      });
+
+      if (isUpdated) {
+        await AsyncStorage.setItem('orderHistory', JSON.stringify(updatedHistory));
+        logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch GHI orderHistory OK: ${updatedHistory.length} đơn`);
+      } else {
+        logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch: Không có đơn nào khớp trong orderHistory`);
+      }
+    } else {
+      logService.warn(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch: orderHistory RỖNG (null)`);
+    }
+  } catch (error) {
+    logService.error(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch LỖI: ${error.message}`, {
+      error: error.message,
+      stack: error.stack ? error.stack.substring(0, 300) : '',
+      syncStatusMap
+    });
+  }
+};
+
+
 export default {
   setListRecommned,
   getListRecommned,
@@ -1017,5 +1094,7 @@ export default {
   addOrderHistory,
   getOrderHistory,
   cleanupOrderHistory,
+  cleanupPendingOrders,
   updateOrderSyncStatus,
+  updateOrdersSyncStatusBatch,
 };

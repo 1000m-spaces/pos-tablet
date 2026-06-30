@@ -1,6 +1,6 @@
 {
   "name": "posTablet",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "scripts": {
     "android": "npm run prebuild && react-native run-android",
