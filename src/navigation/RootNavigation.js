@@ -4,7 +4,7 @@ import StackNavigator from './StackNavigator';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { store } from 'store/index';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, PixelRatio } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 import PrintTemplate from '../components/Order/TemTemplate';
 import BillTemplate from '../components/Order/BillTemplate';
@@ -604,12 +604,12 @@ const HiddenViewShotComponents = () => {
         style={[
           styles.hiddenViewShot,
           {
-            width: printerInfo
-              ? mmToPixels(Math.min(Number(printerInfo.sWidth), Number(printerInfo.sHeight)), printerInfo.labelPrinterDPI)
-              : mmToPixels(50),
-            minHeight: printerInfo
-              ? mmToPixels(Math.max(Number(printerInfo.sWidth), Number(printerInfo.sHeight)), printerInfo.labelPrinterDPI)
-              : mmToPixels(70),
+            width: (printerInfo
+              ? mmToPixels(Math.min(Number(printerInfo.sWidth), Number(printerInfo.sHeight)), Math.max(203, Number(printerInfo.labelPrinterDPI) || 72))
+              : mmToPixels(50, 203)) / PixelRatio.get(),
+            height: (printerInfo
+              ? mmToPixels(Math.max(Number(printerInfo.sWidth), Number(printerInfo.sHeight)), Math.max(203, Number(printerInfo.labelPrinterDPI) || 72))
+              : mmToPixels(70, 203)) / PixelRatio.get(),
           }
         ]}
         collapsable={false}

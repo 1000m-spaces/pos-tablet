@@ -369,7 +369,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
 
             console.log('Preparing to queue label print for currentOrder:', currentOrder);
 
-            order.orderType = currentOrder.orderType
+            // Only overwrite orderType for POS/offline orders, preserve for online/foodapp orders
+            const isFoodAppOrder = isFoodApp || (order && order.chanel_type_id && String(order.chanel_type_id) !== '1');
+            if (!isFoodAppOrder) {
+                order.orderType = currentOrder.orderType;
+            }
 
             const targetOrder = order || selectedOrder;
             console.log('Queueing label print for order:', targetOrder.displayID);
@@ -458,6 +462,8 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             console.log('Bill print task queued with ID:', taskId);
         } catch (error) {
             console.error('Print queue error:', error);
+            // Commented out to ignore missing bill printer configuration and prevent modal popup
+            /*
             Toast.show({
                 type: 'error',
                 text1: error.message === 'Printer settings not configured' ?
@@ -466,6 +472,13 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
             });
             if (error.message === 'Printer settings not configured') {
                 showSettingPrinter();
+            }
+            */
+            if (error.message !== 'Printer settings not configured') {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Lỗi xếp hàng in hoá đơn: ' + error.message
+                });
             }
         } finally {
             setLoadingVisible(false);

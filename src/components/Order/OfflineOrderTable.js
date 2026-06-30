@@ -319,6 +319,8 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
             });
         } catch (error) {
             console.error('Print queue error:', error);
+            // Commented out to ignore missing bill printer configuration and prevent modal popup
+            /*
             Toast.show({
                 type: 'error',
                 text1: error.message === 'Printer settings not configured' ?
@@ -327,6 +329,13 @@ const OfflineOrderTable = ({ orders, onRefresh, selectedDate, showSettingPrinter
             });
             if (error.message === 'Printer settings not configured' && showSettingPrinter) {
                 showSettingPrinter();
+            }
+            */
+            if (error.message !== 'Printer settings not configured') {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Lỗi xếp hàng in: ' + error.message
+                });
             }
         } finally {
             setLoadingVisible(false);

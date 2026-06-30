@@ -234,6 +234,7 @@ class PrintingService {
                     }
 
                     const imageInfo = await Image.getSize(uri);
+                    console.log(`║ PRINT_TEM: Captured/Rotated Image Size: ${imageInfo.width}x${imageInfo.height} pixels`);
                     const base64 = await RNFS.readFile(uri.replace('file://', ''), 'base64');
 
                     await this.labelPrinter.tsplPrintBitmap(

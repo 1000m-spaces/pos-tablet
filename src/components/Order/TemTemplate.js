@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Text as RNText, Image, PixelRatio } from 'react-native';
 import AsyncStorage from 'store/async_storage/index';
 import Svg, { Rect } from 'react-native-svg';
 import QRCode from 'react-native-qrcode-svg';
 import { encodeCode128B, generateBarSpecs, getBarcodeWidth } from 'utils/barcodeUtils';
+
+const Text = (props) => (
+    <RNText {...props} allowFontScaling={false}>
+        {props.children}
+    </RNText>
+);
 
 // Convert mm to pixels for actual label printer output
 const mmToPixels = (mm, dpi = 72) => {
@@ -158,6 +164,11 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
 
     // Get order type badge text
     const getOrderTypeBadge = (order) => {
+        // FoodApp orders (Grab, Shopee, etc.) are always MANG VỀ
+        if (order.chanel_type_id && String(order.chanel_type_id) !== '1') {
+            return 'MANG VỀ';
+        }
+
         const is1000MAppOrder = order.source === 'app_order' &&
             (order.service === 'Delivery' || order.service === 'Pick up' || order.is_delivery !== undefined);
         const isPOSOrder = order.offline_code || order.session?.startsWith('POS-') ||
@@ -308,14 +319,15 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
 
     // ─────── Render one label (portrait card, will be rotated) ───────
     const renderLabel = (item, index) => {
-        const dpi = printerSettings?.dpi || 72;
+        const dpi = Math.max(203, printerSettings?.dpi || 72);
         const labelW_mm = printerSettings?.sWidth || 70;
         const labelH_mm = printerSettings?.sHeight || 50;
         const margin_mm = 0; // No margin — fill entire label edge-to-edge
 
         // Portrait card: width = shorter side, height = longer side
-        const W = mmToPixels(Math.min(labelW_mm, labelH_mm) - margin_mm, dpi);  // ~138px @70dpi
-        const H = mmToPixels(Math.max(labelW_mm, labelH_mm) - margin_mm, dpi);  // ~193px @70dpi
+        const pixelRatio = PixelRatio.get();
+        const W = mmToPixels(Math.min(labelW_mm, labelH_mm) - margin_mm, dpi) / pixelRatio;
+        const H = mmToPixels(Math.max(labelW_mm, labelH_mm) - margin_mm, dpi) / pixelRatio;
 
         const orderId = getOrderId(orderPrint);
         const suffix = getOrderSuffix(orderPrint);
@@ -334,7 +346,7 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
         const fs = {
             channelName: Math.max(6, Math.round(W * 0.053)),   // ~7
             logo: Math.max(5, Math.round(W * 0.045)),          // ~6
-            orderId: Math.max(14, Math.round(W * 0.136)),      // ~19
+            orderId: Math.max(12, Math.round(W * 0.115)),      // Reduced from 14 to 12
             metaLabel: Math.max(6, Math.round(W * 0.042)),     // ~6 (bold for thermal)
             metaValue: Math.max(8, Math.round(W * 0.072)),     // ~10 (slightly smaller)
             badge: Math.max(5, Math.round(W * 0.045)),         // ~6
@@ -343,7 +355,7 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
             modifier: Math.max(5, Math.round(W * 0.042)),      // ~6 (reduced)
             shopInfo: Math.max(5, Math.round(W * 0.045)),      // ~6 (increased for clarity)
             time: Math.max(5, Math.round(W * 0.042)),          // ~6 (was 4, too blurry)
-            price: Math.max(10, Math.round(W * 0.098)),        // ~14 (larger like mockup)
+            price: Math.max(9, Math.round(W * 0.082)),         // Reduced from 10 to 9
             greeting: Math.max(5, Math.round(W * 0.042)),      // ~6 (was 4, too blurry)
             barcodeText: Math.max(5, Math.round(W * 0.038)),   // ~5 (increased min)
         };
@@ -362,26 +374,21 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
         const qrSize = Math.max(16, Math.round(W * 0.15));  // ~20
 
         return (
-            <View key={index} style={{ width: W, height: H, backgroundColor: '#fff', overflow: 'hidden' }}>
+            <View key={index} style={{ width: W, height: H, backgroundColor: '#fff', overflow: 'hidden', paddingTop: Math.round(H * 0.04) }}>
                 {/* ══════ HEADER (Black) ══════ */}
                 <View style={{
                     height: headerH,
                     backgroundColor: '#000',
                     paddingHorizontal: px,
-                    paddingTop: 5,    // Safety margin to prevent POS/logo cut-off (increased to 5 to prevent printer clipping)
-                    paddingBottom: 5,
+                    paddingVertical: Math.round(headerH * 0.08), // Dynamic vertical padding instead of hardcoded
+                    flexDirection: 'column',
                     justifyContent: 'space-between',
                 }}>
-                    {/* Row 1: Channel name + Logo + 1000M — absolute so it doesn't push layout below */}
+                    {/* Row 1: Channel name + Logo + 1000M */}
                     <View style={{
-                        position: 'absolute',
-                        top: 8,
-                        left: px,
-                        right: px,
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        zIndex: 1,
                     }}>
                         <Text style={{ color: '#fff', fontSize: fs.channelName, fontWeight: '900', fontStyle: 'italic' }}>
                             {channelText}
@@ -406,13 +413,10 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
                         </View>
                     </View>
 
-                    {/* Row 2: Big order number — absolute to stay in center of header */}
+                    {/* Row 2: Big order number */}
                     <View style={{
-                        position: 'absolute',
-                        top: 22,
-                        left: px,
-                        right: px,
-                        zIndex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center',
                     }}>
                         <Text
                             numberOfLines={1}
@@ -429,18 +433,13 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
                         </Text>
                     </View>
 
-                    {/* Row 3: Table | Cup count | Badge — absolute at bottom of header */}
+                    {/* Row 3: Table | Cup count | Badge */}
                     <View style={{
-                        position: 'absolute',
-                        bottom: 5,
-                        left: px,
-                        right: px,
                         flexDirection: 'row',
                         alignItems: 'center',
                         borderTopWidth: 1,
                         borderTopColor: '#fff',
-                        paddingTop: 3,
-                        zIndex: 1,
+                        paddingTop: Math.round(headerH * 0.03),
                     }}>
                         {/* Thẻ bàn */}
                         <View style={{ flex: 1.2 }}>
@@ -452,17 +451,17 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
                         {/* Divider */}
                         <View style={{
                             width: 1,
-                            height: fs.metaValue + 8,
+                            height: fs.metaValue + Math.round(headerH * 0.06),
                             backgroundColor: '#fff',
                             marginHorizontal: 4,
                         }} />
 
                         {/* LY */}
                         <View style={{ flex: 0.7 }}>
-                            <Text style={{ color: '#fff', fontSize: fs.metaLabel, fontWeight: '900' }}>
+                            <Text style={{ color: '#fff', fontSize: fs.metaLabel, fontWeight: '900', lineHeight: fs.metaLabel }}>
                                 LY
                             </Text>
-                            <Text style={{ color: '#fff', fontSize: fs.metaValue, fontWeight: '900' }}>
+                            <Text style={{ color: '#fff', fontSize: fs.metaValue, fontWeight: '900', lineHeight: fs.metaValue }}>
                                 {cupText}
                             </Text>
                         </View>
@@ -580,9 +579,11 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
                                 {barcodeValue}
                             </Text>
                         </View>
+                        {/* 
                         <View style={{ marginLeft: 4 }}>
                             <QRCode value={qrValue || 'N/A'} size={qrSize} />
                         </View>
+                        */}
                     </View>
                 </View>
             </View>
@@ -591,14 +592,15 @@ const PrintTemplate = ({ orderPrint, settings = {}, onLayout }) => {
 
     // ─────── Main render ───────
     // Render directly in portrait. Rotation is handled post-capture if needed.
-    const dpi = printerSettings?.dpi || 72;
+    const dpi = Math.max(203, printerSettings?.dpi || 72);
     const labelW_mm = printerSettings?.sWidth || 70;
     const labelH_mm = printerSettings?.sHeight || 50;
     const margin_mm = 0; // No margin — fill entire label
 
     // Card dimensions (always portrait: width = min(W,H), height = max(W,H))
-    const cardW = mmToPixels(Math.min(labelW_mm, labelH_mm) - margin_mm, dpi);
-    const cardH = mmToPixels(Math.max(labelW_mm, labelH_mm) - margin_mm, dpi);
+    const pixelRatio = PixelRatio.get();
+    const cardW = mmToPixels(Math.min(labelW_mm, labelH_mm) - margin_mm, dpi) / pixelRatio;
+    const cardH = mmToPixels(Math.max(labelW_mm, labelH_mm) - margin_mm, dpi) / pixelRatio;
 
     return (
         <View style={{ backgroundColor: '#fff' }} onLayout={onLayout}>
