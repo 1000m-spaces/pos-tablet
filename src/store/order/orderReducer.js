@@ -239,26 +239,26 @@ const handleCheckProduct = (list, payload) => {
   let tempMapCheck = new Map();
   if (list.length === 0) {
     tempMapCheck.set(
-      `${payload.prodid}_${payload.option_item.id}_${payload.extraIds}`,
+      `${payload.prodid}_${payload.option_item.id}_${payload.extraIds}_${payload.note || ''}`,
       payload,
     );
   } else {
     tempMapCheck = new Map(
       list.map(item => {
-        return [`${item.prodid}_${item.option_item.id}_${item.extraIds}`, item];
+        return [`${item.prodid}_${item.option_item.id}_${item.extraIds}_${item.note || ''}`, item];
       }),
     );
     if (
       tempMapCheck.has(
-        `${payload.prodid}_${payload.option_item.id}_${payload.extraIds}`,
+        `${payload.prodid}_${payload.option_item.id}_${payload.extraIds}_${payload.note || ''}`,
       ) === true
     ) {
       const existingProduct = tempMapCheck.get(
-        `${payload.prodid}_${payload.option_item.id}_${payload.extraIds}`,
+        `${payload.prodid}_${payload.option_item.id}_${payload.extraIds}_${payload.note || ''}`,
       );
 
       tempMapCheck.set(
-        `${payload.prodid}_${payload.option_item.id}_${payload.extraIds}`,
+        `${payload.prodid}_${payload.option_item.id}_${payload.extraIds}_${payload.note || ''}`,
         {
           ...existingProduct,
           quantity: existingProduct.quantity + payload.quantity,
@@ -266,7 +266,7 @@ const handleCheckProduct = (list, payload) => {
       );
     } else {
       tempMapCheck.set(
-        `${payload.prodid}_${payload.option_item.id}_${payload.extraIds}`,
+        `${payload.prodid}_${payload.option_item.id}_${payload.extraIds}_${payload.note || ''}`,
         payload,
       );
     }

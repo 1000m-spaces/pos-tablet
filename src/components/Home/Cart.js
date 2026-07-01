@@ -42,7 +42,8 @@ const Cart = ({ showTable, onEditProduct }) => {
       if (
         product.prodid === prod.prodid &&
         product?.option_item?.id === prod?.option_item?.id &&
-        JSON.stringify(product.extraIds) === JSON.stringify(prod.extraIds)
+        JSON.stringify(product.extraIds) === JSON.stringify(prod.extraIds) &&
+        (product.note || '') === (prod.note || '')
       ) {
         if (product.quantity >= 1) {
           if (val === -1 && prod.quantity === 1) {
