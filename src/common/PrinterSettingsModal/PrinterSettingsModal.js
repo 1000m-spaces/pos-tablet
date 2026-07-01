@@ -8,6 +8,7 @@ import { TextNormal } from 'common/Text/TextFont';
 import { getUsbDevices, getSerialDevices } from 'rn-xprinter';
 import { usePrinter } from '../../services/PrinterService';
 import printQueueService from '../../services/PrintQueueService';
+import { getTemplateList, DEFAULT_TEMPLATE_ID } from '../../components/Order/TemTemplateRegistry';
 
 const PrinterSettingsModal = ({
     visible,
@@ -46,6 +47,9 @@ const PrinterSettingsModal = ({
 
     // Label printer DPI setting
     const [labelPrinterDPI, setLabelPrinterDPI] = useState(100);
+
+    // Label template selection
+    const [labelTemplateId, setLabelTemplateId] = useState(DEFAULT_TEMPLATE_ID);
 
     // Bill printer settings
     const [billIP, setBillIP] = useState("");
@@ -153,6 +157,9 @@ const PrinterSettingsModal = ({
 
                 // Load label printer DPI
                 setLabelPrinterDPI(labelPrinterInfo.labelPrinterDPI || 72);
+
+                // Load label template selection
+                setLabelTemplateId(labelPrinterInfo.labelTemplateId || DEFAULT_TEMPLATE_ID);
             }
 
             // Load bill printer settings
@@ -318,6 +325,9 @@ const PrinterSettingsModal = ({
                 // Label printer DPI
                 labelPrinterDPI: parseInt(labelPrinterDPI),
 
+                // Label template selection
+                labelTemplateId: labelTemplateId,
+
                 // Bill printer settings
                 billIP: billIP,
                 billPort: parseInt(billPort),
@@ -388,6 +398,9 @@ const PrinterSettingsModal = ({
 
                 // Label printer DPI
                 labelPrinterDPI: parseInt(labelPrinterDPI),
+
+                // Label template selection
+                labelTemplateId: labelTemplateId,
             };
         } else {
             return {
@@ -969,6 +982,55 @@ const PrinterSettingsModal = ({
                                 </View>
                                 <Text style={styles.paperSizeDescription}>
                                     Độ phân giải máy in (thường là 72, 96, 203, 300 DPI). Giá trị thấp hơn sẽ tạo tem nhỏ hơn.
+                                </Text>
+                            </View>
+
+                            {/* ── Label Template Selection ── */}
+                            <View style={styles.inputGroup}>
+                                <TextNormal style={styles.label}>{'Mẫu tem in (Template)'}</TextNormal>
+                                <View style={{ flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                                    {getTemplateList().map((tpl) => (
+                                        <TouchableOpacity
+                                            key={tpl.id}
+                                            onPress={() => setLabelTemplateId(tpl.id)}
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                borderWidth: labelTemplateId === tpl.id ? 2 : 1,
+                                                borderColor: labelTemplateId === tpl.id ? Colors.primary : '#ccc',
+                                                backgroundColor: labelTemplateId === tpl.id ? (Colors.primary + '10') : '#fff',
+                                                borderRadius: 8,
+                                                paddingHorizontal: 12,
+                                                paddingVertical: 10,
+                                            }}
+                                        >
+                                            <View style={{
+                                                width: 20, height: 20, borderRadius: 10,
+                                                borderWidth: 2,
+                                                borderColor: labelTemplateId === tpl.id ? Colors.primary : '#999',
+                                                alignItems: 'center', justifyContent: 'center',
+                                                marginRight: 10,
+                                            }}>
+                                                {labelTemplateId === tpl.id && (
+                                                    <View style={{
+                                                        width: 10, height: 10, borderRadius: 5,
+                                                        backgroundColor: Colors.primary,
+                                                    }} />
+                                                )}
+                                            </View>
+                                            <View style={{ flex: 1 }}>
+                                                <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>
+                                                    {tpl.name}
+                                                </Text>
+                                                <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+                                                    {tpl.description}
+                                                </Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <Text style={styles.paperSizeDescription}>
+                                    Chọn kiểu bố cục cho tem in. Mỗi template có layout khác nhau.
                                 </Text>
                             </View>
                         </>

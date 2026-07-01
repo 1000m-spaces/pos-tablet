@@ -438,7 +438,9 @@ const getLabelPrinterInfo = async () => {
         labelModifier: printerInfo.labelModifier || 14,
         labelNote: printerInfo.labelNote || 14,
         // Label printer DPI
-        labelPrinterDPI: printerInfo.labelPrinterDPI || 72
+        labelPrinterDPI: printerInfo.labelPrinterDPI || 72,
+        // Label template selection
+        labelTemplateId: printerInfo.labelTemplateId || 'template1'
       };
     }
   } catch (error) {
@@ -459,7 +461,9 @@ const getLabelPrinterInfo = async () => {
     labelModifier: 14,
     labelNote: 14,
     // Label printer DPI
-    labelPrinterDPI: 72
+    labelPrinterDPI: 72,
+    // Label template selection
+    labelTemplateId: 'template1'
   };
 };
 
