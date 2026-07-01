@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import logService, { LOG_CATEGORIES } from '../../services/LogService';
 
 const setExtraProducts = async listProduct => {
   try {
@@ -19,11 +20,14 @@ const getExtraProducts = async () => {
   }
 };
 const setLastOrder = async lastOrder => {
-  console.log('set last order local: ', lastOrder);
   try {
     await AsyncStorage.setItem('theLastOrder', JSON.stringify(lastOrder));
+    logService.info(LOG_CATEGORIES.ORDER, `[Storage] setLastOrder OK: ${lastOrder?.session}`);
   } catch (error) {
-    console.log(error);
+    logService.error(LOG_CATEGORIES.ORDER, `[Storage] setLastOrder LỖI: ${error.message}`, {
+      session: lastOrder?.session,
+      error: error.message,
+    });
   }
 };
 const getLastOrder = async () => {
@@ -265,9 +269,18 @@ const removePrintedLabel = async (orderId, dateString = null) => {
 
 const setPendingOrders = async (orders) => {
   try {
-    await AsyncStorage.setItem('pendingOrders', JSON.stringify(orders));
+    const jsonStr = JSON.stringify(orders);
+    await AsyncStorage.setItem('pendingOrders', jsonStr);
+    logService.info(LOG_CATEGORIES.ORDER, `[Storage] setPendingOrders OK: ${orders.length} đơn, ${jsonStr.length} bytes`, {
+      count: orders.length,
+      sessions: orders.map(o => o.session).filter(Boolean),
+      syncStatuses: orders.map(o => `${o.session}:${o.syncStatus}`),
+    });
   } catch (error) {
-    console.log('Error saving pending orders:', error);
+    logService.error(LOG_CATEGORIES.ORDER, `[Storage] setPendingOrders LỖI: ${error.message}`, {
+      count: orders?.length,
+      error: error.message,
+    });
   }
 };
 
@@ -275,22 +288,48 @@ const getPendingOrders = async () => {
   try {
     const value = await AsyncStorage.getItem('pendingOrders');
     if (value !== null) {
-      return JSON.parse(value);
+      const parsed = JSON.parse(value);
+      logService.info(LOG_CATEGORIES.ORDER, `[Storage] getPendingOrders: ${parsed.length} đơn, ${value.length} bytes`, {
+        count: parsed.length,
+        sessions: parsed.map(o => o.session).filter(Boolean),
+      });
+      return parsed;
     }
+    logService.info(LOG_CATEGORIES.ORDER, `[Storage] getPendingOrders: rỗng (null)`);
   } catch (error) {
-    console.log('Error getting pending orders:', error);
+    logService.error(LOG_CATEGORIES.ORDER, `[Storage] getPendingOrders LỖI (JSON.parse?): ${error.message}`, {
+      error: error.message,
+    });
   }
   return [];
 };
 
 const addPendingOrder = async (order) => {
+  const session = order?.session || 'unknown';
+  logService.info(LOG_CATEGORIES.ORDER, `[Storage] addPendingOrder BẮT ĐẦU: ${session}`);
   try {
     const existingOrders = await getPendingOrders();
+    logService.info(LOG_CATEGORIES.ORDER, `[Storage] addPendingOrder đọc được ${existingOrders.length} đơn cũ`, {
+      existingSessions: existingOrders.map(o => o.session).filter(Boolean),
+    });
     const updatedOrders = [...existingOrders, order];
     await setPendingOrders(updatedOrders);
+    
+    // Xác minh: đọc lại để kiểm tra
+    const verify = await getPendingOrders();
+    const found = verify.some(o => o.session === session);
+    if (found) {
+      logService.info(LOG_CATEGORIES.ORDER, `[Storage] addPendingOrder XÁC MINH OK: ${session} CÓ trong storage (${verify.length} đơn)`);
+    } else {
+      logService.error(LOG_CATEGORIES.ORDER, `[Storage] addPendingOrder XÁC MINH THẤT BẠI: ${session} KHÔNG CÓ trong storage sau khi ghi! (${verify.length} đơn)`, {
+        verifySessions: verify.map(o => o.session).filter(Boolean),
+      });
+    }
     return updatedOrders;
   } catch (error) {
-    console.log('Error adding pending order:', error);
+    logService.error(LOG_CATEGORIES.ORDER, `[Storage] addPendingOrder LỖI: ${session} - ${error.message}`, {
+      error: error.message,
+    });
     return [];
   }
 };
@@ -780,17 +819,43 @@ const getBackupOrdersMetadata = async () => {
 // ============================================================
 
 const addOrderHistory = async (order) => {
+  const session = order?.session || 'unknown';
+  logService.info(LOG_CATEGORIES.ORDER, `[Storage] addOrderHistory BẮT ĐẦU: ${session}`);
   try {
     const existing = await AsyncStorage.getItem('orderHistory');
+    const existingLen = existing ? existing.length : 0;
+    logService.info(LOG_CATEGORIES.ORDER, `[Storage] addOrderHistory đọc orderHistory: ${existingLen} bytes`);
+
     const history = existing ? JSON.parse(existing) : [];
+    logService.info(LOG_CATEGORIES.ORDER, `[Storage] addOrderHistory parse OK: ${history.length} đơn cũ`);
+
     history.unshift({
       ...order,
       history_created_at: new Date().toISOString(),
     });
-    await AsyncStorage.setItem('orderHistory', JSON.stringify(history));
-    console.log(`[OrderHistory] Added order ${order.session}, total: ${history.length}`);
+
+    const jsonStr = JSON.stringify(history);
+    logService.info(LOG_CATEGORIES.ORDER, `[Storage] addOrderHistory sẽ ghi: ${history.length} đơn, ${jsonStr.length} bytes`);
+
+    await AsyncStorage.setItem('orderHistory', jsonStr);
+    logService.info(LOG_CATEGORIES.ORDER, `[Storage] addOrderHistory GHI THÀNH CÔNG: ${session}`);
+
+    // Xác minh: đọc lại để kiểm tra
+    const verifyRaw = await AsyncStorage.getItem('orderHistory');
+    const verifyArr = verifyRaw ? JSON.parse(verifyRaw) : [];
+    const found = verifyArr.some(o => o.session === session);
+    if (found) {
+      logService.info(LOG_CATEGORIES.ORDER, `[Storage] addOrderHistory XÁC MINH OK: ${session} CÓ trong orderHistory (${verifyArr.length} đơn)`);
+    } else {
+      logService.error(LOG_CATEGORIES.ORDER, `[Storage] addOrderHistory XÁC MINH THẤT BẠI: ${session} KHÔNG CÓ sau khi ghi! (${verifyArr.length} đơn)`, {
+        first5: verifyArr.slice(0, 5).map(o => o.session),
+      });
+    }
   } catch (error) {
-    console.error('[OrderHistory] Error adding order:', error);
+    logService.error(LOG_CATEGORIES.ORDER, `[Storage] addOrderHistory LỖI: ${session} - ${error.message}`, {
+      error: error.message,
+      stack: error.stack ? error.stack.substring(0, 300) : '',
+    });
   }
 };
 
@@ -798,16 +863,21 @@ const getOrderHistory = async () => {
   try {
     const value = await AsyncStorage.getItem('orderHistory');
     if (value) {
-      return JSON.parse(value);
+      const parsed = JSON.parse(value);
+      logService.info(LOG_CATEGORIES.ORDER, `[Storage] getOrderHistory: ${parsed.length} đơn, ${value.length} bytes`);
+      return parsed;
     }
+    logService.info(LOG_CATEGORIES.ORDER, `[Storage] getOrderHistory: rỗng (null)`);
     return [];
   } catch (error) {
-    console.error('[OrderHistory] Error getting history:', error);
+    logService.error(LOG_CATEGORIES.ORDER, `[Storage] getOrderHistory LỖI (JSON.parse?): ${error.message}`, {
+      error: error.message,
+    });
     return [];
   }
 };
 
-const cleanupOrderHistory = async (maxDays = 7) => {
+const cleanupOrderHistory = async (maxDays = 5) => {
   try {
     const history = await getOrderHistory();
     if (history.length === 0) return;
@@ -830,12 +900,40 @@ const cleanupOrderHistory = async (maxDays = 7) => {
   }
 };
 
+const cleanupPendingOrders = async (maxDays = 5) => {
+  try {
+    const pending = await getPendingOrders();
+    if (pending.length === 0) return;
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - maxDays);
+
+    const filtered = pending.filter(order => {
+      const orderDate = new Date(order.updated_at || order.created_at);
+      return orderDate >= cutoff;
+    });
+
+    const removed = pending.length - filtered.length;
+    if (removed > 0) {
+      await setPendingOrders(filtered);
+      logService.info(LOG_CATEGORIES.SYNC, `[PendingOrders] Cleaned up ${removed} orders older than ${maxDays} days`);
+    }
+  } catch (error) {
+    logService.error(LOG_CATEGORIES.SYSTEM, `[PendingOrders] Error cleaning up: ${error.message}`);
+  }
+};
+
 const updateOrderSyncStatus = async (session, syncStatus) => {
+  logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrderSyncStatus BẮT ĐẦU: ${session} → ${syncStatus}`);
   try {
     // 1. Cập nhật trong lịch sử đơn hàng (orderHistory)
     const historyValue = await AsyncStorage.getItem('orderHistory');
     if (historyValue) {
       const history = JSON.parse(historyValue);
+      const beforeCount = history.length;
+      const foundInHistory = history.some(o => o.session === session || o.offlineOrderId === session);
+      logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrderSyncStatus orderHistory: ${beforeCount} đơn, tìm thấy ${session}: ${foundInHistory}`);
+
       const updatedHistory = history.map(order => {
         if (order.session === session || order.offlineOrderId === session) {
           return {
@@ -848,12 +946,18 @@ const updateOrderSyncStatus = async (session, syncStatus) => {
         return order;
       });
       await AsyncStorage.setItem('orderHistory', JSON.stringify(updatedHistory));
+      logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrderSyncStatus GHI orderHistory OK: ${updatedHistory.length} đơn`);
+    } else {
+      logService.warn(LOG_CATEGORIES.SYNC, `[Storage] updateOrderSyncStatus: orderHistory RỖNG, không có gì để cập nhật cho ${session}`);
     }
 
     // 2. Cập nhật trong danh sách chờ sync (pendingOrders)
     const pendingValue = await AsyncStorage.getItem('pendingOrders');
     if (pendingValue) {
       const pending = JSON.parse(pendingValue);
+      const foundInPending = pending.some(o => o.session === session || o.offlineOrderId === session);
+      logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrderSyncStatus pendingOrders: ${pending.length} đơn, tìm thấy ${session}: ${foundInPending}`);
+
       const updatedPending = pending.map(order => {
         if (order.session === session || order.offlineOrderId === session) {
           return {
@@ -866,12 +970,72 @@ const updateOrderSyncStatus = async (session, syncStatus) => {
         return order;
       });
       await AsyncStorage.setItem('pendingOrders', JSON.stringify(updatedPending));
+      logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrderSyncStatus GHI pendingOrders OK: ${updatedPending.length} đơn`);
+    } else {
+      logService.warn(LOG_CATEGORIES.SYNC, `[Storage] updateOrderSyncStatus: pendingOrders RỖNG cho ${session}`);
     }
-    console.log(`[AsyncStorage] Updated sync status for ${session} to ${syncStatus}`);
   } catch (error) {
-    console.error('[AsyncStorage] Error updating order sync status:', error);
+    logService.error(LOG_CATEGORIES.SYNC, `[Storage] updateOrderSyncStatus LỖI: ${session} - ${error.message}`, {
+      session,
+      syncStatus,
+      error: error.message,
+    });
   }
 };
+
+const updateOrdersSyncStatusBatch = async (syncStatusMap) => {
+  const count = Object.keys(syncStatusMap || {}).length;
+  logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch BẮT ĐẦU cho ${count} đơn`, {
+    syncStatusMap
+  });
+  if (count === 0) return;
+
+  try {
+    const historyValue = await AsyncStorage.getItem('orderHistory');
+    if (historyValue) {
+      const history = JSON.parse(historyValue);
+      
+      if (!Array.isArray(history)) {
+        logService.warn(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch: orderHistory không phải là mảng`, {
+          type: typeof history,
+          valuePreview: String(historyValue).substring(0, 200)
+        });
+        return;
+      }
+
+      let isUpdated = false;
+      const updatedHistory = history.map(order => {
+        const key = order.session || order.offlineOrderId;
+        if (key && syncStatusMap[key]) {
+          isUpdated = true;
+          return {
+            ...order,
+            syncStatus: syncStatusMap[key],
+            synced_at: syncStatusMap[key] === 'synced' ? new Date().toISOString() : order.synced_at,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return order;
+      });
+
+      if (isUpdated) {
+        await AsyncStorage.setItem('orderHistory', JSON.stringify(updatedHistory));
+        logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch GHI orderHistory OK: ${updatedHistory.length} đơn`);
+      } else {
+        logService.info(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch: Không có đơn nào khớp trong orderHistory`);
+      }
+    } else {
+      logService.warn(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch: orderHistory RỖNG (null)`);
+    }
+  } catch (error) {
+    logService.error(LOG_CATEGORIES.SYNC, `[Storage] updateOrdersSyncStatusBatch LỖI: ${error.message}`, {
+      error: error.message,
+      stack: error.stack ? error.stack.substring(0, 300) : '',
+      syncStatusMap
+    });
+  }
+};
+
 
 export default {
   setListRecommned,
@@ -934,5 +1098,7 @@ export default {
   addOrderHistory,
   getOrderHistory,
   cleanupOrderHistory,
+  cleanupPendingOrders,
   updateOrderSyncStatus,
+  updateOrdersSyncStatusBatch,
 };

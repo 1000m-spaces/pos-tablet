@@ -1,4 +1,4 @@
-import { call, put, takeLatest } from 'redux-saga/effects';
+import { call, put, takeLatest, takeLeading } from 'redux-saga/effects';
 import { NEOCAFE } from 'store/actionsTypes';
 import syncController from './syncController';
 import AsyncStorageService from 'store/async_storage';
@@ -30,12 +30,13 @@ function* syncPendingOrdersSaga() {
     try {
         // Get pending orders from local storage
         const pendingOrders = yield call(AsyncStorageService.getPendingOrders);
-        console.log('Pending orders to sync:', pendingOrders);
+        logService.info(LOG_CATEGORIES.SYNC, `[Sync] === BẮT ĐẦU SYNC === pendingOrders: ${pendingOrders.length} đơn`, {
+            sessions: pendingOrders.map(o => `${o.session}(${o.syncStatus},retry:${o.retry_count || 0})`),
+        });
 
         // Backup all pending orders before syncing (hidden from users, for emergency recovery)
         if (pendingOrders.length > 0) {
             yield call(AsyncStorageService.setBackupOrders, pendingOrders);
-            console.log(`Backed up ${pendingOrders.length} orders before sync attempt`);
         }
 
         // Filter out already synced orders and limit retry attempts
@@ -44,14 +45,14 @@ function* syncPendingOrdersSaga() {
                 (order.retry_count || 0) < 5; // Max 5 retry attempts
 
             if (!shouldRetry && order.syncStatus === 'pending' && (order.retry_count || 0) >= 5) {
-                console.log(`Order ${order.session} exceeded max retry attempts, marking as failed`);
+                logService.warn(LOG_CATEGORIES.SYNC, `[Sync] Đơn ${order.session} quá 5 lần retry → ngừng sync`);
             }
 
             return shouldRetry;
         });
 
         if (ordersToSync.length === 0) {
-            console.log('No pending orders to sync or all exceeded retry limit');
+            logService.info(LOG_CATEGORIES.SYNC, `[Sync] Không có đơn cần sync (${pendingOrders.length} pending tổng, 0 đủ điều kiện)`);
             yield put({
                 type: NEOCAFE.SYNC_PENDING_ORDERS_SUCCESS,
                 payload: { success: true, message: 'No pending orders to sync' },
@@ -59,9 +60,8 @@ function* syncPendingOrdersSaga() {
             return;
         }
 
-        console.log(`Attempting to sync ${ordersToSync.length} orders`);
-        logService.info(LOG_CATEGORIES.SYNC, `Bắt đầu sync ${ordersToSync.length} đơn`, {
-            sessions: ordersToSync.map(o => o.session),
+        logService.info(LOG_CATEGORIES.SYNC, `[Sync] Sẽ gửi ${ordersToSync.length}/${pendingOrders.length} đơn lên server`, {
+            sessionsToSync: ordersToSync.map(o => `${o.session}(retry:${o.retry_count || 0})`),
         });
 
         // Prepare orders for sync in the format expected by the API
@@ -88,11 +88,44 @@ function* syncPendingOrdersSaga() {
         if (response.success) {
             // Update sync status for successfully synced orders
             const ordersSyncedServer = response.result?.data || [];
+            logService.info(LOG_CATEGORIES.SYNC, `[Sync] API trả về ${ordersSyncedServer.length} kết quả`, {
+                serverResults: ordersSyncedServer.map(o => ({
+                    order_id: o.order_id,
+                    match: o.match,
+                    offline_code: o.offline_code || 'THIẾU_OFFLINE_CODE',
+                    differences: o.differences,
+                })),
+            });
+
             // ĐỌC LẠI storage mới nhất để không mất đơn đặt trong lúc chờ API
             const freshOrders = yield call(AsyncStorageService.getPendingOrders);
+            logService.info(LOG_CATEGORIES.SYNC, `[Sync] Đọc lại pendingOrders sau API: ${freshOrders.length} đơn`, {
+                freshSessions: freshOrders.map(o => o.session).filter(Boolean),
+            });
+
             const updatedOrders = freshOrders.map(order => {
                 const serverResult = ordersSyncedServer.find(syncOrder => syncOrder.offline_code === order.session);
+
+                // Log chi tiết quá trình matching cho MỖI đơn
+                if (!serverResult) {
+                    // Kiểm tra xem đơn có trong ordersToSync không
+                    const wasInSync = ordersToSync.some(o => o.session === order.session);
+                    if (wasInSync) {
+                        logService.warn(LOG_CATEGORIES.SYNC, `[Sync] ĐƠN KẸT: ${order.session} đã gửi lên server nhưng KHÔNG tìm thấy trong response (server không trả về offline_code khớp)`, {
+                            session: order.session,
+                            offline_code: order.offline_code,
+                            serverOfflineCodes: ordersSyncedServer.map(o => o.offline_code),
+                            serverOrderIds: ordersSyncedServer.map(o => o.order_id),
+                        });
+                    }
+                }
+
                 if (serverResult && serverResult.match === true) {
+                    logService.info(LOG_CATEGORIES.SYNC, `[Sync] ĐƠN KHỚP: ${order.session} → synced (server order_id: ${serverResult.order_id})`, {
+                        session: order.session,
+                        serverOrderId: serverResult.order_id,
+                        offline_code: serverResult.offline_code,
+                    });
                     return {
                         ...order,
                         syncStatus: 'synced',
@@ -105,17 +138,19 @@ function* syncPendingOrdersSaga() {
                     const newRetryCount = (order.retry_count || 0) + 1;
                     const isPermanentFailure = newRetryCount >= 5;
 
-                    // Log lý do server từ chối đơn hàng
+                    logService.warn(LOG_CATEGORIES.SYNC, `[Sync] ĐƠN KHÔNG KHỚP: ${order.session} (Lần ${newRetryCount}/5)`, {
+                        session: order.session,
+                        serverOrderId: serverResult.order_id,
+                        offline_code: serverResult.offline_code,
+                        match: serverResult.match,
+                        differences: serverResult.differences,
+                        isPermanentFailure,
+                    });
+
                     if (isPermanentFailure) {
-                        logService.error(LOG_CATEGORIES.SYNC, `Đơn hàng ${order.session} bị ngừng sync do lỗi quá 5 lần. Lỗi: ${serverResult.message || 'Server từ chối'}`, {
+                        logService.error(LOG_CATEGORIES.SYNC, `[Sync] NGỪNG SYNC: ${order.session} bị từ chối quá 5 lần`, {
                             session: order.session,
-                            serverResult
-                        });
-                    } else {
-                        logService.warn(LOG_CATEGORIES.SYNC, `Server từ chối đơn ${order.session} (Lần ${newRetryCount}/5): ${serverResult.message || 'Sai lệch thông tin'}`, {
-                            session: order.session,
-                            retry_count: newRetryCount,
-                            serverResult
+                            serverResult,
                         });
                     }
 
@@ -129,25 +164,35 @@ function* syncPendingOrdersSaga() {
                 }
                 return order;
             });
-            console.log(`Successfully synced ${ordersToSync.length} orders`);
+
             const syncedCount = updatedOrders.filter(o => o.syncStatus === 'synced').length;
+            const pendingCount = updatedOrders.filter(o => o.syncStatus === 'pending' || !o.syncStatus).length;
             const failedCount = updatedOrders.filter(o => o.syncStatus === 'failed').length;
-            logService.info(LOG_CATEGORIES.SYNC, `Sync xong: ${syncedCount} thành công, ${failedCount} thất bại`, {
-                total: ordersToSync.length,
+            logService.info(LOG_CATEGORIES.SYNC, `[Sync] Kết quả: ${syncedCount} synced, ${pendingCount} pending, ${failedCount} failed (tổng: ${updatedOrders.length})`, {
+                total: updatedOrders.length,
                 synced: syncedCount,
+                pending: pendingCount,
                 failed: failedCount,
+                allStatuses: updatedOrders.map(o => `${o.session}:${o.syncStatus}`),
             });
 
             // Update orders in local storage with sync status
+            logService.info(LOG_CATEGORIES.SYNC, `[Sync] Ghi lại pendingOrders: ${updatedOrders.length} đơn`);
             yield call(AsyncStorageService.setPendingOrders, updatedOrders);
 
-            // Update sync status in immutable order history for synced/failed orders
+            // Update sync status in immutable order history for synced/failed orders in batch
+            const syncStatusMap = {};
             for (const order of updatedOrders) {
                 const wasAttempted = ordersToSync.some(o => o.session === order.session);
                 if (wasAttempted && (order.syncStatus === 'synced' || order.syncStatus === 'failed')) {
-                    yield call(AsyncStorageService.updateOrderSyncStatus, order.session, order.syncStatus);
+                    syncStatusMap[order.session] = order.syncStatus;
                 }
             }
+            if (Object.keys(syncStatusMap).length > 0) {
+                logService.info(LOG_CATEGORIES.SYNC, `[Sync] Kích hoạt updateOrdersSyncStatusBatch`, { syncStatusMap });
+                yield call(AsyncStorageService.updateOrdersSyncStatusBatch, syncStatusMap);
+            }
+
 
             yield put({
                 type: NEOCAFE.SYNC_PENDING_ORDERS_SUCCESS,
@@ -157,9 +202,9 @@ function* syncPendingOrdersSaga() {
                 },
             });
         } else {
-            console.log('Sync failed, incrementing retry count for orders');
-            logService.warn(LOG_CATEGORIES.SYNC, `Sync thất bại: response.success = false`, {
+            logService.warn(LOG_CATEGORIES.SYNC, `[Sync] API trả về success=false`, {
                 message: response.message,
+                status: response.status,
                 orderCount: ordersToSync.length,
             });
 
@@ -189,6 +234,7 @@ function* syncPendingOrdersSaga() {
             });
 
             // Update orders in local storage with incremented retry count
+            logService.info(LOG_CATEGORIES.SYNC, `[Sync] Ghi lại pendingOrders sau lỗi: ${updatedOrders.length} đơn`);
             yield call(AsyncStorageService.setPendingOrders, updatedOrders);
 
             // Update sync status in immutable order history for permanent failures
@@ -205,12 +251,9 @@ function* syncPendingOrdersSaga() {
             });
         }
     } catch (error) {
-        console.log('Sync error occurred, incrementing retry count');
-
-        // Log exception chi tiết (ví dụ: mất kết nối, timeout...)
-        logService.error(LOG_CATEGORIES.SYNC, `Lỗi exception khi sync đơn hàng: ${error.message}`, {
+        logService.error(LOG_CATEGORIES.SYNC, `[Sync] EXCEPTION: ${error.message}`, {
             message: error.message,
-            stack: error.stack ? error.stack.substring(0, 500) : ''
+            stack: error.stack ? error.stack.substring(0, 500) : '',
         });
 
         try {
@@ -246,17 +289,24 @@ function* syncPendingOrdersSaga() {
 
                 yield call(AsyncStorageService.setPendingOrders, updatedOrders);
 
-                // Update sync status in immutable order history for permanent failures after exception
+                // Update sync status in immutable order history for permanent failures after exception in batch
+                const syncStatusMap = {};
                 for (const order of updatedOrders) {
                     const wasAttempted = ordersToSync.some(o => o.session === order.session);
                     if (wasAttempted && order.syncStatus === 'failed') {
-                        yield call(AsyncStorageService.updateOrderSyncStatus, order.session, 'failed');
+                        syncStatusMap[order.session] = 'failed';
                     }
                 }
+                if (Object.keys(syncStatusMap).length > 0) {
+                    logService.info(LOG_CATEGORIES.SYNC, `[Sync] Kích hoạt updateOrdersSyncStatusBatch (lỗi)`, { syncStatusMap });
+                    yield call(AsyncStorageService.updateOrdersSyncStatusBatch, syncStatusMap);
+                }
+
             }
         } catch (storageError) {
-            console.log('Error updating retry count:', storageError);
-            logService.error(LOG_CATEGORIES.SYSTEM, `Lỗi ghi storage khi xử lý exception sync: ${storageError.message}`);
+            logService.error(LOG_CATEGORIES.SYSTEM, `[Sync] Lỗi ghi storage trong exception handler: ${storageError.message}`, {
+                error: storageError.message,
+            });
         }
 
         yield put({
@@ -268,7 +318,7 @@ function* syncPendingOrdersSaga() {
 
 function* syncSaga() {
     yield takeLatest(NEOCAFE.SYNC_ORDERS_REQUEST, syncOrdersSaga);
-    yield takeLatest(NEOCAFE.SYNC_PENDING_ORDERS_REQUEST, syncPendingOrdersSaga);
+    yield takeLeading(NEOCAFE.SYNC_PENDING_ORDERS_REQUEST, syncPendingOrdersSaga);
 }
 
 export default syncSaga; 

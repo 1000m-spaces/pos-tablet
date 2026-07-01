@@ -112,7 +112,8 @@ const Home = ({ navigation }) => {
           idx !== index &&
           prod.prodid === updatedProduct.prodid &&
           prod?.option_item?.id === updatedProduct?.option_item?.id &&
-          JSON.stringify(prod.extraIds) === JSON.stringify(updatedProduct.extraIds)
+          JSON.stringify(prod.extraIds) === JSON.stringify(updatedProduct.extraIds) &&
+          (prod.note || '') === (updatedProduct.note || '')
         );
       });
 

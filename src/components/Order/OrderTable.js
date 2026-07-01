@@ -10,8 +10,8 @@ import TableSelector from '../Home/TableSelector';
 import printQueueService from '../../services/PrintQueueService';
 import { TextNormal } from "common/Text/TextFont";
 import { useDispatch, useSelector } from "react-redux";
-import { callDriverBack, confirmOrderOnline, getEstimateAhamove, resetConfirmOrderOnline, resetEstimateAhamove } from "store/actions";
-import { confirmOrderOnlineStatusSelector, getResultEsstimate, getStatusEstimateAhamove, currentOrderSelector } from "store/selectors";
+import { callDriverBack, confirmOrderOnline, getEstimateAhamove, resetConfirmOrderOnline, resetEstimateAhamove, callShipperOnline, resetCallShipperOnline } from "store/actions";
+import { confirmOrderOnlineStatusSelector, getResultEsstimate, getStatusEstimateAhamove, currentOrderSelector, callShipperOnlineStatusSelector } from "store/selectors";
 import Status from "common/Status/Status";
 import CryptoJS from 'crypto-js';
 import { PARTNER_ID, SECRET_KEY_TAX } from "assets/config";
@@ -101,6 +101,7 @@ const ServiceIcon = ({ service, shipping_provider, isFoodApp }) => {
 const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, dataShippingSuccess, confirmedOrderId, setConfirmedOrderId, orderTableMapRef, shop }) => {
     const dispatch = useDispatch();
     const confirmOrderStatus = useSelector(confirmOrderOnlineStatusSelector);
+    const callShipperStatus = useSelector(callShipperOnlineStatusSelector);
     const isResultEsstimate = useSelector(getResultEsstimate);
     const isStatusEstimateAhamove = useSelector(getStatusEstimateAhamove);
     const currentOrder = useSelector(state => currentOrderSelector(state));
@@ -126,10 +127,11 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const tableHead = historyDelivery
         ? ["Mã đơn hàng", "Tem", "Trạng thái đơn", "Số món", "Số tiền"]
         : ["Đối tác", "Mã đơn hàng", "Tem", "Trạng thái đơn", "Số món", "Số tiền"];
-    if (!isFoodApp) {
-        if (!historyDelivery) {
-            tableHead.push("Xác nhận");
-        }
+    // if (isFoodApp) {   
+    //     tableHead.push("Thao tác");
+    // }
+    if (!isFoodApp && !historyDelivery) {
+        tableHead.push("Thao tác");
     }
     const numColumns = tableHead.length;
 
@@ -294,6 +296,27 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
 
         autoPrintAfterConfirm();
     }, [confirmOrderStatus]);
+
+    useEffect(() => {
+        console.log('OrderTable [callShipperStatus Effect]: callShipperStatus changed to:', callShipperStatus);
+        if (callShipperStatus === Status.SUCCESS) {
+            console.log('OrderTable [callShipperStatus Effect]: SUCCESS - Toasting success and resetting status');
+            Toast.show({
+                type: 'success',
+                text1: 'Gọi tài xế thành công',
+                position: 'bottom',
+            });
+            dispatch(resetCallShipperOnline());
+        } else if (callShipperStatus === Status.ERROR) {
+            console.log('OrderTable [callShipperStatus Effect]: ERROR - Toasting failure and resetting status');
+            Toast.show({
+                type: 'error',
+                text1: 'Gọi tài xế thất bại',
+                position: 'bottom',
+            });
+            dispatch(resetCallShipperOnline());
+        }
+    }, [callShipperStatus]);
 
 
     const getStatusColor = (status) => {
@@ -623,6 +646,13 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         setShowTableSelector(true);
     };
 
+    const handleCallShipperOnline = (orderId) => {
+        console.log('OrderTable [handleCallShipperOnline]: Button clicked for order ID:', orderId);
+        const payload = { order_id: String(orderId) };
+        console.log('OrderTable [handleCallShipperOnline]: Dispatching callShipperOnline with payload:', payload);
+        dispatch(callShipperOnline(payload));
+    };
+
     // Handle table selection for order confirmation
     const onSelectTable = (table) => {
         setShowTableSelector(false);
@@ -718,15 +748,34 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         // Số tiền
         row.push(order.orderValue);
 
-        // Add Xác nhận button at the end if not a food app order and not historyDelivery
-        if (!isFoodApp && !historyDelivery) {
-            row.push(
-                <View style={{ justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        // Add Thao tác button(s) at the end if not a food app order
+        if (!isFoodApp) {
+            const actionButtons = [];
+            if (!historyDelivery) {
+                actionButtons.push(
                     <TouchableOpacity
-                        style={{ justifyContent: 'center', alignItems: 'center', height: '80%', width: '60%', backgroundColor: '#19b400', borderRadius: 10 }}
-                        onPress={() => handleConfirmOrder(order.displayID)}>
-                        <TextNormal>Xác nhận đơn</TextNormal>
+                        key={order.displayID + "_confirm_btn"}
+                        style={styles.actionBtnConfirm}
+                        onPress={() => handleConfirmOrder(order.displayID)}
+                    >
+                        <TextNormal style={styles.actionBtnText}>Xác nhận</TextNormal>
                     </TouchableOpacity>
+                );
+            }
+            if (order.is_delivery === '1' && !isFoodApp && !historyDelivery) {
+                actionButtons.push(
+                    <TouchableOpacity
+                        key={order.displayID + "_call_btn"}
+                        style={styles.actionBtnCall}
+                        onPress={() => handleCallShipperOnline(order.displayID)}
+                    >
+                        <TextNormal style={styles.actionBtnText}>Gọi tài xế</TextNormal>
+                    </TouchableOpacity>
+                );
+            }
+            row.push(
+                <View style={styles.actionCellContainer} key={order.displayID + "_actions"}>
+                    {actionButtons}
                 </View>
             );
         }
@@ -944,6 +993,34 @@ const styles = StyleSheet.create({
         textAlign: "center",
         color: "#666",
         fontSize: 16,
+    },
+    actionCellContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100%',
+        gap: 6,
+    },
+    actionBtnConfirm: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '80%',
+        paddingHorizontal: 8,
+        backgroundColor: '#4CAF50',
+        borderRadius: 8,
+    },
+    actionBtnCall: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '80%',
+        paddingHorizontal: 8,
+        backgroundColor: '#2196F3',
+        borderRadius: 8,
+    },
+    actionBtnText: {
+        color: '#ffffff',
+        fontSize: 12,
+        fontWeight: 'bold',
     },
 });
 

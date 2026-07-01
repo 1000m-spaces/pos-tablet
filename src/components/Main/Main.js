@@ -35,8 +35,11 @@ const Main = () => {
     // Initialize logging service
     logService.init();
 
-    // Cleanup order history older than 7 days on app start
-    AsyncStorage.cleanupOrderHistory(7);
+    // Cleanup order history older than 5 days on app start
+    AsyncStorage.cleanupOrderHistory(5);
+
+    // Cleanup pending orders older than 5 days on app start
+    AsyncStorage.cleanupPendingOrders(5);
 
     // Background job: sync offline orders every 2 minutes
     const intervalId = setInterval(() => {
