@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_APP_ORDER, NAVIGATION_INVOICE, NAVIGATION_PROFILE } from 'navigation/routes';
+import { NAVIGATION_HOME, NAVIGATION_ORDER, NAVIGATION_APP_ORDER, NAVIGATION_INVOICE, NAVIGATION_PROFILE, NAVIGATION_DELIVERY_ORDER } from 'navigation/routes';
 import { StyleSheet, View, Dimensions, PixelRatio } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import * as Screens from 'components';
@@ -191,6 +191,14 @@ const Main = () => {
           options={{
             drawerLabel: 'Food App'
           }}
+        />
+        <Drawer.Screen
+          name={NAVIGATION_DELIVERY_ORDER}
+          component={Screens.AppOrders}
+          options={{
+            drawerLabel: 'Đơn delivery'
+          }}
+          initialParams={{ isDeliveryOnly: true }}
         />
         <Drawer.Screen
           name={NAVIGATION_INVOICE}

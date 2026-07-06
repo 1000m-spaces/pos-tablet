@@ -9,3 +9,5 @@ export const NAVIGATION_ORDER = 'Orders';
 export const NAVIGATION_APP_ORDER = 'AppOrders';
 export const NAVIGATION_INVOICE = 'Invoice';
 export const NAVIGATION_PROFILE = 'Profile';
+export const NAVIGATION_DELIVERY_ORDER = 'DeliveryOrders';
+
