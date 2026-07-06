@@ -127,12 +127,13 @@ const transformAppOrder = (apiOrder) => {
         mobileNumber: apiOrder.userphone || '',
         comment: apiOrder.description || '',
         address: {
-          address: apiOrder.address || ''
+          address: apiOrder.shipping_address || apiOrder.address || ''
         }
       },
       // Add service info 
       service: isDelivery ? 'Delivery' : 'Pick up',
       shipping_provider: apiOrder.shipping_provider,
+      shipper_phone: apiOrder.shipper_phone || apiOrder.shipperPhone || apiOrder.driver?.mobileNumber || '',
       // Mark as app order
       source: 'app_order',
       // Add order type for label formatting
@@ -142,7 +143,8 @@ const transformAppOrder = (apiOrder) => {
       tableId: apiOrder.shoptableid || apiOrder.tableId || null,
       shoptablename: apiOrder.shoptablename || apiOrder.tableName || null,
       // Preserve full address for delivery orders
-      address: apiOrder.address || '',
+      address: apiOrder.shipping_address || apiOrder.address || '',
+      shipping_address: apiOrder.shipping_address || apiOrder.address || '',
       // Add timestamps
       createdAt: apiOrder.time_create,
       checkTime: apiOrder.time_check,
@@ -154,10 +156,11 @@ const transformAppOrder = (apiOrder) => {
   }
 };
 
-const AppOrders = () => {
+const AppOrders = ({ route }) => {
+  const isDeliveryOnly = route?.params?.isDeliveryOnly || false;
   const dispatch = useDispatch();
   const [data, setData] = useState([]);
-  const [orderType, setOrderType] = useState(1);
+  const [orderType, setOrderType] = useState(isDeliveryOnly ? 2 : 1);
   const [printerModalVisible, setPrinterModalVisible] = useState(false);
   const [userShop, setUserShop] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -175,6 +178,24 @@ const AppOrders = () => {
   const isPaidSuccessOrdersSelector = useSelector(state => paidSuccessOrdersSelector(state));
   const isPaidSuccessOrdersStatus = useSelector(state => paidSuccessOrdersStatusSelector(state));
 
+  const logDisplayOrders = useCallback((label, sourceOrders) => {
+    const normalized = (sourceOrders || []).filter(Boolean);
+    const filtered = normalized.filter(order => !isDeliveryOnly || order?.is_delivery === '1');
+    console.log(`[AppOrders] ${label}`, {
+      orderType,
+      isDeliveryOnly,
+      rawCount: normalized.length,
+      displayCount: filtered.length,
+      sample: filtered.slice(0, 5).map(order => ({
+        displayID: order?.displayID,
+        is_delivery: order?.is_delivery,
+        service: order?.service,
+        state: order?.state,
+        address: order?.address,
+      })),
+    });
+  }, [isDeliveryOnly, orderType]);
+
   const fetchAppOrders = useCallback(async () => {
     if (!userShop) {
       console.log('No user shop data available for app orders');
@@ -190,16 +211,29 @@ const AppOrders = () => {
 
     try {
       if (orderType === 1) {
-        const transformedAppOrders = isOnlineOrderSelector?.map(transformAppOrder)
-          .filter(order => order !== null);
+        const rawOrders = isOnlineOrderSelector || [];
+        console.log('[AppOrders] fetchAppOrders raw online orders', {
+          count: rawOrders.length,
+          sample: rawOrders.slice(0, 3).map(order => ({
+            orderid: order?.orderid,
+            is_delivery: order?.is_delivery,
+            shipping_status: order?.shipping_status,
+            address: order?.address,
+          })),
+        });
+        const transformedAppOrders = rawOrders.map(transformAppOrder)
+          .filter(order => order !== null && (!isDeliveryOnly || order.is_delivery === '1'));
 
+        logDisplayOrders('fetchAppOrders transformed online orders', transformedAppOrders);
         setData(transformedAppOrders);
       } else {
         console.log('AppOrders fetchAppOrders: Transforming paid success orders:', isPaidSuccessOrdersSelector);
-        const transformedOrders = isPaidSuccessOrdersSelector?.data
+        const rawOrders = isPaidSuccessOrdersSelector?.data || [];
+        const transformedOrders = rawOrders
           ?.filter(apiOrder => apiOrder.cust_id && apiOrder.cust_id !== '0' && apiOrder.cust_id !== 0)
           ?.map(transformAppOrder)
-          .filter(order => order !== null);
+          .filter(order => order !== null && (!isDeliveryOnly || order.is_delivery === '1'));
+        logDisplayOrders('fetchAppOrders transformed history orders', transformedOrders);
         setData(transformedOrders)
       }
     } catch (error) {
@@ -290,14 +324,26 @@ const AppOrders = () => {
     if (orderType === 1 && isStatusGetOnlineOrder === Status.SUCCESS) {
       dispatch(resetGetOnlineOrder());
       if (isOnlineOrderSelector && isOnlineOrderSelector?.length >= 0) {
-        const transformedAppOrders = isOnlineOrderSelector
+        const rawOrders = isOnlineOrderSelector || [];
+        console.log('[AppOrders] loadDataOrderOnline raw orders', {
+          count: rawOrders.length,
+          sample: rawOrders.slice(0, 3).map(order => ({
+            orderid: order?.orderid,
+            is_delivery: order?.is_delivery,
+            shipping_status: order?.shipping_status,
+            address: order?.address,
+          })),
+        });
+        const transformedAppOrders = rawOrders
           .map(transformAppOrder)
-          .filter(order => order !== null);
+          .filter(order => order !== null && (!isDeliveryOnly || order.is_delivery === '1'));
+
+        logDisplayOrders('loadDataOrderOnline transformed orders', transformedAppOrders);
 
         // Combine with existing online orders (if any were set by direct API call)
         setData(prevData => {
           // Filter out any app orders to avoid duplicates, keep online orders
-          const onlineOrders = prevData.filter(order => order.source === 'online_new');
+          const onlineOrders = prevData.filter(order => order.source === 'online_new' && (!isDeliveryOnly || order.is_delivery === '1'));
           return [...transformedAppOrders, ...onlineOrders];
         });
       } else if (isStatusGetOnlineOrder === Status.ERROR) {
@@ -323,10 +369,21 @@ const AppOrders = () => {
       console.log('AppOrders: getOrderPaidSuccess success, data:', isPaidSuccessOrdersSelector);
       dispatch(resetGetOrderPaidSuccess());
       if (isPaidSuccessOrdersSelector?.status && isPaidSuccessOrdersSelector?.data) {
-        const transformedOrders = isPaidSuccessOrdersSelector.data
+        const rawOrders = isPaidSuccessOrdersSelector.data || [];
+        console.log('[AppOrders] history orders raw data', {
+          count: rawOrders.length,
+          sample: rawOrders.slice(0, 3).map(order => ({
+            orderid: order?.orderid,
+            is_delivery: order?.is_delivery,
+            shipping_status: order?.shipping_status,
+            address: order?.address,
+          })),
+        });
+        const transformedOrders = rawOrders
           ?.filter(apiOrder => apiOrder.cust_id && apiOrder.cust_id !== '0' && apiOrder.cust_id !== 0)
           ?.map(transformAppOrder)
-          .filter(order => order !== null);
+          .filter(order => order !== null && (!isDeliveryOnly || order.is_delivery === '1'));
+        logDisplayOrders('history orders after transform', transformedOrders);
         setData(transformedOrders);
       } else if (isPaidSuccessOrdersSelector?.status === false) {
         console.log('AppOrders: getOrderPaidSuccess status is false:', isPaidSuccessOrdersSelector);
@@ -401,18 +458,24 @@ const AppOrders = () => {
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.headerContainer}>
-                <View style={styles.filtersContainer}>
-                  <FlatList
-                    data={appOrderFilters}
-                    keyExtractor={i => i.id}
-                    horizontal
-                    contentContainerStyle={{
-                      paddingVertical: 12,
-                      alignSelf: 'flex-start',
-                    }}
-                    showsHorizontalScrollIndicator={false}
-                    renderItem={renderFilter}
-                  />
+                 <View style={styles.filtersContainer}>
+                  {isDeliveryOnly ? (
+                    <TextNormal style={{ fontSize: 18, fontWeight: 'bold', paddingVertical: 12, color: Colors.primary }}>
+                      Lịch sử đơn delivery
+                    </TextNormal>
+                  ) : (
+                    <FlatList
+                      data={appOrderFilters}
+                      keyExtractor={i => i.id}
+                      horizontal
+                      contentContainerStyle={{
+                        paddingVertical: 12,
+                        alignSelf: 'flex-start',
+                      }}
+                      showsHorizontalScrollIndicator={false}
+                      renderItem={renderFilter}
+                    />
+                  )}
                 </View>
                 <View style={styles.actionContainer}>
                   <View style={styles.actionButton}>
@@ -482,6 +545,7 @@ const AppOrders = () => {
                   apiOrder => apiOrder.cust_id && apiOrder.cust_id !== '0' && apiOrder.cust_id !== 0
                 )}
                 shop={userShop}
+                isDeliveryOnly={isDeliveryOnly}
               />
             )}
 

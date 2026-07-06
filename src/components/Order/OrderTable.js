@@ -98,8 +98,36 @@ const ServiceIcon = ({ service, shipping_provider, isFoodApp }) => {
     );
 };
 
-const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, dataShippingSuccess, confirmedOrderId, setConfirmedOrderId, orderTableMapRef, shop }) => {
+const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isFoodApp, historyDelivery, dataShippingSuccess, confirmedOrderId, setConfirmedOrderId, orderTableMapRef, shop, isDeliveryOnly }) => {
     const dispatch = useDispatch();
+
+    const getShippingStatusText = (status) => {
+        let result = '';
+        switch (status) {
+            case 'ASSIGNING':
+                result = 'Đang tìm tài xế';
+                break;
+            case 'COMPLETED':
+                result = 'Đã hoàn thành';
+                break;
+            case 'IN PROCESS':
+                result = 'Đơn đang giao';
+                break;
+            case 'ACCEPTED':
+                result = 'Tài xế đã nhận';
+                break;
+            case 'CANCELLED':
+                result = 'Không tìm thấy Tài Xế';
+                break;
+            case '-1':
+                result = 'Tạo đơn thất bại';
+                break;
+            default:
+                result = status || 'N/A';
+                break;
+        }
+        return result;
+    };
     const confirmOrderStatus = useSelector(confirmOrderOnlineStatusSelector);
     const callShipperStatus = useSelector(callShipperOnlineStatusSelector);
     const isResultEsstimate = useSelector(getResultEsstimate);
@@ -124,13 +152,15 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     const tableMapRef = orderTableMapRef || localOrderTableMapRef;
 
     // Build table header based on order type
-    const tableHead = historyDelivery
-        ? ["Mã đơn hàng", "Tem", "Trạng thái đơn", "Số món", "Số tiền"]
-        : ["Đối tác", "Mã đơn hàng", "Tem", "Trạng thái đơn", "Số món", "Số tiền"];
+    const tableHead = isDeliveryOnly
+        ? ["Mã đơn hàng", "Tem", "Mã vận chuyển", "SĐT Tài xế", "Mã khách hàng", "Địa chỉ giao hàng", "Trạng thái vận chuyển", "Thao tác"]
+        : (historyDelivery
+            ? ["Mã đơn hàng", "Tem", "Trạng thái đơn", "Số món", "Số tiền"]
+            : ["Đối tác", "Mã đơn hàng", "Tem", "Trạng thái đơn", "Số món", "Số tiền"]);
     // if (isFoodApp) {   
     //     tableHead.push("Thao tác");
     // }
-    if (!isFoodApp && !historyDelivery) {
+    if (!isFoodApp && !historyDelivery && !isDeliveryOnly) {
         tableHead.push("Thao tác");
     }
     const numColumns = tableHead.length;
@@ -154,6 +184,23 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
         };
         loadPrintedLabels();
     }, []);
+
+    useEffect(() => {
+        console.log('[OrderTable] incoming orders for display', {
+            orderType,
+            historyDelivery,
+            isFoodApp,
+            total: orders?.length || 0,
+            deliveryCount: (orders || []).filter(order => order?.is_delivery === '1').length,
+            sample: (orders || []).slice(0, 5).map(order => ({
+                displayID: order?.displayID,
+                is_delivery: order?.is_delivery,
+                service: order?.service,
+                state: order?.state,
+                address: order?.address,
+            })),
+        });
+    }, [orders, orderType, historyDelivery, isFoodApp]);
 
     // Listen for print queue task completion to update UI in real-time
     useEffect(() => {
@@ -690,66 +737,60 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
     };
 
     const tableData = orders?.map((order, index) => {
-        const row = [];
 
-        // Đối tác
-        if (!historyDelivery) {
+        const row = [];
+        console.log('Building row for orderDelivery:', order);
+
+        if (isDeliveryOnly) {
+            // Cột 1: Mã đơn hàng
+            row.push(order.displayID);
+            
+            // Cột Tem
             row.push(
-                <ServiceIcon
-                    service={order.service}
-                    shipping_provider={order?.shipping_provider}
-                    isFoodApp={isFoodApp}
-                    key={order.displayID + "_service"}
+                <Badge
+                    text={printedLabels.includes(order.displayID) ? "Đã in" : "Chưa in"}
+                    colorText={printedLabels.includes(order.displayID) ? "#069C2E" : "#EF0000"}
+                    colorBg={printedLabels.includes(order.displayID) ? "#CDEED8" : "#FED9DA"}
+                    width="60%"
+                    key={order.displayID + "_tem"}
                 />
             );
-        }
-
-        // Mã đơn hàng
-        row.push(order.displayID);
-
-        // Tem
-        row.push(
-            <Badge
-                text={printedLabels.includes(order.displayID) ? "Đã in" : "Chưa in"}
-                colorText={printedLabels.includes(order.displayID) ? "#069C2E" : "#EF0000"}
-                colorBg={printedLabels.includes(order.displayID) ? "#CDEED8" : "#FED9DA"}
-                width="60%"
-                key={order.displayID + "_tem"}
-            />
-        );
-
-        // Trạng thái đơn
-        row.push(
-            <Badge
-                text={historyDelivery ? "Đã thanh toán" : getStatusText(order.state)}
-                colorText={historyDelivery ? "#069C2E" : getStatusColor(order.state)}
-                colorBg={historyDelivery ? "#CDEED8" : getStatusColorBg(order.state)}
-                width="80%"
-                key={order.displayID + "_status"}
-            />
-        );
-
-        // Số món
-        row.push(order.itemInfo?.items?.length);
-
-        // Số tiền
-        row.push(order.orderValue);
-
-        // Add Thao tác button(s) at the end if not a food app order
-        if (!isFoodApp) {
-            const actionButtons = [];
-            if (!historyDelivery) {
-                actionButtons.push(
-                    <TouchableOpacity
-                        key={order.displayID + "_confirm_btn"}
-                        style={styles.actionBtnConfirm}
-                        onPress={() => handleConfirmOrder(order.displayID)}
-                    >
-                        <TextNormal style={styles.actionBtnText}>Xác nhận</TextNormal>
-                    </TouchableOpacity>
-                );
+            
+            // Cột 2: Mã vận chuyển (shipping_provider)
+            row.push(order.shipping_provider || 'N/A');
+            
+            // Cột 3: SĐT Tài xế (shipper_phone)
+            row.push(order.shipper_phone || 'N/A');
+            
+            // Cột 4: Mã khách hàng
+            row.push(order.cust_id || 'N/A');
+            
+            // Cột 5: Địa chỉ giao hàng (shipping_address)
+            row.push(order.shipping_address || order.address || 'N/A');
+            
+            // Cột 6: Trạng thái vận chuyển (shipping_status)
+            let badgeColorText = '#FF9800'; // Orange default
+            let badgeColorBg = '#FFF3E0';
+            if (order.shipping_status === 'COMPLETED') {
+                badgeColorText = '#069C2E'; // Green
+                badgeColorBg = '#CDEED8';
+            } else if (order.shipping_status === 'CANCELLED' || order.shipping_status === '-1') {
+                badgeColorText = '#EF0000'; // Red
+                badgeColorBg = '#FED9DA';
             }
-            if (order.is_delivery === '1' && !isFoodApp && !historyDelivery) {
+            row.push(
+                <Badge
+                    text={getShippingStatusText(order.shipping_status)}
+                    colorText={badgeColorText}
+                    colorBg={badgeColorBg}
+                    width="90%"
+                    key={order.displayID + "_shipping_status"}
+                />
+            );
+            
+            // Cột 7: Thao tác
+            const actionButtons = [];
+            if (order.shipping_status === 'CANCELLED' || order.shipping_status === '-1') {
                 actionButtons.push(
                     <TouchableOpacity
                         key={order.displayID + "_call_btn"}
@@ -765,6 +806,71 @@ const OrderTable = ({ orderType, orders, showSettingPrinter, onConfirmOrder, isF
                     {actionButtons}
                 </View>
             );
+        } else {
+            // Đối tác
+            if (!historyDelivery) {
+                row.push(
+                    <ServiceIcon
+                        service={order.service}
+                        shipping_provider={order?.shipping_provider}
+                        isFoodApp={isFoodApp}
+                        key={order.displayID + "_service"}
+                    />
+                );
+            }
+
+            // Mã đơn hàng
+            row.push(order.displayID);
+
+            // Tem
+            row.push(
+                <Badge
+                    text={printedLabels.includes(order.displayID) ? "Đã in" : "Chưa in"}
+                    colorText={printedLabels.includes(order.displayID) ? "#069C2E" : "#EF0000"}
+                    colorBg={printedLabels.includes(order.displayID) ? "#CDEED8" : "#FED9DA"}
+                    width="60%"
+                    key={order.displayID + "_tem"}
+                />
+            );
+
+            // Trạng thái đơn
+            row.push(
+                <Badge
+                    text={historyDelivery ? "Đã thanh toán" : getStatusText(order.state)}
+                    colorText={historyDelivery ? "#069C2E" : getStatusColor(order.state)}
+                    colorBg={historyDelivery ? "#CDEED8" : getStatusColorBg(order.state)}
+                    width="80%"
+                    key={order.displayID + "_status"}
+                />
+            );
+
+            // Số món
+            row.push(order.itemInfo?.items?.length);
+
+            // Số tiền
+            row.push(order.orderValue);
+
+            // Add Thao tác button(s) at the end if not a food app order
+            if (!isFoodApp) {
+                const actionButtons = [];
+                if (!historyDelivery) {
+                    actionButtons.push(
+                        <TouchableOpacity
+                            key={order.displayID + "_confirm_btn"}
+                            style={styles.actionBtnConfirm}
+                            onPress={() => handleConfirmOrder(order.displayID)}
+                        >
+                            <TextNormal style={styles.actionBtnText}>Xác nhận</TextNormal>
+                        </TouchableOpacity>
+                    );
+                }
+
+                row.push(
+                    <View style={styles.actionCellContainer} key={order.displayID + "_actions"}>
+                        {actionButtons}
+                    </View>
+                );
+            }
         }
 
         return row;
